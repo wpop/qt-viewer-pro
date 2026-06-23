@@ -19,6 +19,12 @@ mkdir -p resources/icons
 mkdir -p samples
 mkdir -p tests
 
+# Subdirectories for core and rendering
+mkdir -p include/qtviewerpro/core
+mkdir -p include/qtviewerpro/rendering
+mkdir -p src/core
+mkdir -p src/rendering
+
 # Source files
 touch src/main.cpp
 touch src/ui/MainWindow.cpp
