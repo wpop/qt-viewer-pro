@@ -1,5 +1,5 @@
 #include "qtviewerpro/ui/MainWindow.h"
-#include "qtviewerpro/ui/ImageViewer.h"
+#include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 
@@ -150,12 +150,12 @@ void MainWindow::actualSize()
 
 void MainWindow::createViewer()
 {
-  viewer_ = new ImageViewer(this);
+  viewer_ = new ImageViewer2D(this);
   setCentralWidget(viewer_);
 
   // Explicitly select openImage(const QString&) because openImage() is overloaded.
   connect(viewer_,
-          &ImageViewer::imageDropped,
+          &ImageViewer2D::imageDropped,
           this,
           static_cast<void (MainWindow::*)(const QString&)>(
               &MainWindow::openImage));

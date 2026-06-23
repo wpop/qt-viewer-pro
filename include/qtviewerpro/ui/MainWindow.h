@@ -11,7 +11,7 @@ class QAction;
 namespace qvp
 {
 
-class ImageViewer;
+class ImageViewer2D;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -82,7 +82,7 @@ private:
   void saveSettings();
 
 private:
-  ImageViewer *viewer_ = nullptr;
+  ImageViewer2D *viewer_ = nullptr;
   QImage originalImage_;
   QMenu *recentMenu_ = nullptr;
   QStringList recentFiles_ {};
