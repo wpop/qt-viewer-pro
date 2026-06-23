@@ -22,13 +22,13 @@ mkdir -p tests
 # Source files
 touch src/main.cpp
 touch src/ui/MainWindow.cpp
-touch src/ui/ImageViewer.cpp
+touch src/ui/ImageViewer2D.cpp
 touch src/io/ImageLoader.cpp
 touch src/processing/ImageProcessor.cpp
 
 # Header files
 touch include/qtviewerpro/ui/MainWindow.h
-touch include/qtviewerpro/ui/ImageViewer.h
+touch include/qtviewerpro/ui/ImageViewer2D.h
 touch include/qtviewerpro/io/ImageLoader.h
 touch include/qtviewerpro/processing/ImageProcessor.h
 

@@ -1,4 +1,4 @@
-#include "qtviewerpro/ui/ImageViewer.h"
+#include "qtviewerpro/ui/ImageViewer2D.h"
 
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
@@ -21,7 +21,7 @@ constexpr double kZoomFactor = 1.25;
 namespace qvp
 {
 
-ImageViewer::ImageViewer(QWidget *parent)
+ImageViewer2D::ImageViewer2D(QWidget *parent)
     : QGraphicsView(parent)
 {
   setRenderHint(QPainter::Antialiasing);
@@ -36,7 +36,7 @@ ImageViewer::ImageViewer(QWidget *parent)
   viewport()->setAcceptDrops(true);
 }
 
-void ImageViewer::setImage(const QImage& image)
+void ImageViewer2D::setImage(const QImage& image)
 {
   pixmapItem_->setRotation(0.0);
   pixmapItem_->setPixmap(QPixmap::fromImage(image));
@@ -45,7 +45,7 @@ void ImageViewer::setImage(const QImage& image)
   fitToWindow();
 }
 
-void ImageViewer::resizeEvent(QResizeEvent *event)
+void ImageViewer2D::resizeEvent(QResizeEvent *event)
 {
   QGraphicsView::resizeEvent(event);
 
@@ -53,7 +53,7 @@ void ImageViewer::resizeEvent(QResizeEvent *event)
     fitToWindow();
 }
 
-void ImageViewer::wheelEvent(QWheelEvent *event)
+void ImageViewer2D::wheelEvent(QWheelEvent *event)
 {
   if (event->angleDelta().y() > 0)
   {
@@ -65,7 +65,7 @@ void ImageViewer::wheelEvent(QWheelEvent *event)
   }
 }
 
-void ImageViewer::fitToWindow()
+void ImageViewer2D::fitToWindow()
 {
   if (!scene() || scene()->items().isEmpty())
     return;
@@ -76,47 +76,47 @@ void ImageViewer::fitToWindow()
   fitInView(scene()->sceneRect(), Qt::KeepAspectRatio);
 }
 
-void ImageViewer::actualSize()
+void ImageViewer2D::actualSize()
 {
   fitMode_ = false;
   resetTransform();
 }
 
-QSize ImageViewer::imageSize() const
+QSize ImageViewer2D::imageSize() const
 {
   return pixmapItem_->pixmap().size();
 }
 
-double ImageViewer::zoomFactor() const
+double ImageViewer2D::zoomFactor() const
 {
   return transform().m11();
 }
 
-void ImageViewer::zoomIn()
+void ImageViewer2D::zoomIn()
 {
   fitMode_ = false;
   scale(kZoomFactor, kZoomFactor);
 }
 
-void ImageViewer::zoomOut()
+void ImageViewer2D::zoomOut()
 {
   fitMode_ = false;
   scale(1.0 / kZoomFactor, 1.0 / kZoomFactor);
 }
 
-void ImageViewer::dragEnterEvent(QDragEnterEvent *event)
+void ImageViewer2D::dragEnterEvent(QDragEnterEvent *event)
 {
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-void ImageViewer::dragMoveEvent(QDragMoveEvent *event)
+void ImageViewer2D::dragMoveEvent(QDragMoveEvent *event)
 {
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-void ImageViewer::dropEvent(QDropEvent *event)
+void ImageViewer2D::dropEvent(QDropEvent *event)
 {
   const QList<QUrl> urls = event->mimeData()->urls();
 
@@ -132,7 +132,7 @@ void ImageViewer::dropEvent(QDropEvent *event)
   event->acceptProposedAction();
 }
 
-void ImageViewer::rotateLeft()
+void ImageViewer2D::rotateLeft()
 {
   pixmapItem_->setRotation(pixmapItem_->rotation() - 90.0);
   scene()->setSceneRect(pixmapItem_->sceneBoundingRect());
@@ -141,7 +141,7 @@ void ImageViewer::rotateLeft()
     fitToWindow();
 }
 
-void ImageViewer::rotateRight()
+void ImageViewer2D::rotateRight()
 {
   pixmapItem_->setRotation(pixmapItem_->rotation() + 90.0);
   scene()->setSceneRect(pixmapItem_->sceneBoundingRect());
@@ -150,7 +150,7 @@ void ImageViewer::rotateRight()
     fitToWindow();
 }
 
-void ImageViewer::flipHorizontal()
+void ImageViewer2D::flipHorizontal()
 {
   const QPixmap pixmap = pixmapItem_->pixmap();
 
@@ -165,7 +165,7 @@ void ImageViewer::flipHorizontal()
     fitToWindow();
 }
 
-void ImageViewer::flipVertical()
+void ImageViewer2D::flipVertical()
 {
   const QPixmap pixmap = pixmapItem_->pixmap();
 
@@ -180,7 +180,7 @@ void ImageViewer::flipVertical()
     fitToWindow();
 }
 
-QImage ImageViewer::image() const
+QImage ImageViewer2D::image() const
 {
   if (!pixmapItem_)
     return QImage();

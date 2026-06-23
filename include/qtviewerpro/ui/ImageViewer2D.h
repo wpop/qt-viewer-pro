@@ -18,10 +18,10 @@ namespace qvp
 /**
  * @brief Graphics-view based widget for displaying and manipulating images.
  *
- * ImageViewer is responsible for presentation-level image operations such as
+ * ImageViewer2D is responsible for presentation-level image operations such as
  * zooming, fitting, rotating, flipping, and accepting dropped image files.
  */
-class ImageViewer : public QGraphicsView
+class ImageViewer2D : public QGraphicsView
 {
   Q_OBJECT
 
@@ -30,7 +30,7 @@ public:
    * @brief Constructs an image viewer widget.
    * @param parent Optional Qt parent widget.
    */
-  explicit ImageViewer(QWidget *parent = nullptr);
+  explicit ImageViewer2D(QWidget *parent = nullptr);
 
   /**
    * @brief Replaces the displayed image and fits it to the current view.
