@@ -2,6 +2,9 @@
 
 #include <QImage>
 
+namespace qvp
+{
+
 /**
  * @brief Performs image-processing operations on QImage instances.
  *
@@ -18,3 +21,5 @@ public:
    */
   QImage toGrayscale(const QImage& image) const;
 };
+
+} // namespace qvp

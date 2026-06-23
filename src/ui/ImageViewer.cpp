@@ -18,6 +18,9 @@ namespace
 constexpr double kZoomFactor = 1.25;
 }
 
+namespace qvp
+{
+
 ImageViewer::ImageViewer(QWidget *parent)
     : QGraphicsView(parent)
 {
@@ -184,3 +187,5 @@ QImage ImageViewer::image() const
 
   return pixmapItem_->pixmap().toImage();
 }
+
+} // namespace qvp

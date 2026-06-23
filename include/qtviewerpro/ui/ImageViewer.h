@@ -12,6 +12,9 @@ class QGraphicsPixmapItem;
 class QResizeEvent;
 class QWheelEvent;
 
+namespace qvp
+{
+
 /**
  * @brief Graphics-view based widget for displaying and manipulating images.
  *
@@ -112,3 +115,5 @@ private:
   QGraphicsPixmapItem *pixmapItem_ = nullptr;
   bool fitMode_ = true;
 };
+
+} // namespace qvp

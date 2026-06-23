@@ -45,6 +45,9 @@ namespace
   }
 }
 
+namespace qvp
+{
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -516,3 +519,5 @@ void MainWindow::showAboutDialog()
       "- Save processed image\n\n"
       "Version: 0.1");
 }
+
+} // namespace qvp

@@ -5,6 +5,9 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+namespace qvp
+{
+
 QImage ImageLoader::load(const QString& fileName) const
 {
   cv::Mat bgrImage = cv::imread(fileName.toStdString(), cv::IMREAD_COLOR);
@@ -24,3 +27,5 @@ QImage ImageLoader::load(const QString& fileName) const
 
   return image.copy();
 }
+
+} // namespace qvp
