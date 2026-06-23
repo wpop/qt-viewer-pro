@@ -12,15 +12,15 @@ qt_standard_project_setup()
 
 qt_add_executable(qt-viewer-pro
     src/main.cpp
-    src/MainWindow.cpp
-    src/ImageViewer.cpp
-    src/ImageLoader.cpp
-    src/ImageProcessor.cpp
+    src/ui/MainWindow.cpp
+    src/ui/ImageViewer.cpp
+    src/io/ImageLoader.cpp
+    src/processing/ImageProcessor.cpp
 
-    include/MainWindow.h
-    include/ImageViewer.h
-    include/ImageLoader.h
-    include/ImageProcessor.h
+    include/qtviewerpro/ui/MainWindow.h
+    include/qtviewerpro/ui/ImageViewer.h
+    include/qtviewerpro/io/ImageLoader.h
+    include/qtviewerpro/processing/ImageProcessor.h
 )
 
 target_include_directories(qt-viewer-pro

@@ -1,7 +1,7 @@
-#include "MainWindow.h"
-#include "ImageViewer.h"
-#include "ImageLoader.h"
-#include "ImageProcessor.h"
+#include "qtviewerpro/ui/MainWindow.h"
+#include "qtviewerpro/ui/ImageViewer.h"
+#include "qtviewerpro/io/ImageLoader.h"
+#include "qtviewerpro/processing/ImageProcessor.h"
 
 #include <QImage>
 #include <QMessageBox>
