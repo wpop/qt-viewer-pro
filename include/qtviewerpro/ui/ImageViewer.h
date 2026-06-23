@@ -12,27 +12,85 @@ class QGraphicsPixmapItem;
 class QResizeEvent;
 class QWheelEvent;
 
+/**
+ * @brief Graphics-view based widget for displaying and manipulating images.
+ *
+ * ImageViewer is responsible for presentation-level image operations such as
+ * zooming, fitting, rotating, flipping, and accepting dropped image files.
+ */
 class ImageViewer : public QGraphicsView
 {
   Q_OBJECT
 
 public:
+  /**
+   * @brief Constructs an image viewer widget.
+   * @param parent Optional Qt parent widget.
+   */
   explicit ImageViewer(QWidget *parent = nullptr);
 
+  /**
+   * @brief Replaces the displayed image and fits it to the current view.
+   * @param image Image to display. A null image clears the current pixmap.
+   */
   void setImage(const QImage& image);
+
+  /**
+   * @brief Returns the currently displayed image.
+   * @return Current image, or a null image when nothing is displayed.
+   */
   QImage image() const;
 
+  /**
+   * @brief Scales the displayed image to fit within the viewport.
+   */
   void fitToWindow();
+
+  /**
+   * @brief Resets the view transform so the image is shown at native scale.
+   */
   void actualSize();
+
+  /**
+   * @brief Increases the current zoom level.
+   */
   void zoomIn();
+
+  /**
+   * @brief Decreases the current zoom level.
+   */
   void zoomOut();
 
+  /**
+   * @brief Rotates the displayed image 90 degrees counterclockwise.
+   */
   void rotateLeft();
+
+  /**
+   * @brief Rotates the displayed image 90 degrees clockwise.
+   */
   void rotateRight();
+
+  /**
+   * @brief Mirrors the displayed image horizontally.
+   */
   void flipHorizontal();
+
+  /**
+   * @brief Mirrors the displayed image vertically.
+   */
   void flipVertical();
 
+  /**
+   * @brief Returns the pixel dimensions of the displayed image.
+   * @return Current image size, or an empty size when no image is displayed.
+   */
   QSize imageSize() const;
+
+  /**
+   * @brief Returns the current view zoom factor.
+   * @return Horizontal scale factor from the active view transform.
+   */
   double zoomFactor() const;
 
 protected:
@@ -44,6 +102,10 @@ protected:
   void dropEvent(QDropEvent *event) override;
 
 signals:
+  /**
+   * @brief Emitted when a local image file is dropped onto the viewer.
+   * @param fileName Local file path from the drop event.
+   */
   void imageDropped(const QString& fileName);
 
 private:

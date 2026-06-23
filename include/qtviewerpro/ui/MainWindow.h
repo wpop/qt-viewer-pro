@@ -9,12 +9,27 @@ class ImageViewer;
 class QCloseEvent;
 class QAction;
 
+/**
+ * @brief Main application window for Qt Viewer Pro.
+ *
+ * MainWindow owns the top-level UI composition, menus, toolbar actions,
+ * recent-file state, and coordination between image loading, viewing, and
+ * processing components.
+ */
 class MainWindow : public QMainWindow
 {
   Q_OBJECT
 
 public:
+  /**
+   * @brief Constructs the main window and initializes its child widgets.
+   * @param parent Optional Qt parent widget.
+   */
   explicit MainWindow(QWidget *parent = nullptr);
+
+  /**
+   * @brief Destroys the main window.
+   */
   ~MainWindow() override = default;
 
 protected:
