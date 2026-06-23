@@ -1,4 +1,4 @@
-#include "ImageLoader.h"
+#include "qtviewerpro/io/ImageLoader.h"
 
 #include <QImage>
 

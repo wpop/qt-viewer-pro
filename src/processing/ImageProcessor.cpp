@@ -1,4 +1,4 @@
-#include "ImageProcessor.h"
+#include "qtviewerpro/processing/ImageProcessor.h"
 
 #include <QImage>
 

@@ -1,4 +1,4 @@
-#include "ImageViewer.h"
+#include "qtviewerpro/ui/ImageViewer.h"
 
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
