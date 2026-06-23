@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
   QApplication::setOrganizationName("wpop");
   QApplication::setApplicationName("Qt Viewer");
 
-  MainWindow window;
+  qvp::MainWindow window;
   window.show();
 
   return app.exec();

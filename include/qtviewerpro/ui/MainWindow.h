@@ -5,9 +5,13 @@
 #include <QImage>
 
 class QMenu;
-class ImageViewer;
 class QCloseEvent;
 class QAction;
+
+namespace qvp
+{
+
+class ImageViewer;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -98,3 +102,5 @@ private:
   QAction *resetImageAction_ = nullptr;
   QAction *aboutAction_ = nullptr;
 };
+
+} // namespace qvp

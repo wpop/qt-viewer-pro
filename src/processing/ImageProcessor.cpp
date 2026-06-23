@@ -4,6 +4,9 @@
 
 #include <opencv2/imgproc.hpp>
 
+namespace qvp
+{
+
 QImage ImageProcessor::toGrayscale(const QImage& image) const
 {
   if (image.isNull())
@@ -30,3 +33,5 @@ QImage ImageProcessor::toGrayscale(const QImage& image) const
 
   return grayImage.copy();
 }
+
+} // namespace qvp

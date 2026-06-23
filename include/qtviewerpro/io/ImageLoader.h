@@ -4,6 +4,9 @@
 
 class QImage;
 
+namespace qvp
+{
+
 /**
  * @brief Loads image files into Qt image objects.
  *
@@ -20,3 +23,5 @@ public:
    */
   QImage load(const QString& fileName) const;
 };
+
+} // namespace qvp
