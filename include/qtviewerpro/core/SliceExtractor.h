@@ -27,8 +27,7 @@ public:
    * @return Row-major float buffer containing the extracted slice.
    * @throws std::out_of_range If sliceIndex is outside the volume bounds.
    */
-  static std::vector<float> extract(const VolumeData& volume,
-                                    SliceOrientation orientation,
+  static std::vector<float> extract(const VolumeData& volume, SliceOrientation orientation,
                                     std::size_t sliceIndex);
 };
 

@@ -18,12 +18,8 @@ QImage ImageLoader::load(const QString& fileName) const
   cv::Mat rgbImage;
   cv::cvtColor(bgrImage, rgbImage, cv::COLOR_BGR2RGB);
 
-  QImage image(
-      rgbImage.data,
-      rgbImage.cols,
-      rgbImage.rows,
-      static_cast<int>(rgbImage.step),
-      QImage::Format_RGB888);
+  QImage image(rgbImage.data, rgbImage.cols, rgbImage.rows, static_cast<int>(rgbImage.step),
+               QImage::Format_RGB888);
 
   return image.copy();
 }

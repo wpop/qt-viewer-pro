@@ -1,8 +1,8 @@
 #pragma once
 
+#include <QImage>
 #include <QMainWindow>
 #include <QStringList>
-#include <QImage>
 
 class QMenu;
 class QCloseEvent;
@@ -29,7 +29,7 @@ public:
    * @brief Constructs the main window and initializes its child widgets.
    * @param parent Optional Qt parent widget.
    */
-  explicit MainWindow(QWidget *parent = nullptr);
+  explicit MainWindow(QWidget* parent = nullptr);
 
   /**
    * @brief Destroys the main window.
@@ -37,7 +37,7 @@ public:
   ~MainWindow() override = default;
 
 protected:
-  void closeEvent(QCloseEvent *event) override;
+  void closeEvent(QCloseEvent* event) override;
 
 private slots:
   void openImage();
@@ -70,8 +70,8 @@ private:
   void updateActions();
   void createToolBar();
 
-  QAction *rotateLeftAction_ = nullptr;
-  QAction *rotateRightAction_ = nullptr;
+  QAction* rotateLeftAction_ = nullptr;
+  QAction* rotateRightAction_ = nullptr;
 
   // Recent files
   void addRecentFile(const QString& fileName);
@@ -82,25 +82,25 @@ private:
   void saveSettings();
 
 private:
-  ImageViewer2D *viewer_ = nullptr;
+  ImageViewer2D* viewer_ = nullptr;
   QImage originalImage_;
-  QMenu *recentMenu_ = nullptr;
-  QStringList recentFiles_ {};
+  QMenu* recentMenu_ = nullptr;
+  QStringList recentFiles_{};
 
   // QAction section
-  QAction *openAction_ = nullptr;
-  QAction *saveAsAction_ = nullptr;
-  QAction *zoomInAction_ = nullptr;
-  QAction *zoomOutAction_ = nullptr;
-  QAction *fitAction_ = nullptr;
-  QAction *actualSizeAction_ = nullptr;
+  QAction* openAction_ = nullptr;
+  QAction* saveAsAction_ = nullptr;
+  QAction* zoomInAction_ = nullptr;
+  QAction* zoomOutAction_ = nullptr;
+  QAction* fitAction_ = nullptr;
+  QAction* actualSizeAction_ = nullptr;
 
-  QAction *flipHorizontalAction_ = nullptr;
-  QAction *flipVerticalAction_ = nullptr;
+  QAction* flipHorizontalAction_ = nullptr;
+  QAction* flipVerticalAction_ = nullptr;
 
-  QAction *grayscaleAction_ = nullptr;
-  QAction *resetImageAction_ = nullptr;
-  QAction *aboutAction_ = nullptr;
+  QAction* grayscaleAction_ = nullptr;
+  QAction* resetImageAction_ = nullptr;
+  QAction* aboutAction_ = nullptr;
 };
 
 } // namespace qvp

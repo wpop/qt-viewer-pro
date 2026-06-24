@@ -14,22 +14,14 @@ QImage ImageProcessor::toGrayscale(const QImage& image) const
 
   const QImage rgbImage = image.convertToFormat(QImage::Format_RGB888);
 
-  cv::Mat rgbMat(
-      rgbImage.height(),
-      rgbImage.width(),
-      CV_8UC3,
-      const_cast<uchar*>(rgbImage.bits()),
-      static_cast<size_t>(rgbImage.bytesPerLine()));
+  cv::Mat rgbMat(rgbImage.height(), rgbImage.width(), CV_8UC3, const_cast<uchar*>(rgbImage.bits()),
+                 static_cast<size_t>(rgbImage.bytesPerLine()));
 
   cv::Mat grayMat;
   cv::cvtColor(rgbMat, grayMat, cv::COLOR_RGB2GRAY);
 
-  QImage grayImage(
-      grayMat.data,
-      grayMat.cols,
-      grayMat.rows,
-      static_cast<int>(grayMat.step),
-      QImage::Format_Grayscale8);
+  QImage grayImage(grayMat.data, grayMat.cols, grayMat.rows, static_cast<int>(grayMat.step),
+                   QImage::Format_Grayscale8);
 
   return grayImage.copy();
 }

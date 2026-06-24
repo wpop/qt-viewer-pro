@@ -7,11 +7,11 @@
 #include <QGraphicsScene>
 #include <QMimeData>
 #include <QPainter>
+#include <QPixmap>
+#include <QTransform>
 #include <QUrl>
 #include <QWheelEvent>
 #include <QWidget>
-#include <QPixmap>
-#include <QTransform>
 
 namespace
 {
@@ -21,12 +21,11 @@ constexpr double kZoomFactor = 1.25;
 namespace qvp
 {
 
-ImageViewer2D::ImageViewer2D(QWidget *parent)
-    : QGraphicsView(parent)
+ImageViewer2D::ImageViewer2D(QWidget* parent) : QGraphicsView(parent)
 {
   setRenderHint(QPainter::Antialiasing);
   setDragMode(QGraphicsView::ScrollHandDrag);
-  auto *graphicsScene = new QGraphicsScene(this);
+  auto* graphicsScene = new QGraphicsScene(this);
   setScene(graphicsScene);
   pixmapItem_ = graphicsScene->addPixmap(QPixmap());
   setResizeAnchor(QGraphicsView::AnchorViewCenter);
@@ -45,7 +44,7 @@ void ImageViewer2D::setImage(const QImage& image)
   fitToWindow();
 }
 
-void ImageViewer2D::resizeEvent(QResizeEvent *event)
+void ImageViewer2D::resizeEvent(QResizeEvent* event)
 {
   QGraphicsView::resizeEvent(event);
 
@@ -53,7 +52,7 @@ void ImageViewer2D::resizeEvent(QResizeEvent *event)
     fitToWindow();
 }
 
-void ImageViewer2D::wheelEvent(QWheelEvent *event)
+void ImageViewer2D::wheelEvent(QWheelEvent* event)
 {
   if (event->angleDelta().y() > 0)
   {
@@ -104,19 +103,19 @@ void ImageViewer2D::zoomOut()
   scale(1.0 / kZoomFactor, 1.0 / kZoomFactor);
 }
 
-void ImageViewer2D::dragEnterEvent(QDragEnterEvent *event)
+void ImageViewer2D::dragEnterEvent(QDragEnterEvent* event)
 {
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-void ImageViewer2D::dragMoveEvent(QDragMoveEvent *event)
+void ImageViewer2D::dragMoveEvent(QDragMoveEvent* event)
 {
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-void ImageViewer2D::dropEvent(QDropEvent *event)
+void ImageViewer2D::dropEvent(QDropEvent* event)
 {
   const QList<QUrl> urls = event->mimeData()->urls();
 

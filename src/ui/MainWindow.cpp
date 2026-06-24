@@ -1,18 +1,18 @@
 #include "qtviewerpro/ui/MainWindow.h"
-#include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
+#include "qtviewerpro/ui/ImageViewer2D.h"
 
-#include <QImage>
-#include <QMessageBox>
-#include <QMenuBar>
-#include <QMenu>
 #include <QAction>
-#include <QFileDialog>
-#include <QStatusBar>
-#include <QKeySequence>
-#include <QSettings>
 #include <QCloseEvent>
+#include <QFileDialog>
+#include <QImage>
+#include <QKeySequence>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QSettings>
+#include <QStatusBar>
 #include <QToolBar>
 
 #include <QSize>
@@ -24,32 +24,31 @@
 
 namespace
 {
-  constexpr int kMaxRecentFiles = 5;
+constexpr int kMaxRecentFiles = 5;
 
-  QIcon createTextIcon(const QString& text)
-  {
-    QPixmap pixmap(24, 24);
-    pixmap.fill(Qt::transparent);
+QIcon createTextIcon(const QString& text)
+{
+  QPixmap pixmap(24, 24);
+  pixmap.fill(Qt::transparent);
 
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
+  QPainter painter(&pixmap);
+  painter.setRenderHint(QPainter::Antialiasing);
 
-    QFont font = painter.font();
-    font.setBold(true);
-    font.setPointSize(16);
-    painter.setFont(font);
+  QFont font = painter.font();
+  font.setBold(true);
+  font.setPointSize(16);
+  painter.setFont(font);
 
-    painter.drawText(pixmap.rect(), Qt::AlignCenter, text);
+  painter.drawText(pixmap.rect(), Qt::AlignCenter, text);
 
-    return QIcon(pixmap);
-  }
+  return QIcon(pixmap);
 }
+} // namespace
 
 namespace qvp
 {
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
   setWindowTitle("Qt Viewer");
   resize(1000, 700);
@@ -67,18 +66,14 @@ void MainWindow::saveImageAs()
 {
   const QImage image = viewer_->image();
 
-  if (image.isNull()) {
-    QMessageBox::information(this,
-                             "No Image",
-                             "There is no image to save.");
+  if (image.isNull())
+  {
+    QMessageBox::information(this, "No Image", "There is no image to save.");
     return;
   }
 
-  QString fileName = QFileDialog::getSaveFileName(
-      this,
-      "Save Image As",
-      "processed_image.png",
-      "Images (*.png *.jpg *.jpeg *.bmp)");
+  QString fileName = QFileDialog::getSaveFileName(this, "Save Image As", "processed_image.png",
+                                                  "Images (*.png *.jpg *.jpeg *.bmp)");
 
   if (fileName.isEmpty())
     return;
@@ -86,25 +81,21 @@ void MainWindow::saveImageAs()
   if (!fileName.endsWith(".png", Qt::CaseInsensitive) &&
       !fileName.endsWith(".jpg", Qt::CaseInsensitive) &&
       !fileName.endsWith(".jpeg", Qt::CaseInsensitive) &&
-      !fileName.endsWith(".bmp", Qt::CaseInsensitive)) {
+      !fileName.endsWith(".bmp", Qt::CaseInsensitive))
+  {
     fileName += ".png";
   }
 
-  if (!image.save(fileName)) {
-    QMessageBox::warning(this,
-                         "Save Failed",
-                         "Could not save the image.");
+  if (!image.save(fileName))
+  {
+    QMessageBox::warning(this, "Save Failed", "Could not save the image.");
   }
 }
 
 void MainWindow::openImage()
 {
-  const QString fileName = QFileDialog::getOpenFileName(
-      this,
-      "Open Image",
-      QString(),
-      "Images (*.png *.jpg *.jpeg *.bmp)"
-      );
+  const QString fileName = QFileDialog::getOpenFileName(this, "Open Image", QString(),
+                                                        "Images (*.png *.jpg *.jpeg *.bmp)");
 
   if (fileName.isEmpty())
     return;
@@ -120,11 +111,7 @@ void MainWindow::openImage(const QString& fileName)
 
   if (image.isNull())
   {
-    QMessageBox::warning(
-        this,
-        "Error",
-        "Failed to load image."
-        );
+    QMessageBox::warning(this, "Error", "Failed to load image.");
     return;
   }
 
@@ -154,11 +141,8 @@ void MainWindow::createViewer()
   setCentralWidget(viewer_);
 
   // Explicitly select openImage(const QString&) because openImage() is overloaded.
-  connect(viewer_,
-          &ImageViewer2D::imageDropped,
-          this,
-          static_cast<void (MainWindow::*)(const QString&)>(
-              &MainWindow::openImage));
+  connect(viewer_, &ImageViewer2D::imageDropped, this,
+          static_cast<void (MainWindow::*)(const QString&)>(&MainWindow::openImage));
 }
 
 void MainWindow::createMenus()
@@ -171,7 +155,7 @@ void MainWindow::createMenus()
 
 void MainWindow::createFileMenu()
 {
-  QMenu *fileMenu = menuBar()->addMenu("&File");
+  QMenu* fileMenu = menuBar()->addMenu("&File");
 
   openAction_ = fileMenu->addAction("&Open Image...");
   openAction_->setShortcut(QKeySequence::Open);
@@ -180,109 +164,87 @@ void MainWindow::createFileMenu()
   saveAsAction_ = fileMenu->addAction("Save Image &As...");
   saveAsAction_->setShortcut(QKeySequence::SaveAs);
   saveAsAction_->setStatusTip("Save the current image as a file");
-  connect(saveAsAction_,
-          &QAction::triggered,
-          this,
-          &MainWindow::saveImageAs);
+  connect(saveAsAction_, &QAction::triggered, this, &MainWindow::saveImageAs);
 
   recentMenu_ = fileMenu->addMenu("Open &Recent");
   fileMenu->addSeparator();
 
   // Explicitly select openImage() because it is overloaded.
-  connect(openAction_,
-          &QAction::triggered,
-          this,
+  connect(openAction_, &QAction::triggered, this,
           static_cast<void (MainWindow::*)()>(&MainWindow::openImage));
 }
 
 void MainWindow::createViewMenu()
 {
-  QMenu *viewMenu = menuBar()->addMenu("&View");
+  QMenu* viewMenu = menuBar()->addMenu("&View");
 
   zoomInAction_ = viewMenu->addAction("Zoom &In");
   zoomInAction_->setShortcut(QKeySequence::ZoomIn);
   zoomInAction_->setStatusTip("Zoom in");
-  connect(zoomInAction_, &QAction::triggered,
-          this, &MainWindow::zoomIn);
+  connect(zoomInAction_, &QAction::triggered, this, &MainWindow::zoomIn);
 
   zoomOutAction_ = viewMenu->addAction("Zoom &Out");
   zoomOutAction_->setShortcut(QKeySequence::ZoomOut);
   zoomOutAction_->setStatusTip("Zoom out");
-  connect(zoomOutAction_, &QAction::triggered,
-          this, &MainWindow::zoomOut);
+  connect(zoomOutAction_, &QAction::triggered, this, &MainWindow::zoomOut);
 
   viewMenu->addSeparator();
 
   fitAction_ = viewMenu->addAction("Fit to &Window");
   fitAction_->setShortcut(QKeySequence("Ctrl+F"));
   fitAction_->setStatusTip("Fit image to window");
-  connect(fitAction_, &QAction::triggered,
-          this, &MainWindow::fitToWindow);
+  connect(fitAction_, &QAction::triggered, this, &MainWindow::fitToWindow);
 
   actualSizeAction_ = viewMenu->addAction("&Actual Size");
   actualSizeAction_->setShortcut(QKeySequence("Ctrl+0"));
   actualSizeAction_->setStatusTip("Show image at actual size");
-  connect(actualSizeAction_, &QAction::triggered,
-          this, &MainWindow::actualSize);
+  connect(actualSizeAction_, &QAction::triggered, this, &MainWindow::actualSize);
 }
 
 void MainWindow::createImageMenu()
 {
-  QMenu *imageMenu = menuBar()->addMenu("&Image");
+  QMenu* imageMenu = menuBar()->addMenu("&Image");
 
   rotateLeftAction_ = imageMenu->addAction("Rotate &Left");
   rotateLeftAction_->setShortcut(QKeySequence("Ctrl+L"));
   rotateLeftAction_->setStatusTip("Rotate image left");
-  connect(rotateLeftAction_, &QAction::triggered,
-          this, &MainWindow::rotateLeft);
+  connect(rotateLeftAction_, &QAction::triggered, this, &MainWindow::rotateLeft);
 
   rotateRightAction_ = imageMenu->addAction("Rotate &Right");
   rotateRightAction_->setShortcut(QKeySequence("Ctrl+R"));
   rotateRightAction_->setStatusTip("Rotate image right");
-  connect(rotateRightAction_, &QAction::triggered,
-          this, &MainWindow::rotateRight);
+  connect(rotateRightAction_, &QAction::triggered, this, &MainWindow::rotateRight);
 
   imageMenu->addSeparator();
 
   flipHorizontalAction_ = imageMenu->addAction("Flip &Horizontal");
   flipHorizontalAction_->setStatusTip("Flip image horizontally");
-  connect(flipHorizontalAction_, &QAction::triggered,
-          this, &MainWindow::flipHorizontal);
+  connect(flipHorizontalAction_, &QAction::triggered, this, &MainWindow::flipHorizontal);
 
   flipVerticalAction_ = imageMenu->addAction("Flip &Vertical");
   flipVerticalAction_->setStatusTip("Flip image vertically");
-  connect(flipVerticalAction_, &QAction::triggered,
-          this, &MainWindow::flipVertical);
+  connect(flipVerticalAction_, &QAction::triggered, this, &MainWindow::flipVertical);
 
   imageMenu->addSeparator();
 
   grayscaleAction_ = imageMenu->addAction("&Grayscale");
   grayscaleAction_->setStatusTip("Convert image to grayscale");
-  connect(grayscaleAction_,
-          &QAction::triggered,
-          this,
-          &MainWindow::convertToGrayscale);
+  connect(grayscaleAction_, &QAction::triggered, this, &MainWindow::convertToGrayscale);
 
   imageMenu->addSeparator();
 
   resetImageAction_ = imageMenu->addAction("&Reset Image");
   resetImageAction_->setStatusTip("Reset image to the original version");
-  connect(resetImageAction_,
-          &QAction::triggered,
-          this,
-          &MainWindow::resetImage);
+  connect(resetImageAction_, &QAction::triggered, this, &MainWindow::resetImage);
 }
 
 void MainWindow::createHelpMenu()
 {
-  QMenu *helpMenu = menuBar()->addMenu("&Help");
+  QMenu* helpMenu = menuBar()->addMenu("&Help");
 
   aboutAction_ = helpMenu->addAction("&About Qt Viewer");
   aboutAction_->setStatusTip("Show information about Qt Viewer");
-  connect(aboutAction_,
-          &QAction::triggered,
-          this,
-          &MainWindow::showAboutDialog);
+  connect(aboutAction_, &QAction::triggered, this, &MainWindow::showAboutDialog);
 }
 
 void MainWindow::createStatusBar()
@@ -293,14 +255,12 @@ void MainWindow::createStatusBar()
 void MainWindow::updateStatusBar()
 {
   const QSize imageSize = viewer_->imageSize();
-  const int zoomPercent =
-      static_cast<int>(viewer_->zoomFactor() * 100.0);
+  const int zoomPercent = static_cast<int>(viewer_->zoomFactor() * 100.0);
 
-  statusBar()->showMessage(
-      QString("Image: %1 × %2    Zoom: %3%")
-          .arg(imageSize.width())
-          .arg(imageSize.height())
-          .arg(zoomPercent));
+  statusBar()->showMessage(QString("Image: %1 × %2    Zoom: %3%")
+                               .arg(imageSize.width())
+                               .arg(imageSize.height())
+                               .arg(zoomPercent));
 }
 
 void MainWindow::updateActions()
@@ -350,22 +310,19 @@ void MainWindow::updateRecentFilesMenu()
 
   for (const QString& fileName : recentFiles_)
   {
-    QAction *action = recentMenu_->addAction(fileName);
+    QAction* action = recentMenu_->addAction(fileName);
     action->setData(fileName);
 
-    connect(action, &QAction::triggered,
-            this, &MainWindow::openRecentFile);
+    connect(action, &QAction::triggered, this, &MainWindow::openRecentFile);
   }
 
   if (!recentFiles_.isEmpty())
   {
     recentMenu_->addSeparator();
 
-    QAction *clearAction =
-        recentMenu_->addAction("Clear Recent Files");
+    QAction* clearAction = recentMenu_->addAction("Clear Recent Files");
 
-    connect(clearAction, &QAction::triggered,
-            this, &MainWindow::clearRecentFiles);
+    connect(clearAction, &QAction::triggered, this, &MainWindow::clearRecentFiles);
   }
 
   recentMenu_->setEnabled(!recentFiles_.isEmpty());
@@ -373,7 +330,7 @@ void MainWindow::updateRecentFilesMenu()
 
 void MainWindow::openRecentFile()
 {
-  QAction *action = qobject_cast<QAction*>(sender());
+  QAction* action = qobject_cast<QAction*>(sender());
   if (!action)
     return;
   const QString fileName = action->data().toString();
@@ -393,7 +350,7 @@ void MainWindow::saveSettings()
   settings.setValue("recentFiles", recentFiles_);
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
+void MainWindow::closeEvent(QCloseEvent* event)
 {
   saveSettings();
   QMainWindow::closeEvent(event);
@@ -408,7 +365,7 @@ void MainWindow::clearRecentFiles()
 
 void MainWindow::createToolBar()
 {
-  QToolBar *toolBar = addToolBar("Main Toolbar");
+  QToolBar* toolBar = addToolBar("Main Toolbar");
   toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
   toolBar->setIconSize(QSize(24, 24));
 
@@ -505,8 +462,7 @@ void MainWindow::resetImage()
 void MainWindow::showAboutDialog()
 {
   QMessageBox::about(
-      this,
-      "About Qt Viewer",
+      this, "About Qt Viewer",
       "Qt Viewer\n\n"
       "A lightweight desktop image viewer built with C++, Qt Widgets, and OpenCV.\n\n"
       "Features:\n"
