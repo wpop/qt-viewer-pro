@@ -1,6 +1,10 @@
 #include "qtviewerpro/ui/MainWindow.h"
+#include "qtviewerpro/core/SliceExtractor.h"
+#include "qtviewerpro/core/SliceOrientation.h"
+#include "qtviewerpro/core/VolumeData.h"
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
+#include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
 #include <QAction>
@@ -21,6 +25,10 @@
 #include <QIcon>
 #include <QPainter>
 #include <QPixmap>
+
+#include <cmath>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -150,6 +158,7 @@ void MainWindow::createMenus()
   createFileMenu();
   createViewMenu();
   createImageMenu();
+  createDemoMenu();
   createHelpMenu();
 }
 
@@ -236,6 +245,16 @@ void MainWindow::createImageMenu()
   resetImageAction_ = imageMenu->addAction("&Reset Image");
   resetImageAction_->setStatusTip("Reset image to the original version");
   connect(resetImageAction_, &QAction::triggered, this, &MainWindow::resetImage);
+}
+
+void MainWindow::createDemoMenu()
+{
+  QMenu* demoMenu = menuBar()->addMenu("&Demo");
+
+  openSyntheticVolumeSliceAction_ = demoMenu->addAction("Open Synthetic Volume Slice");
+  openSyntheticVolumeSliceAction_->setStatusTip("Display a synthetic axial volume slice");
+  connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
+          &MainWindow::openSyntheticVolumeSlice);
 }
 
 void MainWindow::createHelpMenu()
@@ -457,6 +476,57 @@ void MainWindow::resetImage()
   viewer_->setImage(originalImage_);
   updateStatusBar();
   updateActions();
+}
+
+VolumeData MainWindow::createSyntheticVolume() const
+{
+  constexpr std::size_t width = 128;
+  constexpr std::size_t height = 128;
+  constexpr std::size_t depth = 32;
+  constexpr float spacing = 1.0F;
+
+  std::vector<float> voxels;
+  voxels.reserve(width * height * depth);
+
+  const float centerX = static_cast<float>(width - 1) / 2.0F;
+  const float centerY = static_cast<float>(height - 1) / 2.0F;
+  const float maxRadius = std::sqrt((centerX * centerX) + (centerY * centerY));
+
+  for (std::size_t z = 0; z < depth; ++z)
+  {
+    const float zGradient = static_cast<float>(z) / static_cast<float>(depth - 1);
+
+    for (std::size_t y = 0; y < height; ++y)
+    {
+      const float dy = static_cast<float>(y) - centerY;
+
+      for (std::size_t x = 0; x < width; ++x)
+      {
+        const float dx = static_cast<float>(x) - centerX;
+        const float radius = std::sqrt((dx * dx) + (dy * dy)) / maxRadius;
+        const float circularValue = (1.0F - radius) * 180.0F;
+        voxels.push_back(circularValue + (zGradient * 75.0F));
+      }
+    }
+  }
+
+  return VolumeData(width, height, depth, spacing, spacing, spacing, std::move(voxels));
+}
+
+void MainWindow::openSyntheticVolumeSlice()
+{
+  const VolumeData volume = createSyntheticVolume();
+  const std::size_t sliceIndex = volume.depth() / 2;
+  const auto slice = SliceExtractor::extract(volume, SliceOrientation::Axial, sliceIndex);
+  const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.5F);
+
+  originalImage_ = image;
+  viewer_->setImage(image);
+  updateActions();
+  statusBar()->showMessage(QString("Synthetic axial slice: %1 × %2    Slice: %3")
+                               .arg(image.width())
+                               .arg(image.height())
+                               .arg(sliceIndex));
 }
 
 void MainWindow::showAboutDialog()
