@@ -22,6 +22,7 @@ qt_add_executable(qt-viewer-pro
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
     include/qtviewerpro/processing/ImageProcessor.h
+    include/qtviewerpro/core/SliceOrientation.h
     include/qtviewerpro/core/VolumeData.h
 )
 
