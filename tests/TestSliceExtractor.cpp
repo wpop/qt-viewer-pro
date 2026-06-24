@@ -22,7 +22,7 @@ namespace
 qvp::VolumeData makeVolume()
 {
   return qvp::VolumeData(
-      2, 3, 2, 1.0F, 1.0F, 1.0F,
+      2, 3, 2, 0.5F, 0.75F, 1.25F,
       {0.0F, 1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F});
 }
 
@@ -34,7 +34,13 @@ void TestSliceExtractor::extractsAxialSlice()
   const auto slice = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Axial, 1);
   const std::vector<float> expected{6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F};
 
-  QVERIFY(slice == expected);
+  QCOMPARE(slice.width(), std::size_t{2});
+  QCOMPARE(slice.height(), std::size_t{3});
+  QCOMPARE(slice.spacingX(), 0.5F);
+  QCOMPARE(slice.spacingY(), 0.75F);
+  QCOMPARE(slice.orientation(), qvp::SliceOrientation::Axial);
+  QCOMPARE(slice.sliceIndex(), std::size_t{1});
+  QVERIFY(slice.pixels() == expected);
 }
 
 void TestSliceExtractor::extractsCoronalSlice()
@@ -43,7 +49,13 @@ void TestSliceExtractor::extractsCoronalSlice()
   const auto slice = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Coronal, 1);
   const std::vector<float> expected{2.0F, 3.0F, 8.0F, 9.0F};
 
-  QVERIFY(slice == expected);
+  QCOMPARE(slice.width(), std::size_t{2});
+  QCOMPARE(slice.height(), std::size_t{2});
+  QCOMPARE(slice.spacingX(), 0.5F);
+  QCOMPARE(slice.spacingY(), 1.25F);
+  QCOMPARE(slice.orientation(), qvp::SliceOrientation::Coronal);
+  QCOMPARE(slice.sliceIndex(), std::size_t{1});
+  QVERIFY(slice.pixels() == expected);
 }
 
 void TestSliceExtractor::extractsSagittalSlice()
@@ -52,7 +64,13 @@ void TestSliceExtractor::extractsSagittalSlice()
   const auto slice = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Sagittal, 1);
   const std::vector<float> expected{1.0F, 3.0F, 5.0F, 7.0F, 9.0F, 11.0F};
 
-  QVERIFY(slice == expected);
+  QCOMPARE(slice.width(), std::size_t{3});
+  QCOMPARE(slice.height(), std::size_t{2});
+  QCOMPARE(slice.spacingX(), 0.75F);
+  QCOMPARE(slice.spacingY(), 1.25F);
+  QCOMPARE(slice.orientation(), qvp::SliceOrientation::Sagittal);
+  QCOMPARE(slice.sliceIndex(), std::size_t{1});
+  QVERIFY(slice.pixels() == expected);
 }
 
 void TestSliceExtractor::throwsForInvalidSliceIndex()
