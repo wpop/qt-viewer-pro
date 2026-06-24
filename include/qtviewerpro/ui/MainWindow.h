@@ -12,6 +12,7 @@ namespace qvp
 {
 
 class ImageViewer2D;
+class VolumeData;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -53,6 +54,7 @@ private slots:
   void flipVertical();
   void convertToGrayscale();
   void resetImage();
+  void openSyntheticVolumeSlice();
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -64,11 +66,13 @@ private:
   void createFileMenu();
   void createViewMenu();
   void createImageMenu();
+  void createDemoMenu();
   void createHelpMenu();
   void createStatusBar();
   void updateStatusBar();
   void updateActions();
   void createToolBar();
+  VolumeData createSyntheticVolume() const;
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
@@ -100,6 +104,7 @@ private:
 
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
+  QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
 };
 
