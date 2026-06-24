@@ -50,6 +50,15 @@ qt-viewer-pro/
 └── tests/
 ```
 
+## Project Architecture
+
+- `core` contains reusable data and slice logic, including `VolumeData`, `SliceOrientation`, and `SliceExtractor`. It is built as the separate `qt-viewer-pro-core` CMake library target.
+- `io` handles image loading.
+- `processing` contains image processing utilities.
+- `ui` contains the desktop interface, including `MainWindow` and `ImageViewer2D`.
+
+Unit tests currently cover core data structures and slice extraction.
+
 ## Build
 
 ```bash
