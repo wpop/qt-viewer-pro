@@ -1,8 +1,12 @@
 #pragma once
 
+#include "qtviewerpro/core/VolumeData.h"
+
 #include <QImage>
 #include <QMainWindow>
 #include <QStringList>
+
+#include <cstddef>
 
 class QMenu;
 class QCloseEvent;
@@ -12,7 +16,6 @@ namespace qvp
 {
 
 class ImageViewer2D;
-class VolumeData;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -55,6 +58,8 @@ private slots:
   void convertToGrayscale();
   void resetImage();
   void openSyntheticVolumeSlice();
+  void previousSyntheticSlice();
+  void nextSyntheticSlice();
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -73,6 +78,8 @@ private:
   void updateActions();
   void createToolBar();
   VolumeData createSyntheticVolume() const;
+  void displaySyntheticSlice();
+  void updateSyntheticSliceActions();
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
@@ -88,6 +95,9 @@ private:
 private:
   ImageViewer2D* viewer_ = nullptr;
   QImage originalImage_;
+  VolumeData syntheticVolume_;
+  std::size_t syntheticSliceIndex_ = 0;
+  bool syntheticDemoActive_ = false;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
 
@@ -105,6 +115,8 @@ private:
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
+  QAction* previousSyntheticSliceAction_ = nullptr;
+  QAction* nextSyntheticSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
 };
 
