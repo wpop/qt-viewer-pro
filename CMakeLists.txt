@@ -13,6 +13,28 @@ find_package(OpenCV REQUIRED)
 qt_standard_project_setup()
 enable_testing()
 
+# Core library
+set(QTVIEWERPRO_CORE_SOURCES
+    src/core/SliceExtractor.cpp
+    src/core/VolumeData.cpp
+)
+
+set(QTVIEWERPRO_CORE_HEADERS
+    include/qtviewerpro/core/SliceExtractor.h
+    include/qtviewerpro/core/SliceOrientation.h
+    include/qtviewerpro/core/VolumeData.h
+)
+
+add_library(qt-viewer-pro-core
+    ${QTVIEWERPRO_CORE_SOURCES}
+    ${QTVIEWERPRO_CORE_HEADERS}
+)
+
+target_include_directories(qt-viewer-pro-core
+    PUBLIC
+        include
+)
+
 # Application target
 set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
@@ -20,8 +42,6 @@ set(QTVIEWERPRO_APP_SOURCES
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
     src/processing/ImageProcessor.cpp
-    src/core/SliceExtractor.cpp
-    src/core/VolumeData.cpp
 )
 
 set(QTVIEWERPRO_APP_HEADERS
@@ -29,9 +49,6 @@ set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
     include/qtviewerpro/processing/ImageProcessor.h
-    include/qtviewerpro/core/SliceExtractor.h
-    include/qtviewerpro/core/SliceOrientation.h
-    include/qtviewerpro/core/VolumeData.h
 )
 
 qt_add_executable(qt-viewer-pro
@@ -47,6 +64,7 @@ target_include_directories(qt-viewer-pro
 
 target_link_libraries(qt-viewer-pro
     PRIVATE
+        qt-viewer-pro-core
         Qt6::Widgets
         ${OpenCV_LIBS}
 )
@@ -54,16 +72,11 @@ target_link_libraries(qt-viewer-pro
 # Tests
 qt_add_executable(test-volume-data
     tests/TestVolumeData.cpp
-    src/core/VolumeData.cpp
-)
-
-target_include_directories(test-volume-data
-    PRIVATE
-        include
 )
 
 target_link_libraries(test-volume-data
     PRIVATE
+        qt-viewer-pro-core
         Qt6::Test
 )
 
@@ -71,17 +84,11 @@ add_test(NAME test-volume-data COMMAND test-volume-data)
 
 qt_add_executable(test-slice-extractor
     tests/TestSliceExtractor.cpp
-    src/core/SliceExtractor.cpp
-    src/core/VolumeData.cpp
-)
-
-target_include_directories(test-slice-extractor
-    PRIVATE
-        include
 )
 
 target_link_libraries(test-slice-extractor
     PRIVATE
+        qt-viewer-pro-core
         Qt6::Test
 )
 
