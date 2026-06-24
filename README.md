@@ -1,5 +1,7 @@
 # Qt Viewer Pro
 
+[![CI](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml)
+
 Qt Viewer Pro is a lightweight C++20 image viewer built with Qt Widgets, CMake, and OpenCV.
 
 This project is a professional extension of the original Qt Viewer project. The current version focuses on a clean desktop image viewer architecture. Future versions will add OpenGL rendering, medical volume visualization, overlays, and optional medical imaging preprocessing support.
