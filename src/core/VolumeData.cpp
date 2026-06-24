@@ -5,20 +5,10 @@
 namespace qvp
 {
 
-VolumeData::VolumeData(std::size_t width,
-                       std::size_t height,
-                       std::size_t depth,
-                       float spacingX,
-                       float spacingY,
-                       float spacingZ,
-                       std::vector<float> voxels)
-    : width_(width),
-      height_(height),
-      depth_(depth),
-      spacingX_(spacingX),
-      spacingY_(spacingY),
-      spacingZ_(spacingZ),
-      voxels_(std::move(voxels))
+VolumeData::VolumeData(std::size_t width, std::size_t height, std::size_t depth, float spacingX,
+                       float spacingY, float spacingZ, std::vector<float> voxels)
+    : width_(width), height_(height), depth_(depth), spacingX_(spacingX), spacingY_(spacingY),
+      spacingZ_(spacingZ), voxels_(std::move(voxels))
 {
 }
 

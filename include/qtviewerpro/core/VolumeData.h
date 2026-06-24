@@ -30,13 +30,8 @@ public:
    * @param spacingZ Physical spacing between voxels along the Z axis.
    * @param voxels Linear voxel values stored as floats.
    */
-  VolumeData(std::size_t width,
-             std::size_t height,
-             std::size_t depth,
-             float spacingX,
-             float spacingY,
-             float spacingZ,
-             std::vector<float> voxels);
+  VolumeData(std::size_t width, std::size_t height, std::size_t depth, float spacingX,
+             float spacingY, float spacingZ, std::vector<float> voxels);
 
   /**
    * @brief Returns the number of voxels along the X axis.

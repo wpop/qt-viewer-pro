@@ -8,18 +8,14 @@ namespace qvp
 namespace
 {
 
-std::size_t voxelIndex(const VolumeData& volume,
-                       std::size_t x,
-                       std::size_t y,
-                       std::size_t z)
+std::size_t voxelIndex(const VolumeData& volume, std::size_t x, std::size_t y, std::size_t z)
 {
   return (z * volume.height() * volume.width()) + (y * volume.width()) + x;
 }
 
 } // namespace
 
-std::vector<float> SliceExtractor::extract(const VolumeData& volume,
-                                           SliceOrientation orientation,
+std::vector<float> SliceExtractor::extract(const VolumeData& volume, SliceOrientation orientation,
                                            std::size_t sliceIndex)
 {
   const auto& voxels = volume.voxels();

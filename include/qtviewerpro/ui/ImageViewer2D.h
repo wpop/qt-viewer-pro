@@ -30,7 +30,7 @@ public:
    * @brief Constructs an image viewer widget.
    * @param parent Optional Qt parent widget.
    */
-  explicit ImageViewer2D(QWidget *parent = nullptr);
+  explicit ImageViewer2D(QWidget* parent = nullptr);
 
   /**
    * @brief Replaces the displayed image and fits it to the current view.
@@ -97,12 +97,12 @@ public:
   double zoomFactor() const;
 
 protected:
-  void resizeEvent(QResizeEvent *event) override;
-  void wheelEvent(QWheelEvent *event) override;
+  void resizeEvent(QResizeEvent* event) override;
+  void wheelEvent(QWheelEvent* event) override;
 
-  void dragEnterEvent(QDragEnterEvent *event) override;
-  void dragMoveEvent(QDragMoveEvent *event) override;
-  void dropEvent(QDropEvent *event) override;
+  void dragEnterEvent(QDragEnterEvent* event) override;
+  void dragMoveEvent(QDragMoveEvent* event) override;
+  void dropEvent(QDropEvent* event) override;
 
 signals:
   /**
@@ -112,7 +112,7 @@ signals:
   void imageDropped(const QString& fileName);
 
 private:
-  QGraphicsPixmapItem *pixmapItem_ = nullptr;
+  QGraphicsPixmapItem* pixmapItem_ = nullptr;
   bool fitMode_ = true;
 };
 

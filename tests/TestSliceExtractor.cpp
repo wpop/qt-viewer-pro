@@ -22,7 +22,8 @@ namespace
 qvp::VolumeData makeVolume()
 {
   return qvp::VolumeData(
-      2, 3, 2, 1.0F, 1.0F, 1.0F, {0.0F, 1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F});
+      2, 3, 2, 1.0F, 1.0F, 1.0F,
+      {0.0F, 1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F});
 }
 
 } // namespace
@@ -58,9 +59,12 @@ void TestSliceExtractor::throwsForInvalidSliceIndex()
 {
   const auto volume = makeVolume();
 
-  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Axial, 2), std::out_of_range);
-  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Coronal, 3), std::out_of_range);
-  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Sagittal, 2), std::out_of_range);
+  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Axial, 2),
+                           std::out_of_range);
+  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Coronal, 3),
+                           std::out_of_range);
+  QVERIFY_EXCEPTION_THROWN(qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Sagittal, 2),
+                           std::out_of_range);
 }
 
 QTEST_MAIN(TestSliceExtractor)
