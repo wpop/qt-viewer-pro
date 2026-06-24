@@ -40,11 +40,13 @@ target_include_directories(qt-viewer-pro-core
 # Processing library
 set(QTVIEWERPRO_PROCESSING_SOURCES
     src/processing/ImageProcessor.cpp
+    src/processing/SliceImageConverter.cpp
     src/processing/WindowLevelProcessor.cpp
 )
 
 set(QTVIEWERPRO_PROCESSING_HEADERS
     include/qtviewerpro/processing/ImageProcessor.h
+    include/qtviewerpro/processing/SliceImageConverter.h
     include/qtviewerpro/processing/WindowLevelProcessor.h
 )
 
@@ -149,3 +151,16 @@ target_link_libraries(test-window-level-processor
 )
 
 add_test(NAME test-window-level-processor COMMAND test-window-level-processor)
+
+qt_add_executable(test-slice-image-converter
+    tests/TestSliceImageConverter.cpp
+)
+
+target_link_libraries(test-slice-image-converter
+    PRIVATE
+        qt-viewer-pro-processing
+        Qt6::Widgets
+        Qt6::Test
+)
+
+add_test(NAME test-slice-image-converter COMMAND test-slice-image-converter)
