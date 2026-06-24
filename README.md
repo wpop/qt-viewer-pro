@@ -84,6 +84,16 @@ Run unit tests with CTest:
 ctest --test-dir build --output-on-failure
 ```
 
+## Formatting
+
+This project uses `clang-format` for C++ source formatting.
+
+Format all C++ headers and source files:
+
+```bash
+find include src tests \( -name "*.h" -o -name "*.cpp" \) -print0 | xargs -0 clang-format -i
+```
+
 ## License
 
 MIT License
