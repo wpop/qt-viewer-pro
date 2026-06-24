@@ -58,6 +58,21 @@ cmake --build build
 ./build/qt-viewer-pro
 ```
 
+## Testing
+
+Configure and build the project first:
+
+```bash
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+Run unit tests with CTest:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
 ## License
 
 MIT License
