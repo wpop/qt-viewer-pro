@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Project setup
 project(QtViewerPro VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Dependencies
 find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
 find_package(OpenCV REQUIRED)
 
 qt_standard_project_setup()
 enable_testing()
 
-qt_add_executable(qt-viewer-pro
+# Application target
+set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
     src/ui/ImageViewer2D.cpp
@@ -19,7 +22,9 @@ qt_add_executable(qt-viewer-pro
     src/processing/ImageProcessor.cpp
     src/core/SliceExtractor.cpp
     src/core/VolumeData.cpp
+)
 
+set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MainWindow.h
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
@@ -27,6 +32,11 @@ qt_add_executable(qt-viewer-pro
     include/qtviewerpro/core/SliceExtractor.h
     include/qtviewerpro/core/SliceOrientation.h
     include/qtviewerpro/core/VolumeData.h
+)
+
+qt_add_executable(qt-viewer-pro
+    ${QTVIEWERPRO_APP_SOURCES}
+    ${QTVIEWERPRO_APP_HEADERS}
 )
 
 target_include_directories(qt-viewer-pro
@@ -41,6 +51,7 @@ target_link_libraries(qt-viewer-pro
         ${OpenCV_LIBS}
 )
 
+# Tests
 qt_add_executable(test-volume-data
     tests/TestVolumeData.cpp
     src/core/VolumeData.cpp
