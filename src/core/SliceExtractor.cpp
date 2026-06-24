@@ -1,6 +1,8 @@
 #include "qtviewerpro/core/SliceExtractor.h"
 
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 namespace qvp
 {
@@ -15,8 +17,9 @@ std::size_t voxelIndex(const VolumeData& volume, std::size_t x, std::size_t y, s
 
 } // namespace
 
-std::vector<float> SliceExtractor::extract(const VolumeData& volume, SliceOrientation orientation,
-                                           std::size_t sliceIndex)
+SliceData SliceExtractor::extract(const VolumeData& volume,
+                                  SliceOrientation orientation,
+                                  std::size_t sliceIndex)
 {
   const auto& voxels = volume.voxels();
 
@@ -40,7 +43,13 @@ std::vector<float> SliceExtractor::extract(const VolumeData& volume, SliceOrient
       }
     }
 
-    return slice;
+    return SliceData(volume.width(),
+                     volume.height(),
+                     volume.spacingX(),
+                     volume.spacingY(),
+                     orientation,
+                     sliceIndex,
+                     std::move(slice));
   }
   case SliceOrientation::Coronal:
   {
@@ -60,7 +69,13 @@ std::vector<float> SliceExtractor::extract(const VolumeData& volume, SliceOrient
       }
     }
 
-    return slice;
+    return SliceData(volume.width(),
+                     volume.depth(),
+                     volume.spacingX(),
+                     volume.spacingZ(),
+                     orientation,
+                     sliceIndex,
+                     std::move(slice));
   }
   case SliceOrientation::Sagittal:
   {
@@ -80,7 +95,13 @@ std::vector<float> SliceExtractor::extract(const VolumeData& volume, SliceOrient
       }
     }
 
-    return slice;
+    return SliceData(volume.height(),
+                     volume.depth(),
+                     volume.spacingY(),
+                     volume.spacingZ(),
+                     orientation,
+                     sliceIndex,
+                     std::move(slice));
   }
   }
 
