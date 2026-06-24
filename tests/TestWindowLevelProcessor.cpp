@@ -16,6 +16,7 @@ private slots:
   void mapsLevelValueToMidpoint();
   void clampsValueBelowLowerToZero();
   void clampsValueAboveUpperToMax();
+  void mapsSliceDataLikePixelBuffer();
   void throwsForNonPositiveWindow();
 };
 
@@ -54,6 +55,17 @@ void TestWindowLevelProcessor::clampsValueAboveUpperToMax()
   const auto output = qvp::WindowLevelProcessor::apply({110.0F}, 100.0F, 50.0F);
 
   QCOMPARE(output, std::vector<std::uint8_t>{255});
+}
+
+void TestWindowLevelProcessor::mapsSliceDataLikePixelBuffer()
+{
+  const std::vector<float> pixels{0.0F, 50.0F, 100.0F};
+  const qvp::SliceData slice(3, 1, 1.0F, 1.0F, qvp::SliceOrientation::Axial, 0, pixels);
+
+  const auto fromPixels = qvp::WindowLevelProcessor::apply(pixels, 100.0F, 50.0F);
+  const auto fromSlice = qvp::WindowLevelProcessor::apply(slice, 100.0F, 50.0F);
+
+  QCOMPARE(fromSlice, fromPixels);
 }
 
 void TestWindowLevelProcessor::throwsForNonPositiveWindow()

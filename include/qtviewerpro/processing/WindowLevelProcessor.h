@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qtviewerpro/core/SliceData.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -24,6 +26,16 @@ public:
    * @throws std::invalid_argument If window is not positive.
    */
   static std::vector<std::uint8_t> apply(const std::vector<float>& pixels, float window, float level);
+
+  /**
+   * @brief Applies window/level mapping to a slice pixel buffer.
+   * @param slice Source slice data.
+   * @param window Width of the intensity window. Must be positive.
+   * @param level Center of the intensity window.
+   * @return 8-bit grayscale values in the range 0 to 255.
+   * @throws std::invalid_argument If window is not positive.
+   */
+  static std::vector<std::uint8_t> apply(const SliceData& slice, float window, float level);
 };
 
 } // namespace qvp
