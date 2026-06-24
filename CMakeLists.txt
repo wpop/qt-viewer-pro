@@ -37,22 +37,47 @@ target_include_directories(qt-viewer-pro-core
         include
 )
 
+# Processing library
+set(QTVIEWERPRO_PROCESSING_SOURCES
+    src/processing/ImageProcessor.cpp
+    src/processing/WindowLevelProcessor.cpp
+)
+
+set(QTVIEWERPRO_PROCESSING_HEADERS
+    include/qtviewerpro/processing/ImageProcessor.h
+    include/qtviewerpro/processing/WindowLevelProcessor.h
+)
+
+add_library(qt-viewer-pro-processing
+    ${QTVIEWERPRO_PROCESSING_SOURCES}
+    ${QTVIEWERPRO_PROCESSING_HEADERS}
+)
+
+target_include_directories(qt-viewer-pro-processing
+    PUBLIC
+        include
+    PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+)
+
+target_link_libraries(qt-viewer-pro-processing
+    PRIVATE
+        Qt6::Widgets
+        ${OpenCV_LIBS}
+)
+
 # Application target
 set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
-    src/processing/ImageProcessor.cpp
-    src/processing/WindowLevelProcessor.cpp
 )
 
 set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MainWindow.h
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
-    include/qtviewerpro/processing/ImageProcessor.h
-    include/qtviewerpro/processing/WindowLevelProcessor.h
 )
 
 qt_add_executable(qt-viewer-pro
@@ -69,6 +94,7 @@ target_include_directories(qt-viewer-pro
 target_link_libraries(qt-viewer-pro
     PRIVATE
         qt-viewer-pro-core
+        qt-viewer-pro-processing
         Qt6::Widgets
         ${OpenCV_LIBS}
 )
@@ -112,16 +138,11 @@ add_test(NAME test-slice-extractor COMMAND test-slice-extractor)
 
 qt_add_executable(test-window-level-processor
     tests/TestWindowLevelProcessor.cpp
-    src/processing/WindowLevelProcessor.cpp
-)
-
-target_include_directories(test-window-level-processor
-    PRIVATE
-        include
 )
 
 target_link_libraries(test-window-level-processor
     PRIVATE
+        qt-viewer-pro-processing
         Qt6::Test
 )
 
