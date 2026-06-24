@@ -16,12 +16,14 @@ qt_add_executable(qt-viewer-pro
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
     src/processing/ImageProcessor.cpp
+    src/core/SliceExtractor.cpp
     src/core/VolumeData.cpp
 
     include/qtviewerpro/ui/MainWindow.h
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
     include/qtviewerpro/processing/ImageProcessor.h
+    include/qtviewerpro/core/SliceExtractor.h
     include/qtviewerpro/core/SliceOrientation.h
     include/qtviewerpro/core/VolumeData.h
 )
