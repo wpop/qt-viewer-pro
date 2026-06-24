@@ -61,6 +61,8 @@ target_include_directories(qt-viewer-pro-processing
 )
 
 target_link_libraries(qt-viewer-pro-processing
+    PUBLIC
+        qt-viewer-pro-core
     PRIVATE
         Qt6::Widgets
         ${OpenCV_LIBS}

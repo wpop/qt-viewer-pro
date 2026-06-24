@@ -41,4 +41,11 @@ std::vector<std::uint8_t> WindowLevelProcessor::apply(const std::vector<float>& 
   return output;
 }
 
+std::vector<std::uint8_t> WindowLevelProcessor::apply(const SliceData& slice,
+                                                      float window,
+                                                      float level)
+{
+  return apply(slice.pixels(), window, level);
+}
+
 } // namespace qvp
