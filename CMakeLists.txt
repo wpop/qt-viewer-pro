@@ -44,6 +44,7 @@ set(QTVIEWERPRO_APP_SOURCES
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
     src/processing/ImageProcessor.cpp
+    src/processing/WindowLevelProcessor.cpp
 )
 
 set(QTVIEWERPRO_APP_HEADERS
@@ -51,6 +52,7 @@ set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
     include/qtviewerpro/processing/ImageProcessor.h
+    include/qtviewerpro/processing/WindowLevelProcessor.h
 )
 
 qt_add_executable(qt-viewer-pro
@@ -107,3 +109,20 @@ target_link_libraries(test-slice-extractor
 )
 
 add_test(NAME test-slice-extractor COMMAND test-slice-extractor)
+
+qt_add_executable(test-window-level-processor
+    tests/TestWindowLevelProcessor.cpp
+    src/processing/WindowLevelProcessor.cpp
+)
+
+target_include_directories(test-window-level-processor
+    PRIVATE
+        include
+)
+
+target_link_libraries(test-window-level-processor
+    PRIVATE
+        Qt6::Test
+)
+
+add_test(NAME test-window-level-processor COMMAND test-window-level-processor)
