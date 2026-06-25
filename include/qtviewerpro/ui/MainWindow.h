@@ -60,8 +60,8 @@ private slots:
   void resetImage();
   void openSyntheticVolumeSlice();
   void openRawVolume();
-  void previousSyntheticSlice();
-  void nextSyntheticSlice();
+  void previousSlice();
+  void nextSlice();
   void setSliceFromSlider(int sliceIndex);
   void showAboutDialog();
   void openRecentFile();
@@ -120,8 +120,8 @@ private:
   QAction* resetImageAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
-  QAction* previousSyntheticSliceAction_ = nullptr;
-  QAction* nextSyntheticSliceAction_ = nullptr;
+  QAction* previousSliceAction_ = nullptr;
+  QAction* nextSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
   QSlider* sliceSlider_ = nullptr;
 };
