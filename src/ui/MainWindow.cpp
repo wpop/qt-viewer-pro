@@ -424,6 +424,8 @@ void MainWindow::createToolBar()
 
   grayscaleAction_->setIcon(createTextIcon("▣"));
   resetImageAction_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+  previousSyntheticSliceAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
+  nextSyntheticSliceAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
 
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
@@ -447,6 +449,10 @@ void MainWindow::createToolBar()
 
   toolBar->addAction(grayscaleAction_);
   toolBar->addAction(resetImageAction_);
+  toolBar->addSeparator();
+
+  toolBar->addAction(previousSyntheticSliceAction_);
+  toolBar->addAction(nextSyntheticSliceAction_);
 }
 
 void MainWindow::rotateLeft()
