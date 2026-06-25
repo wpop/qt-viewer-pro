@@ -1,5 +1,6 @@
 #pragma once
 
+#include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 
 #include <QImage>
@@ -11,6 +12,7 @@
 class QMenu;
 class QCloseEvent;
 class QAction;
+class QComboBox;
 class QSlider;
 class QSpinBox;
 
@@ -64,6 +66,7 @@ private slots:
   void previousSlice();
   void nextSlice();
   void setSliceFromSlider(int sliceIndex);
+  void setSliceOrientation(int orientationIndex);
   void updateWindowLevel();
   void showAboutDialog();
   void openRecentFile();
@@ -84,6 +87,7 @@ private:
   void createToolBar();
   VolumeData createSyntheticVolume() const;
   void displayCurrentSlice();
+  std::size_t activeSliceCount() const;
   void updateSliceActions();
 
   QAction* rotateLeftAction_ = nullptr;
@@ -102,6 +106,7 @@ private:
   QImage originalImage_;
   VolumeData activeVolume_;
   std::size_t activeSliceIndex_ = 0;
+  SliceOrientation activeSliceOrientation_ = SliceOrientation::Axial;
   bool volumeActive_ = false;
   bool rawVolumeActive_ = false;
   QMenu* recentMenu_ = nullptr;
@@ -125,6 +130,7 @@ private:
   QAction* previousSliceAction_ = nullptr;
   QAction* nextSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
+  QComboBox* sliceOrientationComboBox_ = nullptr;
   QSlider* sliceSlider_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;

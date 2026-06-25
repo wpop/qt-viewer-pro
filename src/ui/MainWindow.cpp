@@ -10,6 +10,7 @@
 
 #include <QAction>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QFileDialog>
 #include <QImage>
 #include <QKeySequence>
@@ -494,6 +495,18 @@ void MainWindow::createToolBar()
   levelSpinBox_->setStatusTip("Level");
   connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
 
+  sliceOrientationComboBox_ = new QComboBox(this);
+  sliceOrientationComboBox_->addItem("Axial");
+  sliceOrientationComboBox_->addItem("Coronal");
+  sliceOrientationComboBox_->addItem("Sagittal");
+  sliceOrientationComboBox_->setCurrentIndex(0);
+  sliceOrientationComboBox_->setToolTip("Slice Orientation");
+  sliceOrientationComboBox_->setStatusTip("Slice Orientation");
+  connect(sliceOrientationComboBox_, static_cast<void (QComboBox::*)(int)>(
+                                      &QComboBox::currentIndexChanged),
+          this,
+          &MainWindow::setSliceOrientation);
+
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
@@ -520,6 +533,7 @@ void MainWindow::createToolBar()
 
   toolBar->addAction(previousSliceAction_);
   toolBar->addAction(nextSliceAction_);
+  toolBar->addWidget(sliceOrientationComboBox_);
   toolBar->addWidget(sliceSlider_);
   toolBar->addWidget(windowSpinBox_);
   toolBar->addWidget(levelSpinBox_);
@@ -613,7 +627,7 @@ VolumeData MainWindow::createSyntheticVolume() const
 void MainWindow::openSyntheticVolumeSlice()
 {
   activeVolume_ = createSyntheticVolume();
-  activeSliceIndex_ = activeVolume_.depth() / 2;
+  activeSliceIndex_ = activeSliceCount() / 2;
   volumeActive_ = true;
   rawVolumeActive_ = false;
 
@@ -640,7 +654,7 @@ void MainWindow::openRawVolume()
   try
   {
     activeVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
-    activeSliceIndex_ = activeVolume_.depth() / 2;
+    activeSliceIndex_ = activeSliceCount() / 2;
     volumeActive_ = true;
     rawVolumeActive_ = true;
 
@@ -665,7 +679,7 @@ void MainWindow::previousSlice()
 
 void MainWindow::nextSlice()
 {
-  if (!volumeActive_ || activeSliceIndex_ + 1 >= activeVolume_.depth())
+  if (!volumeActive_ || activeSliceIndex_ + 1 >= activeSliceCount())
   {
     return;
   }
@@ -677,12 +691,36 @@ void MainWindow::nextSlice()
 void MainWindow::setSliceFromSlider(int sliceIndex)
 {
   if (!volumeActive_ || sliceIndex < 0 ||
-      static_cast<std::size_t>(sliceIndex) >= activeVolume_.depth())
+      static_cast<std::size_t>(sliceIndex) >= activeSliceCount())
   {
     return;
   }
 
   activeSliceIndex_ = static_cast<std::size_t>(sliceIndex);
+  displayCurrentSlice();
+}
+
+void MainWindow::setSliceOrientation(int orientationIndex)
+{
+  switch (orientationIndex)
+  {
+  case 1:
+    activeSliceOrientation_ = SliceOrientation::Coronal;
+    break;
+  case 2:
+    activeSliceOrientation_ = SliceOrientation::Sagittal;
+    break;
+  default:
+    activeSliceOrientation_ = SliceOrientation::Axial;
+    break;
+  }
+
+  if (!volumeActive_)
+  {
+    return;
+  }
+
+  activeSliceIndex_ = activeSliceCount() / 2;
   displayCurrentSlice();
 }
 
@@ -699,7 +737,7 @@ void MainWindow::updateWindowLevel()
 void MainWindow::displayCurrentSlice()
 {
   const auto slice =
-      SliceExtractor::extract(activeVolume_, SliceOrientation::Axial, activeSliceIndex_);
+      SliceExtractor::extract(activeVolume_, activeSliceOrientation_, activeSliceIndex_);
   const float window = windowSpinBox_ ? static_cast<float>(windowSpinBox_->value()) : 255.0F;
   const float level = levelSpinBox_ ? static_cast<float>(levelSpinBox_->value()) : 127.0F;
   const QImage image = SliceImageConverter::toGrayscaleImage(slice, window, level);
@@ -709,7 +747,7 @@ void MainWindow::displayCurrentSlice()
   if (sliceSlider_)
   {
     const QSignalBlocker blocker(sliceSlider_);
-    sliceSlider_->setRange(0, static_cast<int>(activeVolume_.depth() - 1));
+    sliceSlider_->setRange(0, static_cast<int>(activeSliceCount() - 1));
     sliceSlider_->setValue(static_cast<int>(activeSliceIndex_));
   }
   updateActions();
@@ -717,7 +755,22 @@ void MainWindow::displayCurrentSlice()
   statusBar()->showMessage(QString("%1 %2/%3")
                                .arg(sliceLabel)
                                .arg(activeSliceIndex_ + 1)
-                               .arg(activeVolume_.depth()));
+                               .arg(activeSliceCount()));
+}
+
+std::size_t MainWindow::activeSliceCount() const
+{
+  switch (activeSliceOrientation_)
+  {
+  case SliceOrientation::Coronal:
+    return activeVolume_.height();
+  case SliceOrientation::Sagittal:
+    return activeVolume_.width();
+  case SliceOrientation::Axial:
+    return activeVolume_.depth();
+  }
+
+  return activeVolume_.depth();
 }
 
 void MainWindow::updateSliceActions()
@@ -727,10 +780,10 @@ void MainWindow::updateSliceActions()
     return;
   }
 
-  const bool hasVolume = volumeActive_ && activeVolume_.depth() > 0;
+  const bool hasVolume = volumeActive_ && activeSliceCount() > 0;
 
   previousSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
-  nextSliceAction_->setEnabled(hasVolume && activeSliceIndex_ + 1 < activeVolume_.depth());
+  nextSliceAction_->setEnabled(hasVolume && activeSliceIndex_ + 1 < activeSliceCount());
   if (sliceSlider_)
   {
     sliceSlider_->setEnabled(hasVolume);
