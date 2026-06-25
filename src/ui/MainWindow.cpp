@@ -267,16 +267,15 @@ void MainWindow::createDemoMenu()
 
   demoMenu->addSeparator();
 
-  previousSyntheticSliceAction_ = demoMenu->addAction("Previous Slice");
-  previousSyntheticSliceAction_->setStatusTip("Display the previous slice");
-  previousSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageUp));
-  connect(previousSyntheticSliceAction_, &QAction::triggered, this,
-          &MainWindow::previousSyntheticSlice);
+  previousSliceAction_ = demoMenu->addAction("Previous Slice");
+  previousSliceAction_->setStatusTip("Display the previous slice");
+  previousSliceAction_->setShortcut(QKeySequence(Qt::Key_PageUp));
+  connect(previousSliceAction_, &QAction::triggered, this, &MainWindow::previousSlice);
 
-  nextSyntheticSliceAction_ = demoMenu->addAction("Next Slice");
-  nextSyntheticSliceAction_->setStatusTip("Display the next slice");
-  nextSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
-  connect(nextSyntheticSliceAction_, &QAction::triggered, this, &MainWindow::nextSyntheticSlice);
+  nextSliceAction_ = demoMenu->addAction("Next Slice");
+  nextSliceAction_->setStatusTip("Display the next slice");
+  nextSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
+  connect(nextSliceAction_, &QAction::triggered, this, &MainWindow::nextSlice);
 
   updateSliceActions();
 }
@@ -433,8 +432,8 @@ void MainWindow::createToolBar()
   grayscaleAction_->setIcon(createTextIcon("G"));
   resetImageAction_->setIcon(createTextIcon("R"));
 
-  previousSyntheticSliceAction_->setIcon(createTextIcon("Z-"));
-  nextSyntheticSliceAction_->setIcon(createTextIcon("Z+"));
+  previousSliceAction_->setIcon(createTextIcon("Z-"));
+  nextSliceAction_->setIcon(createTextIcon("Z+"));
 
   openAction_->setToolTip("Open Image");
   openAction_->setStatusTip("Open Image");
@@ -466,10 +465,10 @@ void MainWindow::createToolBar()
   resetImageAction_->setToolTip("Reset Image");
   resetImageAction_->setStatusTip("Reset Image");
 
-  previousSyntheticSliceAction_->setToolTip("Previous Slice");
-  previousSyntheticSliceAction_->setStatusTip("Previous Slice");
-  nextSyntheticSliceAction_->setToolTip("Next Slice");
-  nextSyntheticSliceAction_->setStatusTip("Next Slice");
+  previousSliceAction_->setToolTip("Previous Slice");
+  previousSliceAction_->setStatusTip("Previous Slice");
+  nextSliceAction_->setToolTip("Next Slice");
+  nextSliceAction_->setStatusTip("Next Slice");
 
   sliceSlider_ = new QSlider(Qt::Horizontal, this);
   sliceSlider_->setEnabled(false);
@@ -502,8 +501,8 @@ void MainWindow::createToolBar()
   toolBar->addAction(resetImageAction_);
   toolBar->addSeparator();
 
-  toolBar->addAction(previousSyntheticSliceAction_);
-  toolBar->addAction(nextSyntheticSliceAction_);
+  toolBar->addAction(previousSliceAction_);
+  toolBar->addAction(nextSliceAction_);
   toolBar->addWidget(sliceSlider_);
 }
 
@@ -634,7 +633,7 @@ void MainWindow::openRawVolume()
   }
 }
 
-void MainWindow::previousSyntheticSlice()
+void MainWindow::previousSlice()
 {
   if (!volumeActive_ || activeSliceIndex_ == 0)
   {
@@ -645,7 +644,7 @@ void MainWindow::previousSyntheticSlice()
   displayCurrentSlice();
 }
 
-void MainWindow::nextSyntheticSlice()
+void MainWindow::nextSlice()
 {
   if (!volumeActive_ || activeSliceIndex_ + 1 >= activeVolume_.depth())
   {
@@ -692,16 +691,15 @@ void MainWindow::displayCurrentSlice()
 
 void MainWindow::updateSliceActions()
 {
-  if (!previousSyntheticSliceAction_ || !nextSyntheticSliceAction_)
+  if (!previousSliceAction_ || !nextSliceAction_)
   {
     return;
   }
 
   const bool hasVolume = volumeActive_ && activeVolume_.depth() > 0;
 
-  previousSyntheticSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
-  nextSyntheticSliceAction_->setEnabled(hasVolume &&
-                                        activeSliceIndex_ + 1 < activeVolume_.depth());
+  previousSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
+  nextSliceAction_->setEnabled(hasVolume && activeSliceIndex_ + 1 < activeVolume_.depth());
   if (sliceSlider_)
   {
     sliceSlider_->setEnabled(hasVolume);
