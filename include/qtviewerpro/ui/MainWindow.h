@@ -58,6 +58,7 @@ private slots:
   void convertToGrayscale();
   void resetImage();
   void openSyntheticVolumeSlice();
+  void openRawVolume();
   void previousSyntheticSlice();
   void nextSyntheticSlice();
   void showAboutDialog();
@@ -98,6 +99,7 @@ private:
   VolumeData syntheticVolume_;
   std::size_t syntheticSliceIndex_ = 0;
   bool syntheticDemoActive_ = false;
+  bool rawVolumeActive_ = false;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
 
@@ -115,6 +117,7 @@ private:
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
+  QAction* openRawVolumeAction_ = nullptr;
   QAction* previousSyntheticSliceAction_ = nullptr;
   QAction* nextSyntheticSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
