@@ -510,21 +510,32 @@ VolumeData MainWindow::createSyntheticVolume() const
   const float centerX = static_cast<float>(width - 1) / 2.0F;
   const float centerY = static_cast<float>(height - 1) / 2.0F;
   const float maxRadius = std::sqrt((centerX * centerX) + (centerY * centerY));
+  constexpr float pi = 3.14159265358979323846F;
 
   for (std::size_t z = 0; z < depth; ++z)
   {
     const float zGradient = static_cast<float>(z) / static_cast<float>(depth - 1);
+    const float zPhase = zGradient * 2.0F * pi;
+    const float brightRadius = 18.0F + (10.0F * std::sin(zPhase));
+    const float brightCenterX = centerX + (10.0F * std::sin(zPhase));
+    const float brightCenterY = centerY + (7.0F * std::cos(zPhase));
+    const float brightValue = 210.0F + (35.0F * zGradient);
 
     for (std::size_t y = 0; y < height; ++y)
     {
       const float dy = static_cast<float>(y) - centerY;
+      const float brightDy = static_cast<float>(y) - brightCenterY;
 
       for (std::size_t x = 0; x < width; ++x)
       {
         const float dx = static_cast<float>(x) - centerX;
         const float radius = std::sqrt((dx * dx) + (dy * dy)) / maxRadius;
-        const float circularValue = (1.0F - radius) * 180.0F;
-        voxels.push_back(circularValue + (zGradient * 75.0F));
+        const float backgroundValue = (1.0F - radius) * 120.0F;
+
+        const float brightDx = static_cast<float>(x) - brightCenterX;
+        const float brightDistance = std::sqrt((brightDx * brightDx) + (brightDy * brightDy));
+
+        voxels.push_back(brightDistance <= brightRadius ? brightValue : backgroundValue);
       }
     }
   }
