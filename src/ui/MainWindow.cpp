@@ -17,6 +17,8 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSettings>
+#include <QSignalBlocker>
+#include <QSlider>
 #include <QStatusBar>
 #include <QToolBar>
 
@@ -469,6 +471,13 @@ void MainWindow::createToolBar()
   nextSyntheticSliceAction_->setToolTip("Next Slice");
   nextSyntheticSliceAction_->setStatusTip("Next Slice");
 
+  sliceSlider_ = new QSlider(Qt::Horizontal, this);
+  sliceSlider_->setEnabled(false);
+  sliceSlider_->setFixedWidth(180);
+  sliceSlider_->setToolTip("Slice");
+  sliceSlider_->setStatusTip("Slice");
+  connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
+
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
@@ -495,6 +504,7 @@ void MainWindow::createToolBar()
 
   toolBar->addAction(previousSyntheticSliceAction_);
   toolBar->addAction(nextSyntheticSliceAction_);
+  toolBar->addWidget(sliceSlider_);
 }
 
 void MainWindow::rotateLeft()
@@ -646,6 +656,18 @@ void MainWindow::nextSyntheticSlice()
   displaySyntheticSlice();
 }
 
+void MainWindow::setSliceFromSlider(int sliceIndex)
+{
+  if (!syntheticDemoActive_ || sliceIndex < 0 ||
+      static_cast<std::size_t>(sliceIndex) >= syntheticVolume_.depth())
+  {
+    return;
+  }
+
+  syntheticSliceIndex_ = static_cast<std::size_t>(sliceIndex);
+  displaySyntheticSlice();
+}
+
 void MainWindow::displaySyntheticSlice()
 {
   const auto slice =
@@ -654,6 +676,12 @@ void MainWindow::displaySyntheticSlice()
 
   originalImage_ = image;
   viewer_->setImage(image);
+  if (sliceSlider_)
+  {
+    const QSignalBlocker blocker(sliceSlider_);
+    sliceSlider_->setRange(0, static_cast<int>(syntheticVolume_.depth() - 1));
+    sliceSlider_->setValue(static_cast<int>(syntheticSliceIndex_));
+  }
   updateActions();
   const QString sliceLabel = rawVolumeActive_ ? "RAW volume slice" : "Synthetic slice";
   statusBar()->showMessage(QString("%1 %2/%3")
@@ -674,6 +702,10 @@ void MainWindow::updateSyntheticSliceActions()
   previousSyntheticSliceAction_->setEnabled(hasSyntheticVolume && syntheticSliceIndex_ > 0);
   nextSyntheticSliceAction_->setEnabled(hasSyntheticVolume &&
                                         syntheticSliceIndex_ + 1 < syntheticVolume_.depth());
+  if (sliceSlider_)
+  {
+    sliceSlider_->setEnabled(hasSyntheticVolume);
+  }
 }
 
 void MainWindow::showAboutDialog()

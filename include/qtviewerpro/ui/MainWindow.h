@@ -11,6 +11,7 @@
 class QMenu;
 class QCloseEvent;
 class QAction;
+class QSlider;
 
 namespace qvp
 {
@@ -61,6 +62,7 @@ private slots:
   void openRawVolume();
   void previousSyntheticSlice();
   void nextSyntheticSlice();
+  void setSliceFromSlider(int sliceIndex);
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -121,6 +123,7 @@ private:
   QAction* previousSyntheticSliceAction_ = nullptr;
   QAction* nextSyntheticSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
+  QSlider* sliceSlider_ = nullptr;
 };
 
 } // namespace qvp
