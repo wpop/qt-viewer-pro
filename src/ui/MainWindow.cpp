@@ -3,6 +3,7 @@
 #include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 #include "qtviewerpro/io/ImageLoader.h"
+#include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
@@ -27,6 +28,7 @@
 #include <QPixmap>
 
 #include <cmath>
+#include <exception>
 #include <utility>
 #include <vector>
 
@@ -256,6 +258,10 @@ void MainWindow::createDemoMenu()
   openSyntheticVolumeSliceAction_->setStatusTip("Display a synthetic axial volume slice");
   connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
           &MainWindow::openSyntheticVolumeSlice);
+
+  openRawVolumeAction_ = demoMenu->addAction("Open RAW Volume...");
+  openRawVolumeAction_->setStatusTip("Open a RAW float32 volume from metadata and voxel files");
+  connect(openRawVolumeAction_, &QAction::triggered, this, &MainWindow::openRawVolume);
 
   demoMenu->addSeparator();
 
@@ -581,8 +587,41 @@ void MainWindow::openSyntheticVolumeSlice()
   syntheticVolume_ = createSyntheticVolume();
   syntheticSliceIndex_ = syntheticVolume_.depth() / 2;
   syntheticDemoActive_ = true;
+  rawVolumeActive_ = false;
 
   displaySyntheticSlice();
+}
+
+void MainWindow::openRawVolume()
+{
+  const QString metadataPath =
+      QFileDialog::getOpenFileName(this, "Open RAW Volume Metadata", QString(),
+                                   "JSON Metadata (*.json);;All Files (*)");
+  if (metadataPath.isEmpty())
+  {
+    return;
+  }
+
+  const QString rawPath = QFileDialog::getOpenFileName(this, "Open RAW Volume Data", QString(),
+                                                       "RAW Volume Data (*.raw);;All Files (*)");
+  if (rawPath.isEmpty())
+  {
+    return;
+  }
+
+  try
+  {
+    syntheticVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
+    syntheticSliceIndex_ = syntheticVolume_.depth() / 2;
+    syntheticDemoActive_ = true;
+    rawVolumeActive_ = true;
+
+    displaySyntheticSlice();
+  }
+  catch (const std::exception& error)
+  {
+    QMessageBox::critical(this, "RAW Volume Load Error", error.what());
+  }
 }
 
 void MainWindow::previousSyntheticSlice()
@@ -616,7 +655,9 @@ void MainWindow::displaySyntheticSlice()
   originalImage_ = image;
   viewer_->setImage(image);
   updateActions();
-  statusBar()->showMessage(QString("Synthetic slice %1/%2")
+  const QString sliceLabel = rawVolumeActive_ ? "RAW volume slice" : "Synthetic slice";
+  statusBar()->showMessage(QString("%1 %2/%3")
+                               .arg(sliceLabel)
                                .arg(syntheticSliceIndex_ + 1)
                                .arg(syntheticVolume_.depth()));
 }
