@@ -261,11 +261,13 @@ void MainWindow::createDemoMenu()
 
   previousSyntheticSliceAction_ = demoMenu->addAction("Previous Synthetic Slice");
   previousSyntheticSliceAction_->setStatusTip("Display the previous synthetic slice");
+  previousSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageUp));
   connect(previousSyntheticSliceAction_, &QAction::triggered, this,
           &MainWindow::previousSyntheticSlice);
 
   nextSyntheticSliceAction_ = demoMenu->addAction("Next Synthetic Slice");
   nextSyntheticSliceAction_->setStatusTip("Display the next synthetic slice");
+  nextSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
   connect(nextSyntheticSliceAction_, &QAction::triggered, this, &MainWindow::nextSyntheticSlice);
 
   updateSyntheticSliceActions();
