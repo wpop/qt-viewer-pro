@@ -551,33 +551,24 @@ VolumeData MainWindow::createSyntheticVolume() const
 
   const float centerX = static_cast<float>(width - 1) / 2.0F;
   const float centerY = static_cast<float>(height - 1) / 2.0F;
-  const float maxRadius = std::sqrt((centerX * centerX) + (centerY * centerY));
-  constexpr float pi = 3.14159265358979323846F;
+  const float centerZ = static_cast<float>(depth - 1) / 2.0F;
+  constexpr float sphereRadius = 1.02F;
+  constexpr float brightValue = 240.0F;
+  constexpr float backgroundValue = 35.0F;
 
   for (std::size_t z = 0; z < depth; ++z)
   {
-    const float zGradient = static_cast<float>(z) / static_cast<float>(depth - 1);
-    const float zPhase = zGradient * 2.0F * pi;
-    const float brightRadius = 18.0F + (10.0F * std::sin(zPhase));
-    const float brightCenterX = centerX + (10.0F * std::sin(zPhase));
-    const float brightCenterY = centerY + (7.0F * std::cos(zPhase));
-    const float brightValue = 210.0F + (35.0F * zGradient);
+    const float dz = (static_cast<float>(z) - centerZ) / centerZ;
 
     for (std::size_t y = 0; y < height; ++y)
     {
-      const float dy = static_cast<float>(y) - centerY;
-      const float brightDy = static_cast<float>(y) - brightCenterY;
+      const float dy = (static_cast<float>(y) - centerY) / centerY;
 
       for (std::size_t x = 0; x < width; ++x)
       {
-        const float dx = static_cast<float>(x) - centerX;
-        const float radius = std::sqrt((dx * dx) + (dy * dy)) / maxRadius;
-        const float backgroundValue = (1.0F - radius) * 120.0F;
-
-        const float brightDx = static_cast<float>(x) - brightCenterX;
-        const float brightDistance = std::sqrt((brightDx * brightDx) + (brightDy * brightDy));
-
-        voxels.push_back(brightDistance <= brightRadius ? brightValue : backgroundValue);
+        const float dx = (static_cast<float>(x) - centerX) / centerX;
+        const float distance = std::sqrt((dx * dx) + (dy * dy) + (dz * dz));
+        voxels.push_back(distance <= sphereRadius ? brightValue : backgroundValue);
       }
     }
   }
@@ -625,9 +616,7 @@ void MainWindow::displaySyntheticSlice()
   originalImage_ = image;
   viewer_->setImage(image);
   updateActions();
-  statusBar()->showMessage(QString("Synthetic Slice: %1 × %2    Slice Index: %3 / %4")
-                               .arg(image.width())
-                               .arg(image.height())
+  statusBar()->showMessage(QString("Synthetic slice %1/%2")
                                .arg(syntheticSliceIndex_ + 1)
                                .arg(syntheticVolume_.depth()));
 }
