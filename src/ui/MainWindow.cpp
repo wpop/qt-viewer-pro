@@ -265,14 +265,14 @@ void MainWindow::createDemoMenu()
 
   demoMenu->addSeparator();
 
-  previousSyntheticSliceAction_ = demoMenu->addAction("Previous Synthetic Slice");
-  previousSyntheticSliceAction_->setStatusTip("Display the previous synthetic slice");
+  previousSyntheticSliceAction_ = demoMenu->addAction("Previous Slice");
+  previousSyntheticSliceAction_->setStatusTip("Display the previous slice");
   previousSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageUp));
   connect(previousSyntheticSliceAction_, &QAction::triggered, this,
           &MainWindow::previousSyntheticSlice);
 
-  nextSyntheticSliceAction_ = demoMenu->addAction("Next Synthetic Slice");
-  nextSyntheticSliceAction_->setStatusTip("Display the next synthetic slice");
+  nextSyntheticSliceAction_ = demoMenu->addAction("Next Slice");
+  nextSyntheticSliceAction_->setStatusTip("Display the next slice");
   nextSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
   connect(nextSyntheticSliceAction_, &QAction::triggered, this, &MainWindow::nextSyntheticSlice);
 
@@ -464,10 +464,10 @@ void MainWindow::createToolBar()
   resetImageAction_->setToolTip("Reset Image");
   resetImageAction_->setStatusTip("Reset Image");
 
-  previousSyntheticSliceAction_->setToolTip("Previous Synthetic Slice");
-  previousSyntheticSliceAction_->setStatusTip("Previous Synthetic Slice");
-  nextSyntheticSliceAction_->setToolTip("Next Synthetic Slice");
-  nextSyntheticSliceAction_->setStatusTip("Next Synthetic Slice");
+  previousSyntheticSliceAction_->setToolTip("Previous Slice");
+  previousSyntheticSliceAction_->setStatusTip("Previous Slice");
+  nextSyntheticSliceAction_->setToolTip("Next Slice");
+  nextSyntheticSliceAction_->setStatusTip("Next Slice");
 
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
