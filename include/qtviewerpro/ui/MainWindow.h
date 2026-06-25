@@ -85,6 +85,7 @@ private:
   void updateStatusBar();
   void updateActions();
   void createToolBar();
+  void createVolumeControlsDock();
   VolumeData createSyntheticVolume() const;
   void displayCurrentSlice();
   std::size_t activeSliceCount() const;
