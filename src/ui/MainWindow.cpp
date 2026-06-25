@@ -128,7 +128,7 @@ void MainWindow::openImage(const QString& fileName)
   }
 
   originalImage_ = image;
-  syntheticDemoActive_ = false;
+  volumeActive_ = false;
   viewer_->setImage(image);
   updateStatusBar();
   updateActions();
@@ -278,7 +278,7 @@ void MainWindow::createDemoMenu()
   nextSyntheticSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
   connect(nextSyntheticSliceAction_, &QAction::triggered, this, &MainWindow::nextSyntheticSlice);
 
-  updateSyntheticSliceActions();
+  updateSliceActions();
 }
 
 void MainWindow::createHelpMenu()
@@ -324,7 +324,7 @@ void MainWindow::updateActions()
   grayscaleAction_->setEnabled(hasImage);
   resetImageAction_->setEnabled(hasImage);
 
-  updateSyntheticSliceActions();
+  updateSliceActions();
 }
 
 void MainWindow::zoomIn()
@@ -594,12 +594,12 @@ VolumeData MainWindow::createSyntheticVolume() const
 
 void MainWindow::openSyntheticVolumeSlice()
 {
-  syntheticVolume_ = createSyntheticVolume();
-  syntheticSliceIndex_ = syntheticVolume_.depth() / 2;
-  syntheticDemoActive_ = true;
+  activeVolume_ = createSyntheticVolume();
+  activeSliceIndex_ = activeVolume_.depth() / 2;
+  volumeActive_ = true;
   rawVolumeActive_ = false;
 
-  displaySyntheticSlice();
+  displayCurrentSlice();
 }
 
 void MainWindow::openRawVolume()
@@ -621,12 +621,12 @@ void MainWindow::openRawVolume()
 
   try
   {
-    syntheticVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
-    syntheticSliceIndex_ = syntheticVolume_.depth() / 2;
-    syntheticDemoActive_ = true;
+    activeVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
+    activeSliceIndex_ = activeVolume_.depth() / 2;
+    volumeActive_ = true;
     rawVolumeActive_ = true;
 
-    displaySyntheticSlice();
+    displayCurrentSlice();
   }
   catch (const std::exception& error)
   {
@@ -636,42 +636,42 @@ void MainWindow::openRawVolume()
 
 void MainWindow::previousSyntheticSlice()
 {
-  if (!syntheticDemoActive_ || syntheticSliceIndex_ == 0)
+  if (!volumeActive_ || activeSliceIndex_ == 0)
   {
     return;
   }
 
-  --syntheticSliceIndex_;
-  displaySyntheticSlice();
+  --activeSliceIndex_;
+  displayCurrentSlice();
 }
 
 void MainWindow::nextSyntheticSlice()
 {
-  if (!syntheticDemoActive_ || syntheticSliceIndex_ + 1 >= syntheticVolume_.depth())
+  if (!volumeActive_ || activeSliceIndex_ + 1 >= activeVolume_.depth())
   {
     return;
   }
 
-  ++syntheticSliceIndex_;
-  displaySyntheticSlice();
+  ++activeSliceIndex_;
+  displayCurrentSlice();
 }
 
 void MainWindow::setSliceFromSlider(int sliceIndex)
 {
-  if (!syntheticDemoActive_ || sliceIndex < 0 ||
-      static_cast<std::size_t>(sliceIndex) >= syntheticVolume_.depth())
+  if (!volumeActive_ || sliceIndex < 0 ||
+      static_cast<std::size_t>(sliceIndex) >= activeVolume_.depth())
   {
     return;
   }
 
-  syntheticSliceIndex_ = static_cast<std::size_t>(sliceIndex);
-  displaySyntheticSlice();
+  activeSliceIndex_ = static_cast<std::size_t>(sliceIndex);
+  displayCurrentSlice();
 }
 
-void MainWindow::displaySyntheticSlice()
+void MainWindow::displayCurrentSlice()
 {
   const auto slice =
-      SliceExtractor::extract(syntheticVolume_, SliceOrientation::Axial, syntheticSliceIndex_);
+      SliceExtractor::extract(activeVolume_, SliceOrientation::Axial, activeSliceIndex_);
   const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.5F);
 
   originalImage_ = image;
@@ -679,32 +679,32 @@ void MainWindow::displaySyntheticSlice()
   if (sliceSlider_)
   {
     const QSignalBlocker blocker(sliceSlider_);
-    sliceSlider_->setRange(0, static_cast<int>(syntheticVolume_.depth() - 1));
-    sliceSlider_->setValue(static_cast<int>(syntheticSliceIndex_));
+    sliceSlider_->setRange(0, static_cast<int>(activeVolume_.depth() - 1));
+    sliceSlider_->setValue(static_cast<int>(activeSliceIndex_));
   }
   updateActions();
   const QString sliceLabel = rawVolumeActive_ ? "RAW volume slice" : "Synthetic slice";
   statusBar()->showMessage(QString("%1 %2/%3")
                                .arg(sliceLabel)
-                               .arg(syntheticSliceIndex_ + 1)
-                               .arg(syntheticVolume_.depth()));
+                               .arg(activeSliceIndex_ + 1)
+                               .arg(activeVolume_.depth()));
 }
 
-void MainWindow::updateSyntheticSliceActions()
+void MainWindow::updateSliceActions()
 {
   if (!previousSyntheticSliceAction_ || !nextSyntheticSliceAction_)
   {
     return;
   }
 
-  const bool hasSyntheticVolume = syntheticDemoActive_ && syntheticVolume_.depth() > 0;
+  const bool hasVolume = volumeActive_ && activeVolume_.depth() > 0;
 
-  previousSyntheticSliceAction_->setEnabled(hasSyntheticVolume && syntheticSliceIndex_ > 0);
-  nextSyntheticSliceAction_->setEnabled(hasSyntheticVolume &&
-                                        syntheticSliceIndex_ + 1 < syntheticVolume_.depth());
+  previousSyntheticSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
+  nextSyntheticSliceAction_->setEnabled(hasVolume &&
+                                        activeSliceIndex_ + 1 < activeVolume_.depth());
   if (sliceSlider_)
   {
-    sliceSlider_->setEnabled(hasSyntheticVolume);
+    sliceSlider_->setEnabled(hasVolume);
   }
 }
 

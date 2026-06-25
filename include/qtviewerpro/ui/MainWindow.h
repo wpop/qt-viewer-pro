@@ -81,8 +81,8 @@ private:
   void updateActions();
   void createToolBar();
   VolumeData createSyntheticVolume() const;
-  void displaySyntheticSlice();
-  void updateSyntheticSliceActions();
+  void displayCurrentSlice();
+  void updateSliceActions();
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
@@ -98,9 +98,9 @@ private:
 private:
   ImageViewer2D* viewer_ = nullptr;
   QImage originalImage_;
-  VolumeData syntheticVolume_;
-  std::size_t syntheticSliceIndex_ = 0;
-  bool syntheticDemoActive_ = false;
+  VolumeData activeVolume_;
+  std::size_t activeSliceIndex_ = 0;
+  bool volumeActive_ = false;
   bool rawVolumeActive_ = false;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
