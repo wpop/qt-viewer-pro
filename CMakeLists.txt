@@ -18,6 +18,7 @@ set(QTVIEWERPRO_CORE_SOURCES
     src/core/SliceData.cpp
     src/core/SliceExtractor.cpp
     src/core/VolumeData.cpp
+    src/core/VolumeMetadata.cpp
 )
 
 set(QTVIEWERPRO_CORE_HEADERS
@@ -25,6 +26,7 @@ set(QTVIEWERPRO_CORE_HEADERS
     include/qtviewerpro/core/SliceExtractor.h
     include/qtviewerpro/core/SliceOrientation.h
     include/qtviewerpro/core/VolumeData.h
+    include/qtviewerpro/core/VolumeMetadata.h
 )
 
 add_library(qt-viewer-pro-core
@@ -115,6 +117,18 @@ target_link_libraries(test-volume-data
 )
 
 add_test(NAME test-volume-data COMMAND test-volume-data)
+
+qt_add_executable(test-volume-metadata
+    tests/TestVolumeMetadata.cpp
+)
+
+target_link_libraries(test-volume-metadata
+    PRIVATE
+        qt-viewer-pro-core
+        Qt6::Test
+)
+
+add_test(NAME test-volume-metadata COMMAND test-volume-metadata)
 
 qt_add_executable(test-slice-data
     tests/TestSliceData.cpp
