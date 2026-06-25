@@ -428,6 +428,41 @@ void MainWindow::createToolBar()
   previousSyntheticSliceAction_->setIcon(createTextIcon("Z-"));
   nextSyntheticSliceAction_->setIcon(createTextIcon("Z+"));
 
+  openAction_->setToolTip("Open Image");
+  openAction_->setStatusTip("Open Image");
+  saveAsAction_->setToolTip("Save Image As");
+  saveAsAction_->setStatusTip("Save Image As");
+
+  zoomInAction_->setToolTip("Zoom In");
+  zoomInAction_->setStatusTip("Zoom In");
+  zoomOutAction_->setToolTip("Zoom Out");
+  zoomOutAction_->setStatusTip("Zoom Out");
+
+  fitAction_->setToolTip("Fit to Window");
+  fitAction_->setStatusTip("Fit to Window");
+  actualSizeAction_->setToolTip("Actual Size");
+  actualSizeAction_->setStatusTip("Actual Size");
+
+  rotateLeftAction_->setToolTip("Rotate Left");
+  rotateLeftAction_->setStatusTip("Rotate Left");
+  rotateRightAction_->setToolTip("Rotate Right");
+  rotateRightAction_->setStatusTip("Rotate Right");
+
+  flipHorizontalAction_->setToolTip("Flip Horizontal");
+  flipHorizontalAction_->setStatusTip("Flip Horizontal");
+  flipVerticalAction_->setToolTip("Flip Vertical");
+  flipVerticalAction_->setStatusTip("Flip Vertical");
+
+  grayscaleAction_->setToolTip("Convert to Grayscale");
+  grayscaleAction_->setStatusTip("Convert to Grayscale");
+  resetImageAction_->setToolTip("Reset Image");
+  resetImageAction_->setStatusTip("Reset Image");
+
+  previousSyntheticSliceAction_->setToolTip("Previous Synthetic Slice");
+  previousSyntheticSliceAction_->setStatusTip("Previous Synthetic Slice");
+  nextSyntheticSliceAction_->setToolTip("Next Synthetic Slice");
+  nextSyntheticSliceAction_->setStatusTip("Next Synthetic Slice");
+
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
