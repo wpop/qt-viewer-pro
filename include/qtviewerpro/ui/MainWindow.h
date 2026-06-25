@@ -12,6 +12,7 @@ class QMenu;
 class QCloseEvent;
 class QAction;
 class QSlider;
+class QSpinBox;
 
 namespace qvp
 {
@@ -63,6 +64,7 @@ private slots:
   void previousSlice();
   void nextSlice();
   void setSliceFromSlider(int sliceIndex);
+  void updateWindowLevel();
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -124,6 +126,8 @@ private:
   QAction* nextSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
   QSlider* sliceSlider_ = nullptr;
+  QSpinBox* windowSpinBox_ = nullptr;
+  QSpinBox* levelSpinBox_ = nullptr;
 };
 
 } // namespace qvp
