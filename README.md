@@ -69,6 +69,32 @@ cmake --build build
 ./build/qt-viewer-pro
 ```
 
+## RAW Volume Demo
+
+Generate local sample RAW volume files:
+
+```bash
+python3 scripts/create_raw_volume_sample.py
+```
+
+Build and run the app:
+
+```bash
+cmake -S . -B build -G Ninja
+cmake --build build
+./build/qt-viewer-pro
+```
+
+In the app, choose `Demo -> Open RAW Volume...`, then select:
+
+```text
+data/samples/raw_volume/volume.json
+data/samples/raw_volume/volume.raw
+```
+
+Use `Z-` / `Z+` toolbar buttons or `PageUp` / `PageDown` to navigate slices.
+The generated data files are local test files and are not committed.
+
 ## Testing
 
 Configure and build the project first:
