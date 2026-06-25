@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies
-find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Test)
 find_package(OpenCV REQUIRED)
 
 qt_standard_project_setup()
@@ -72,6 +72,32 @@ target_link_libraries(qt-viewer-pro-processing
         ${OpenCV_LIBS}
 )
 
+# IO library
+set(QTVIEWERPRO_IO_SOURCES
+    src/io/RawVolumeLoader.cpp
+)
+
+set(QTVIEWERPRO_IO_HEADERS
+    include/qtviewerpro/io/RawVolumeLoader.h
+)
+
+add_library(qt-viewer-pro-io
+    ${QTVIEWERPRO_IO_SOURCES}
+    ${QTVIEWERPRO_IO_HEADERS}
+)
+
+target_include_directories(qt-viewer-pro-io
+    PUBLIC
+        include
+)
+
+target_link_libraries(qt-viewer-pro-io
+    PUBLIC
+        qt-viewer-pro-core
+    PRIVATE
+        Qt6::Core
+)
+
 # Application target
 set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
@@ -101,6 +127,7 @@ target_link_libraries(qt-viewer-pro
     PRIVATE
         qt-viewer-pro-core
         qt-viewer-pro-processing
+        qt-viewer-pro-io
         Qt6::Widgets
         ${OpenCV_LIBS}
 )
@@ -178,3 +205,15 @@ target_link_libraries(test-slice-image-converter
 )
 
 add_test(NAME test-slice-image-converter COMMAND test-slice-image-converter)
+
+qt_add_executable(test-raw-volume-loader
+    tests/TestRawVolumeLoader.cpp
+)
+
+target_link_libraries(test-raw-volume-loader
+    PRIVATE
+        qt-viewer-pro-io
+        Qt6::Test
+)
+
+add_test(NAME test-raw-volume-loader COMMAND test-raw-volume-loader)
