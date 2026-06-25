@@ -11,7 +11,9 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QDockWidget>
 #include <QFileDialog>
+#include <QFormLayout>
 #include <QImage>
 #include <QKeySequence>
 #include <QMenu>
@@ -23,6 +25,7 @@
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
+#include <QWidget>
 
 #include <QSize>
 #include <QStyle>
@@ -70,6 +73,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   createViewer();
   createMenus();
   createToolBar();
+  createVolumeControlsDock();
   createStatusBar();
   loadSettings();
 
@@ -472,41 +476,6 @@ void MainWindow::createToolBar()
   nextSliceAction_->setToolTip("Next Slice");
   nextSliceAction_->setStatusTip("Next Slice");
 
-  sliceSlider_ = new QSlider(Qt::Horizontal, this);
-  sliceSlider_->setEnabled(false);
-  sliceSlider_->setFixedWidth(180);
-  sliceSlider_->setToolTip("Slice");
-  sliceSlider_->setStatusTip("Slice");
-  connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
-
-  windowSpinBox_ = new QSpinBox(this);
-  windowSpinBox_->setRange(1, 4096);
-  windowSpinBox_->setValue(255);
-  windowSpinBox_->setPrefix("Window ");
-  windowSpinBox_->setToolTip("Window");
-  windowSpinBox_->setStatusTip("Window");
-  connect(windowSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
-
-  levelSpinBox_ = new QSpinBox(this);
-  levelSpinBox_->setRange(-2048, 4096);
-  levelSpinBox_->setValue(127);
-  levelSpinBox_->setPrefix("Level ");
-  levelSpinBox_->setToolTip("Level");
-  levelSpinBox_->setStatusTip("Level");
-  connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
-
-  sliceOrientationComboBox_ = new QComboBox(this);
-  sliceOrientationComboBox_->addItem("Axial");
-  sliceOrientationComboBox_->addItem("Coronal");
-  sliceOrientationComboBox_->addItem("Sagittal");
-  sliceOrientationComboBox_->setCurrentIndex(0);
-  sliceOrientationComboBox_->setToolTip("Slice Orientation");
-  sliceOrientationComboBox_->setStatusTip("Slice Orientation");
-  connect(sliceOrientationComboBox_, static_cast<void (QComboBox::*)(int)>(
-                                      &QComboBox::currentIndexChanged),
-          this,
-          &MainWindow::setSliceOrientation);
-
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
@@ -533,10 +502,53 @@ void MainWindow::createToolBar()
 
   toolBar->addAction(previousSliceAction_);
   toolBar->addAction(nextSliceAction_);
-  toolBar->addWidget(sliceOrientationComboBox_);
-  toolBar->addWidget(sliceSlider_);
-  toolBar->addWidget(windowSpinBox_);
-  toolBar->addWidget(levelSpinBox_);
+}
+
+void MainWindow::createVolumeControlsDock()
+{
+  auto* dock = new QDockWidget("Volume Controls", this);
+  auto* panel = new QWidget(dock);
+  auto* layout = new QFormLayout(panel);
+
+  sliceOrientationComboBox_ = new QComboBox(panel);
+  sliceOrientationComboBox_->addItem("Axial");
+  sliceOrientationComboBox_->addItem("Coronal");
+  sliceOrientationComboBox_->addItem("Sagittal");
+  sliceOrientationComboBox_->setCurrentIndex(0);
+  sliceOrientationComboBox_->setToolTip("Slice Orientation");
+  sliceOrientationComboBox_->setStatusTip("Slice Orientation");
+  connect(sliceOrientationComboBox_, static_cast<void (QComboBox::*)(int)>(
+                                      &QComboBox::currentIndexChanged),
+          this,
+          &MainWindow::setSliceOrientation);
+
+  sliceSlider_ = new QSlider(Qt::Horizontal, panel);
+  sliceSlider_->setEnabled(false);
+  sliceSlider_->setToolTip("Slice");
+  sliceSlider_->setStatusTip("Slice");
+  connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
+
+  windowSpinBox_ = new QSpinBox(panel);
+  windowSpinBox_->setRange(1, 4096);
+  windowSpinBox_->setValue(255);
+  windowSpinBox_->setToolTip("Window");
+  windowSpinBox_->setStatusTip("Window");
+  connect(windowSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
+
+  levelSpinBox_ = new QSpinBox(panel);
+  levelSpinBox_->setRange(-2048, 4096);
+  levelSpinBox_->setValue(127);
+  levelSpinBox_->setToolTip("Level");
+  levelSpinBox_->setStatusTip("Level");
+  connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
+
+  layout->addRow("Orientation:", sliceOrientationComboBox_);
+  layout->addRow("Slice:", sliceSlider_);
+  layout->addRow("Window:", windowSpinBox_);
+  layout->addRow("Level:", levelSpinBox_);
+
+  dock->setWidget(panel);
+  addDockWidget(Qt::RightDockWidgetArea, dock);
 }
 
 void MainWindow::rotateLeft()
