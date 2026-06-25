@@ -19,6 +19,7 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSlider>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
 
@@ -477,6 +478,22 @@ void MainWindow::createToolBar()
   sliceSlider_->setStatusTip("Slice");
   connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
 
+  windowSpinBox_ = new QSpinBox(this);
+  windowSpinBox_->setRange(1, 4096);
+  windowSpinBox_->setValue(255);
+  windowSpinBox_->setPrefix("Window ");
+  windowSpinBox_->setToolTip("Window");
+  windowSpinBox_->setStatusTip("Window");
+  connect(windowSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
+
+  levelSpinBox_ = new QSpinBox(this);
+  levelSpinBox_->setRange(-2048, 4096);
+  levelSpinBox_->setValue(127);
+  levelSpinBox_->setPrefix("Level ");
+  levelSpinBox_->setToolTip("Level");
+  levelSpinBox_->setStatusTip("Level");
+  connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
+
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
@@ -504,6 +521,8 @@ void MainWindow::createToolBar()
   toolBar->addAction(previousSliceAction_);
   toolBar->addAction(nextSliceAction_);
   toolBar->addWidget(sliceSlider_);
+  toolBar->addWidget(windowSpinBox_);
+  toolBar->addWidget(levelSpinBox_);
 }
 
 void MainWindow::rotateLeft()
@@ -667,11 +686,23 @@ void MainWindow::setSliceFromSlider(int sliceIndex)
   displayCurrentSlice();
 }
 
+void MainWindow::updateWindowLevel()
+{
+  if (!volumeActive_)
+  {
+    return;
+  }
+
+  displayCurrentSlice();
+}
+
 void MainWindow::displayCurrentSlice()
 {
   const auto slice =
       SliceExtractor::extract(activeVolume_, SliceOrientation::Axial, activeSliceIndex_);
-  const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.5F);
+  const float window = windowSpinBox_ ? static_cast<float>(windowSpinBox_->value()) : 255.0F;
+  const float level = levelSpinBox_ ? static_cast<float>(levelSpinBox_->value()) : 127.0F;
+  const QImage image = SliceImageConverter::toGrayscaleImage(slice, window, level);
 
   originalImage_ = image;
   viewer_->setImage(image);
