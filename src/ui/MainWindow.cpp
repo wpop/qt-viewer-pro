@@ -407,25 +407,26 @@ void MainWindow::createToolBar()
   toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
   toolBar->setIconSize(QSize(24, 24));
 
-  openAction_->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
-  saveAsAction_->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+  openAction_->setIcon(createTextIcon("O"));
+  saveAsAction_->setIcon(createTextIcon("S"));
 
   zoomInAction_->setIcon(createTextIcon("+"));
   zoomOutAction_->setIcon(createTextIcon("-"));
 
-  fitAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
-  actualSizeAction_->setIcon(style()->standardIcon(QStyle::SP_DialogResetButton));
+  fitAction_->setIcon(createTextIcon("F"));
+  actualSizeAction_->setIcon(createTextIcon("1:1"));
 
-  rotateLeftAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
-  rotateRightAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+  rotateLeftAction_->setIcon(createTextIcon("↺"));
+  rotateRightAction_->setIcon(createTextIcon("↻"));
 
-  flipHorizontalAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowLeft));
-  flipVerticalAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+  flipHorizontalAction_->setIcon(createTextIcon("H"));
+  flipVerticalAction_->setIcon(createTextIcon("V"));
 
-  grayscaleAction_->setIcon(createTextIcon("▣"));
-  resetImageAction_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-  previousSyntheticSliceAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
-  nextSyntheticSliceAction_->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+  grayscaleAction_->setIcon(createTextIcon("G"));
+  resetImageAction_->setIcon(createTextIcon("R"));
+
+  previousSyntheticSliceAction_->setIcon(createTextIcon("Z-"));
+  nextSyntheticSliceAction_->setIcon(createTextIcon("Z+"));
 
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
