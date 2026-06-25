@@ -507,6 +507,8 @@ void MainWindow::createToolBar()
 void MainWindow::createVolumeControlsDock()
 {
   auto* dock = new QDockWidget("Volume Controls", this);
+  dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+
   auto* panel = new QWidget(dock);
   auto* layout = new QFormLayout(panel);
 
@@ -517,8 +519,8 @@ void MainWindow::createVolumeControlsDock()
   sliceOrientationComboBox_->setCurrentIndex(0);
   sliceOrientationComboBox_->setToolTip("Slice Orientation");
   sliceOrientationComboBox_->setStatusTip("Slice Orientation");
-  connect(sliceOrientationComboBox_, static_cast<void (QComboBox::*)(int)>(
-                                      &QComboBox::currentIndexChanged),
+  connect(sliceOrientationComboBox_,
+          static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
           this,
           &MainWindow::setSliceOrientation);
 
