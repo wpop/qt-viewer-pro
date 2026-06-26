@@ -6,6 +6,7 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
 #include <QMimeData>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QTransform>
@@ -31,7 +32,9 @@ ImageViewer2D::ImageViewer2D(QWidget* parent) : QGraphicsView(parent)
   setResizeAnchor(QGraphicsView::AnchorViewCenter);
   setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
+  setMouseTracking(true);
   setAcceptDrops(true);
+  viewport()->setMouseTracking(true);
   viewport()->setAcceptDrops(true);
 }
 
@@ -62,6 +65,26 @@ void ImageViewer2D::wheelEvent(QWheelEvent* event)
   {
     zoomOut();
   }
+}
+
+void ImageViewer2D::mouseMoveEvent(QMouseEvent* event)
+{
+  if (pixmapItem_ && !pixmapItem_->pixmap().isNull())
+  {
+    const QPointF scenePosition = mapToScene(event->position().toPoint());
+    const QPointF imagePosition = pixmapItem_->mapFromScene(scenePosition);
+    const QSize imageSize = pixmapItem_->pixmap().size();
+
+    if (imagePosition.x() >= 0.0 && imagePosition.y() >= 0.0 &&
+        imagePosition.x() < static_cast<double>(imageSize.width()) &&
+        imagePosition.y() < static_cast<double>(imageSize.height()))
+    {
+      emit imageMousePositionChanged(static_cast<int>(imagePosition.x()),
+                                     static_cast<int>(imagePosition.y()));
+    }
+  }
+
+  QGraphicsView::mouseMoveEvent(event);
 }
 
 void ImageViewer2D::fitToWindow()

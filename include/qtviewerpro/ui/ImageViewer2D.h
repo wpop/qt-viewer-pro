@@ -9,6 +9,7 @@ class QDragEnterEvent;
 class QDragMoveEvent;
 class QDropEvent;
 class QGraphicsPixmapItem;
+class QMouseEvent;
 class QResizeEvent;
 class QWheelEvent;
 
@@ -97,6 +98,7 @@ public:
   double zoomFactor() const;
 
 protected:
+  void mouseMoveEvent(QMouseEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
 
@@ -110,6 +112,13 @@ signals:
    * @param fileName Local file path from the drop event.
    */
   void imageDropped(const QString& fileName);
+
+  /**
+   * @brief Emitted when the mouse moves over a displayed image pixel.
+   * @param x Image pixel coordinate along the horizontal axis.
+   * @param y Image pixel coordinate along the vertical axis.
+   */
+  void imageMousePositionChanged(int x, int y);
 
 private:
   QGraphicsPixmapItem* pixmapItem_ = nullptr;

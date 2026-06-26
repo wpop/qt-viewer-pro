@@ -182,6 +182,8 @@ void MainWindow::createViewer()
   // Explicitly select openImage(const QString&) because openImage() is overloaded.
   connect(viewer_, &ImageViewer2D::imageDropped, this,
           static_cast<void (MainWindow::*)(const QString&)>(&MainWindow::openImage));
+  connect(viewer_, &ImageViewer2D::imageMousePositionChanged, this,
+          &MainWindow::updateMouseImagePosition);
 }
 
 void MainWindow::createMenus()
@@ -861,6 +863,11 @@ void MainWindow::updateInvertGrayscale()
   }
 
   displayCurrentSlice();
+}
+
+void MainWindow::updateMouseImagePosition(int x, int y)
+{
+  statusBar()->showMessage(QString("Mouse x=%1 y=%2").arg(x).arg(y));
 }
 
 void MainWindow::displayCurrentSlice()

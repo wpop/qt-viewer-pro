@@ -74,6 +74,7 @@ private slots:
   void updateWindowLevel();
   void resetWindowLevel();
   void updateInvertGrayscale();
+  void updateMouseImagePosition(int x, int y);
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
