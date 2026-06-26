@@ -20,6 +20,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSlider>
@@ -574,6 +575,10 @@ void MainWindow::createVolumeControlsDock()
   levelSpinBox_->setStatusTip("Level");
   connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
 
+  resetWindowLevelButton_ = new QPushButton("Reset W/L", panel);
+  resetWindowLevelButton_->setEnabled(false);
+  connect(resetWindowLevelButton_, &QPushButton::clicked, this, &MainWindow::resetWindowLevel);
+
   layout->addRow("Orientation:", sliceOrientationComboBox_);
   layout->addRow("Slice:", sliceSlider_);
   layout->addRow("Slice Index:", sliceSpinBox_);
@@ -583,6 +588,7 @@ void MainWindow::createVolumeControlsDock()
   layout->addRow("Current:", currentSliceValueLabel_);
   layout->addRow("Window:", windowSpinBox_);
   layout->addRow("Level:", levelSpinBox_);
+  layout->addRow(resetWindowLevelButton_);
 
   dock->setWidget(panel);
   addDockWidget(Qt::RightDockWidgetArea, dock);
@@ -800,6 +806,25 @@ void MainWindow::updateWindowLevel()
   displayCurrentSlice();
 }
 
+void MainWindow::resetWindowLevel()
+{
+  if (windowSpinBox_)
+  {
+    const QSignalBlocker blocker(windowSpinBox_);
+    windowSpinBox_->setValue(255);
+  }
+  if (levelSpinBox_)
+  {
+    const QSignalBlocker blocker(levelSpinBox_);
+    levelSpinBox_->setValue(127);
+  }
+
+  if (volumeActive_)
+  {
+    displayCurrentSlice();
+  }
+}
+
 void MainWindow::displayCurrentSlice()
 {
   const auto slice =
@@ -865,6 +890,10 @@ void MainWindow::updateSliceActions()
   if (sliceSpinBox_)
   {
     sliceSpinBox_->setEnabled(hasVolume);
+  }
+  if (resetWindowLevelButton_)
+  {
+    resetWindowLevelButton_->setEnabled(hasVolume);
   }
 }
 
