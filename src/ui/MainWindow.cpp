@@ -24,6 +24,7 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSlider>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -78,6 +79,112 @@ QString sliceOrientationName(qvp::SliceOrientation orientation)
 
   return "Axial";
 }
+
+QString darkMedicalStyleSheet()
+{
+  return QStringLiteral(R"(
+QMainWindow {
+  background-color: #1E1E1E;
+  color: #E6E6E6;
+}
+
+QMenuBar, QMenu, QToolBar, QStatusBar, QDockWidget {
+  background-color: #252526;
+  color: #E6E6E6;
+  border-color: #3A3A3A;
+}
+
+QMenuBar::item:selected, QMenu::item:selected {
+  background-color: #333333;
+  color: #4FC3F7;
+}
+
+QToolBar {
+  spacing: 4px;
+  border-bottom: 1px solid #3A3A3A;
+}
+
+QToolButton, QPushButton {
+  background-color: #333333;
+  color: #E6E6E6;
+  border: 1px solid #3A3A3A;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+QToolButton:hover, QPushButton:hover {
+  background-color: #3A3A3A;
+}
+
+QToolButton:checked {
+  background-color: #2A4A5A;
+  color: #FFFFFF;
+  border: 1px solid #4FC3F7;
+}
+
+QToolButton:checked:hover {
+  background-color: #315A6D;
+  color: #FFFFFF;
+  border: 1px solid #4FC3F7;
+}
+
+QToolButton:pressed {
+  background-color: #444444;
+  color: #FFFFFF;
+}
+
+QPushButton:pressed {
+  background-color: #444444;
+}
+
+QToolButton:disabled, QPushButton:disabled,
+QComboBox:disabled, QSpinBox:disabled, QCheckBox:disabled {
+  color: #777777;
+  background-color: #252526;
+}
+
+QDockWidget::title {
+  background-color: #252526;
+  color: #E6E6E6;
+  padding: 6px;
+  border-bottom: 1px solid #3A3A3A;
+}
+
+QLabel, QCheckBox {
+  color: #E6E6E6;
+}
+
+QComboBox, QSpinBox {
+  background-color: #333333;
+  color: #E6E6E6;
+  border: 1px solid #3A3A3A;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+QComboBox:focus, QSpinBox:focus {
+  border-color: #4FC3F7;
+}
+
+QSlider::groove:horizontal {
+  height: 4px;
+  background: #3A3A3A;
+  border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+  width: 14px;
+  margin: -5px 0;
+  background: #4FC3F7;
+  border-radius: 7px;
+}
+
+QGraphicsView {
+  background-color: #111111;
+  border: none;
+}
+)");
+}
 } // namespace
 
 namespace qvp
@@ -95,6 +202,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   createStatusBar();
   loadSettings();
 
+  setStyleSheet(darkMedicalStyleSheet());
   updateActions();
 }
 
@@ -536,6 +644,7 @@ void MainWindow::createVolumeControlsDock()
   dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
 
   auto* panel = new QWidget(dock);
+  panel->setMinimumWidth(220);
   auto* layout = new QFormLayout(panel);
 
   sliceOrientationComboBox_ = new QComboBox(panel);
@@ -569,6 +678,8 @@ void MainWindow::createVolumeControlsDock()
   spacingValueLabel_ = new QLabel("-", panel);
   currentSliceValueLabel_ = new QLabel("-", panel);
   cursorValueLabel_ = new QLabel("-", panel);
+  cursorValueLabel_->setMinimumWidth(140);
+  cursorValueLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
   windowSpinBox_ = new QSpinBox(panel);
   windowSpinBox_->setRange(1, 4096);
@@ -627,6 +738,7 @@ void MainWindow::createVolumeControlsDock()
   layout->addRow(invertGrayscaleCheckBox_);
 
   dock->setWidget(panel);
+  dock->setMinimumWidth(230);
   addDockWidget(Qt::RightDockWidgetArea, dock);
   updateVolumeInfoLabels();
 }
@@ -896,7 +1008,7 @@ void MainWindow::updateMouseImagePosition(int x, int y)
 
   if (cursorValueLabel_)
   {
-    cursorValueLabel_->setText(QString("x=%1 y=%2 value=%3")
+    cursorValueLabel_->setText(QString("x=%1 y=%2 v=%3")
                                    .arg(x)
                                    .arg(y)
                                    .arg(voxelValueAt(voxelX, voxelY, voxelZ)));
