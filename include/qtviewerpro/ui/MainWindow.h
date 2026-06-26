@@ -13,6 +13,7 @@ class QMenu;
 class QCloseEvent;
 class QAction;
 class QComboBox;
+class QLabel;
 class QSlider;
 class QSpinBox;
 
@@ -90,6 +91,7 @@ private:
   void displayCurrentSlice();
   std::size_t activeSliceCount() const;
   void updateSliceActions();
+  void updateVolumeInfoLabels();
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
@@ -133,6 +135,10 @@ private:
   QAction* aboutAction_ = nullptr;
   QComboBox* sliceOrientationComboBox_ = nullptr;
   QSlider* sliceSlider_ = nullptr;
+  QLabel* modeValueLabel_ = nullptr;
+  QLabel* sizeValueLabel_ = nullptr;
+  QLabel* spacingValueLabel_ = nullptr;
+  QLabel* currentSliceValueLabel_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
 };
