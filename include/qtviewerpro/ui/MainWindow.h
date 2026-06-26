@@ -95,6 +95,10 @@ private:
   std::size_t activeSliceCount() const;
   void updateSliceActions();
   void updateVolumeInfoLabels();
+  QString currentModeText() const;
+  QString currentSizeText() const;
+  QString currentSpacingText() const;
+  QString currentSliceText() const;
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;

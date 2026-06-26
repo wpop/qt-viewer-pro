@@ -919,32 +919,64 @@ void MainWindow::updateVolumeInfoLabels()
     return;
   }
 
+  modeValueLabel_->setText(currentModeText());
+  sizeValueLabel_->setText(currentSizeText());
+  spacingValueLabel_->setText(currentSpacingText());
+  currentSliceValueLabel_->setText(currentSliceText());
+}
+
+QString MainWindow::currentModeText() const
+{
   if (!volumeActive_)
   {
-    const bool hasImage = !originalImage_.isNull();
-    modeValueLabel_->setText(hasImage ? "Image" : "None");
-    sizeValueLabel_->setText(hasImage ? QString("%1 × %2")
-                                            .arg(originalImage_.width())
-                                            .arg(originalImage_.height())
-                                      : "-");
-    spacingValueLabel_->setText("-");
-    currentSliceValueLabel_->setText("-");
-    return;
+    return originalImage_.isNull() ? "None" : "Image";
   }
 
-  modeValueLabel_->setText(rawVolumeActive_ ? "RAW" : "Synthetic");
-  sizeValueLabel_->setText(QString("%1 × %2 × %3")
-                               .arg(activeVolume_.width())
-                               .arg(activeVolume_.height())
-                               .arg(activeVolume_.depth()));
-  spacingValueLabel_->setText(QString("%1 × %2 × %3")
-                                  .arg(activeVolume_.spacingX())
-                                  .arg(activeVolume_.spacingY())
-                                  .arg(activeVolume_.spacingZ()));
-  currentSliceValueLabel_->setText(QString("%1 slice %2/%3")
-                                       .arg(sliceOrientationName(activeSliceOrientation_))
-                                       .arg(activeSliceIndex_ + 1)
-                                       .arg(activeSliceCount()));
+  return rawVolumeActive_ ? "RAW" : "Synthetic";
+}
+
+QString MainWindow::currentSizeText() const
+{
+  if (volumeActive_)
+  {
+    return QString("%1 × %2 × %3")
+        .arg(activeVolume_.width())
+        .arg(activeVolume_.height())
+        .arg(activeVolume_.depth());
+  }
+
+  if (!originalImage_.isNull())
+  {
+    return QString("%1 × %2").arg(originalImage_.width()).arg(originalImage_.height());
+  }
+
+  return "-";
+}
+
+QString MainWindow::currentSpacingText() const
+{
+  if (!volumeActive_)
+  {
+    return "-";
+  }
+
+  return QString("%1 × %2 × %3")
+      .arg(activeVolume_.spacingX())
+      .arg(activeVolume_.spacingY())
+      .arg(activeVolume_.spacingZ());
+}
+
+QString MainWindow::currentSliceText() const
+{
+  if (!volumeActive_)
+  {
+    return "-";
+  }
+
+  return QString("%1 slice %2/%3")
+      .arg(sliceOrientationName(activeSliceOrientation_))
+      .arg(activeSliceIndex_ + 1)
+      .arg(activeSliceCount());
 }
 
 void MainWindow::showAboutDialog()
