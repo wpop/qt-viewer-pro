@@ -2,14 +2,19 @@
 
 #include <QGraphicsView>
 #include <QImage>
+#include <QPointF>
 #include <QSize>
 #include <QString>
+
+#include <optional>
 
 class QDragEnterEvent;
 class QDragMoveEvent;
 class QDropEvent;
+class QEvent;
 class QGraphicsPixmapItem;
 class QMouseEvent;
+class QPainter;
 class QResizeEvent;
 class QWheelEvent;
 
@@ -98,6 +103,8 @@ public:
   double zoomFactor() const;
 
 protected:
+  void drawForeground(QPainter* painter, const QRectF& rect) override;
+  void leaveEvent(QEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
@@ -123,6 +130,7 @@ signals:
 private:
   QGraphicsPixmapItem* pixmapItem_ = nullptr;
   bool fitMode_ = true;
+  std::optional<QPointF> currentImageMousePosition_;
 };
 
 } // namespace qvp
