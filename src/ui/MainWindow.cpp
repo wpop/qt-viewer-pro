@@ -867,7 +867,70 @@ void MainWindow::updateInvertGrayscale()
 
 void MainWindow::updateMouseImagePosition(int x, int y)
 {
-  statusBar()->showMessage(QString("Mouse x=%1 y=%2").arg(x).arg(y));
+  int voxelX = 0;
+  int voxelY = 0;
+  int voxelZ = 0;
+  if (!voxelCoordinatesFromImagePosition(x, y, voxelX, voxelY, voxelZ))
+  {
+    statusBar()->showMessage(QString("Mouse x=%1 y=%2").arg(x).arg(y));
+    return;
+  }
+
+  statusBar()->showMessage(QString("%1 %2 slice %3/%4 | Mouse x=%5 y=%6 | Voxel value=%7")
+                               .arg(currentModeText())
+                               .arg(sliceOrientationName(activeSliceOrientation_))
+                               .arg(activeSliceIndex_ + 1)
+                               .arg(activeSliceCount())
+                               .arg(x)
+                               .arg(y)
+                               .arg(voxelValueAt(voxelX, voxelY, voxelZ)));
+}
+
+bool MainWindow::voxelCoordinatesFromImagePosition(int imageX,
+                                                   int imageY,
+                                                   int& voxelX,
+                                                   int& voxelY,
+                                                   int& voxelZ) const
+{
+  if (!volumeActive_ || imageX < 0 || imageY < 0)
+  {
+    return false;
+  }
+
+  switch (activeSliceOrientation_)
+  {
+  case SliceOrientation::Coronal:
+    voxelX = imageX;
+    voxelY = static_cast<int>(activeSliceIndex_);
+    voxelZ = imageY;
+    break;
+  case SliceOrientation::Sagittal:
+    voxelX = static_cast<int>(activeSliceIndex_);
+    voxelY = imageX;
+    voxelZ = imageY;
+    break;
+  case SliceOrientation::Axial:
+    voxelX = imageX;
+    voxelY = imageY;
+    voxelZ = static_cast<int>(activeSliceIndex_);
+    break;
+  }
+
+  return voxelX >= 0 && voxelY >= 0 && voxelZ >= 0 &&
+         static_cast<std::size_t>(voxelX) < activeVolume_.width() &&
+         static_cast<std::size_t>(voxelY) < activeVolume_.height() &&
+         static_cast<std::size_t>(voxelZ) < activeVolume_.depth();
+}
+
+float MainWindow::voxelValueAt(int voxelX, int voxelY, int voxelZ) const
+{
+  const std::size_t x = static_cast<std::size_t>(voxelX);
+  const std::size_t y = static_cast<std::size_t>(voxelY);
+  const std::size_t z = static_cast<std::size_t>(voxelZ);
+  const std::size_t index =
+      (z * activeVolume_.height() * activeVolume_.width()) + (y * activeVolume_.width()) + x;
+
+  return activeVolume_.voxels().at(index);
 }
 
 void MainWindow::displayCurrentSlice()

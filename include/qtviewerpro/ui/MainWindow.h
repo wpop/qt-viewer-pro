@@ -102,6 +102,12 @@ private:
   QString currentSizeText() const;
   QString currentSpacingText() const;
   QString currentSliceText() const;
+  bool voxelCoordinatesFromImagePosition(int imageX,
+                                         int imageY,
+                                         int& voxelX,
+                                         int& voxelY,
+                                         int& voxelZ) const;
+  float voxelValueAt(int voxelX, int voxelY, int voxelZ) const;
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
