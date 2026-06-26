@@ -588,13 +588,31 @@ void MainWindow::createVolumeControlsDock()
   connect(invertGrayscaleCheckBox_, &QCheckBox::toggled, this,
           &MainWindow::updateInvertGrayscale);
 
+  auto* navigationHeader = new QLabel("Navigation", panel);
+  QFont navigationHeaderFont = navigationHeader->font();
+  navigationHeaderFont.setBold(true);
+  navigationHeader->setFont(navigationHeaderFont);
+
+  auto* infoHeader = new QLabel("Info", panel);
+  QFont infoHeaderFont = infoHeader->font();
+  infoHeaderFont.setBold(true);
+  infoHeader->setFont(infoHeaderFont);
+
+  auto* displayHeader = new QLabel("Display", panel);
+  QFont displayHeaderFont = displayHeader->font();
+  displayHeaderFont.setBold(true);
+  displayHeader->setFont(displayHeaderFont);
+
+  layout->addRow(navigationHeader);
   layout->addRow("Orientation:", sliceOrientationComboBox_);
   layout->addRow("Slice:", sliceSlider_);
   layout->addRow("Slice Index:", sliceSpinBox_);
+  layout->addRow(infoHeader);
   layout->addRow("Mode:", modeValueLabel_);
   layout->addRow("Size:", sizeValueLabel_);
   layout->addRow("Spacing:", spacingValueLabel_);
   layout->addRow("Current:", currentSliceValueLabel_);
+  layout->addRow(displayHeader);
   layout->addRow("Window:", windowSpinBox_);
   layout->addRow("Level:", levelSpinBox_);
   layout->addRow(resetWindowLevelButton_);
