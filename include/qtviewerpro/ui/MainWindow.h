@@ -14,6 +14,7 @@ class QCloseEvent;
 class QAction;
 class QComboBox;
 class QLabel;
+class QPushButton;
 class QSlider;
 class QSpinBox;
 
@@ -70,6 +71,7 @@ private slots:
   void setSliceFromSpinBox(int sliceNumber);
   void setSliceOrientation(int orientationIndex);
   void updateWindowLevel();
+  void resetWindowLevel();
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -143,6 +145,7 @@ private:
   QLabel* currentSliceValueLabel_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
+  QPushButton* resetWindowLevelButton_ = nullptr;
 };
 
 } // namespace qvp
