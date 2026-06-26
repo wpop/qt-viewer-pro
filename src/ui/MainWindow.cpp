@@ -9,6 +9,7 @@
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
 #include <QAction>
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDockWidget>
@@ -582,6 +583,11 @@ void MainWindow::createVolumeControlsDock()
   resetWindowLevelButton_->setEnabled(false);
   connect(resetWindowLevelButton_, &QPushButton::clicked, this, &MainWindow::resetWindowLevel);
 
+  invertGrayscaleCheckBox_ = new QCheckBox("Invert grayscale", panel);
+  invertGrayscaleCheckBox_->setEnabled(false);
+  connect(invertGrayscaleCheckBox_, &QCheckBox::toggled, this,
+          &MainWindow::updateInvertGrayscale);
+
   layout->addRow("Orientation:", sliceOrientationComboBox_);
   layout->addRow("Slice:", sliceSlider_);
   layout->addRow("Slice Index:", sliceSpinBox_);
@@ -592,6 +598,7 @@ void MainWindow::createVolumeControlsDock()
   layout->addRow("Window:", windowSpinBox_);
   layout->addRow("Level:", levelSpinBox_);
   layout->addRow(resetWindowLevelButton_);
+  layout->addRow(invertGrayscaleCheckBox_);
 
   dock->setWidget(panel);
   addDockWidget(Qt::RightDockWidgetArea, dock);
@@ -828,13 +835,27 @@ void MainWindow::resetWindowLevel()
   }
 }
 
+void MainWindow::updateInvertGrayscale()
+{
+  if (!volumeActive_)
+  {
+    return;
+  }
+
+  displayCurrentSlice();
+}
+
 void MainWindow::displayCurrentSlice()
 {
   const auto slice =
       SliceExtractor::extract(activeVolume_, activeSliceOrientation_, activeSliceIndex_);
   const float window = windowSpinBox_ ? static_cast<float>(windowSpinBox_->value()) : 255.0F;
   const float level = levelSpinBox_ ? static_cast<float>(levelSpinBox_->value()) : 127.0F;
-  const QImage image = SliceImageConverter::toGrayscaleImage(slice, window, level);
+  QImage image = SliceImageConverter::toGrayscaleImage(slice, window, level);
+  if (invertGrayscaleCheckBox_ && invertGrayscaleCheckBox_->isChecked())
+  {
+    image.invertPixels();
+  }
 
   originalImage_ = image;
   viewer_->setImage(image);
@@ -909,6 +930,10 @@ void MainWindow::updateSliceActions()
   if (resetWindowLevelButton_)
   {
     resetWindowLevelButton_->setEnabled(hasVolume);
+  }
+  if (invertGrayscaleCheckBox_)
+  {
+    invertGrayscaleCheckBox_->setEnabled(hasVolume);
   }
 }
 

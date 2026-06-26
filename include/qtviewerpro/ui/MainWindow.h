@@ -12,6 +12,7 @@
 class QMenu;
 class QCloseEvent;
 class QAction;
+class QCheckBox;
 class QComboBox;
 class QLabel;
 class QPushButton;
@@ -72,6 +73,7 @@ private slots:
   void setSliceOrientation(int orientationIndex);
   void updateWindowLevel();
   void resetWindowLevel();
+  void updateInvertGrayscale();
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -150,6 +152,7 @@ private:
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
   QPushButton* resetWindowLevelButton_ = nullptr;
+  QCheckBox* invertGrayscaleCheckBox_ = nullptr;
 };
 
 } // namespace qvp
