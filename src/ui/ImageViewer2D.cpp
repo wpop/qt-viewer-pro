@@ -127,14 +127,16 @@ void ImageViewer2D::drawForeground(QPainter* painter, const QRectF& rect)
   const QPointF left = pixmapItem_->mapToScene(QPointF(imageBounds.left(), imagePosition.y()));
   const QPointF right = pixmapItem_->mapToScene(QPointF(imageBounds.right(), imagePosition.y()));
 
-  QPen outlinePen(QColor(0, 0, 0, 180));
-  outlinePen.setWidth(3);
+  QPen outlinePen(QColor(0, 0, 0, 100));
+  outlinePen.setWidth(2);
+  outlinePen.setCosmetic(true);
   painter->setPen(outlinePen);
   painter->drawLine(top, bottom);
   painter->drawLine(left, right);
 
   QPen innerPen(QColor(255, 255, 255, 230));
-  innerPen.setWidth(0);
+  innerPen.setWidth(1);
+  innerPen.setCosmetic(true);
   painter->setPen(innerPen);
   painter->drawLine(top, bottom);
   painter->drawLine(left, right);
