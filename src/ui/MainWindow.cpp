@@ -15,6 +15,7 @@
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QImage>
+#include <QLabel>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
@@ -59,6 +60,21 @@ QIcon createTextIcon(const QString& text)
   painter.drawText(pixmap.rect(), Qt::AlignCenter, text);
 
   return QIcon(pixmap);
+}
+
+QString sliceOrientationName(qvp::SliceOrientation orientation)
+{
+  switch (orientation)
+  {
+  case qvp::SliceOrientation::Coronal:
+    return "Coronal";
+  case qvp::SliceOrientation::Sagittal:
+    return "Sagittal";
+  case qvp::SliceOrientation::Axial:
+    return "Axial";
+  }
+
+  return "Axial";
 }
 } // namespace
 
@@ -135,9 +151,11 @@ void MainWindow::openImage(const QString& fileName)
 
   originalImage_ = image;
   volumeActive_ = false;
+  rawVolumeActive_ = false;
   viewer_->setImage(image);
   updateStatusBar();
   updateActions();
+  updateVolumeInfoLabels();
 
   addRecentFile(fileName);
 }
@@ -530,6 +548,11 @@ void MainWindow::createVolumeControlsDock()
   sliceSlider_->setStatusTip("Slice");
   connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
 
+  modeValueLabel_ = new QLabel("-", panel);
+  sizeValueLabel_ = new QLabel("-", panel);
+  spacingValueLabel_ = new QLabel("-", panel);
+  currentSliceValueLabel_ = new QLabel("-", panel);
+
   windowSpinBox_ = new QSpinBox(panel);
   windowSpinBox_->setRange(1, 4096);
   windowSpinBox_->setValue(255);
@@ -546,11 +569,16 @@ void MainWindow::createVolumeControlsDock()
 
   layout->addRow("Orientation:", sliceOrientationComboBox_);
   layout->addRow("Slice:", sliceSlider_);
+  layout->addRow("Mode:", modeValueLabel_);
+  layout->addRow("Size:", sizeValueLabel_);
+  layout->addRow("Spacing:", spacingValueLabel_);
+  layout->addRow("Current:", currentSliceValueLabel_);
   layout->addRow("Window:", windowSpinBox_);
   layout->addRow("Level:", levelSpinBox_);
 
   dock->setWidget(panel);
   addDockWidget(Qt::RightDockWidgetArea, dock);
+  updateVolumeInfoLabels();
 }
 
 void MainWindow::rotateLeft()
@@ -645,6 +673,7 @@ void MainWindow::openSyntheticVolumeSlice()
   volumeActive_ = true;
   rawVolumeActive_ = false;
 
+  updateVolumeInfoLabels();
   displayCurrentSlice();
 }
 
@@ -672,6 +701,7 @@ void MainWindow::openRawVolume()
     volumeActive_ = true;
     rawVolumeActive_ = true;
 
+    updateVolumeInfoLabels();
     displayCurrentSlice();
   }
   catch (const std::exception& error)
@@ -731,10 +761,12 @@ void MainWindow::setSliceOrientation(int orientationIndex)
 
   if (!volumeActive_)
   {
+    updateVolumeInfoLabels();
     return;
   }
 
   activeSliceIndex_ = activeSliceCount() / 2;
+  updateVolumeInfoLabels();
   displayCurrentSlice();
 }
 
@@ -764,6 +796,7 @@ void MainWindow::displayCurrentSlice()
     sliceSlider_->setRange(0, static_cast<int>(activeSliceCount() - 1));
     sliceSlider_->setValue(static_cast<int>(activeSliceIndex_));
   }
+  updateVolumeInfoLabels();
   updateActions();
   const QString sliceLabel = rawVolumeActive_ ? "RAW volume slice" : "Synthetic slice";
   statusBar()->showMessage(QString("%1 %2/%3")
@@ -802,6 +835,37 @@ void MainWindow::updateSliceActions()
   {
     sliceSlider_->setEnabled(hasVolume);
   }
+}
+
+void MainWindow::updateVolumeInfoLabels()
+{
+  if (!modeValueLabel_ || !sizeValueLabel_ || !spacingValueLabel_ || !currentSliceValueLabel_)
+  {
+    return;
+  }
+
+  if (!volumeActive_)
+  {
+    modeValueLabel_->setText("None");
+    sizeValueLabel_->setText("-");
+    spacingValueLabel_->setText("-");
+    currentSliceValueLabel_->setText("-");
+    return;
+  }
+
+  modeValueLabel_->setText(rawVolumeActive_ ? "RAW" : "Synthetic");
+  sizeValueLabel_->setText(QString("%1 × %2 × %3")
+                               .arg(activeVolume_.width())
+                               .arg(activeVolume_.height())
+                               .arg(activeVolume_.depth()));
+  spacingValueLabel_->setText(QString("%1 × %2 × %3")
+                                  .arg(activeVolume_.spacingX())
+                                  .arg(activeVolume_.spacingY())
+                                  .arg(activeVolume_.spacingZ()));
+  currentSliceValueLabel_->setText(QString("%1 slice %2/%3")
+                                       .arg(sliceOrientationName(activeSliceOrientation_))
+                                       .arg(activeSliceIndex_ + 1)
+                                       .arg(activeSliceCount()));
 }
 
 void MainWindow::showAboutDialog()
