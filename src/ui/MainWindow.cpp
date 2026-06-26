@@ -798,9 +798,10 @@ void MainWindow::displayCurrentSlice()
   }
   updateVolumeInfoLabels();
   updateActions();
-  const QString sliceLabel = rawVolumeActive_ ? "RAW volume slice" : "Synthetic slice";
-  statusBar()->showMessage(QString("%1 %2/%3")
+  const QString sliceLabel = rawVolumeActive_ ? "RAW volume" : "Synthetic";
+  statusBar()->showMessage(QString("%1 %2 slice %3/%4")
                                .arg(sliceLabel)
+                               .arg(sliceOrientationName(activeSliceOrientation_))
                                .arg(activeSliceIndex_ + 1)
                                .arg(activeSliceCount()));
 }
