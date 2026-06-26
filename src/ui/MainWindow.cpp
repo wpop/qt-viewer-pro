@@ -921,8 +921,12 @@ void MainWindow::updateVolumeInfoLabels()
 
   if (!volumeActive_)
   {
-    modeValueLabel_->setText("None");
-    sizeValueLabel_->setText("-");
+    const bool hasImage = !originalImage_.isNull();
+    modeValueLabel_->setText(hasImage ? "Image" : "None");
+    sizeValueLabel_->setText(hasImage ? QString("%1 × %2")
+                                            .arg(originalImage_.width())
+                                            .arg(originalImage_.height())
+                                      : "-");
     spacingValueLabel_->setText("-");
     currentSliceValueLabel_->setText("-");
     return;
