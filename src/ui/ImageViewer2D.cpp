@@ -3,11 +3,13 @@
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
 #include <QDropEvent>
+#include <QEvent>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPen>
 #include <QPixmap>
 #include <QTransform>
 #include <QUrl>
@@ -69,6 +71,7 @@ void ImageViewer2D::wheelEvent(QWheelEvent* event)
 
 void ImageViewer2D::mouseMoveEvent(QMouseEvent* event)
 {
+  bool hasValidImagePosition = false;
   if (pixmapItem_ && !pixmapItem_->pixmap().isNull())
   {
     const QPointF scenePosition = mapToScene(event->position().toPoint());
@@ -79,12 +82,55 @@ void ImageViewer2D::mouseMoveEvent(QMouseEvent* event)
         imagePosition.x() < static_cast<double>(imageSize.width()) &&
         imagePosition.y() < static_cast<double>(imageSize.height()))
     {
+      currentImageMousePosition_ = imagePosition;
+      hasValidImagePosition = true;
+      viewport()->update();
       emit imageMousePositionChanged(static_cast<int>(imagePosition.x()),
                                      static_cast<int>(imagePosition.y()));
     }
   }
 
+  if (!hasValidImagePosition && currentImageMousePosition_.has_value())
+  {
+    currentImageMousePosition_.reset();
+    viewport()->update();
+  }
+
   QGraphicsView::mouseMoveEvent(event);
+}
+
+void ImageViewer2D::leaveEvent(QEvent* event)
+{
+  if (currentImageMousePosition_.has_value())
+  {
+    currentImageMousePosition_.reset();
+    viewport()->update();
+  }
+
+  QGraphicsView::leaveEvent(event);
+}
+
+void ImageViewer2D::drawForeground(QPainter* painter, const QRectF& rect)
+{
+  QGraphicsView::drawForeground(painter, rect);
+
+  if (!pixmapItem_ || pixmapItem_->pixmap().isNull() || !currentImageMousePosition_.has_value())
+  {
+    return;
+  }
+
+  const QRectF imageBounds = pixmapItem_->boundingRect();
+  const QPointF imagePosition = currentImageMousePosition_.value();
+  const QPointF top = pixmapItem_->mapToScene(QPointF(imagePosition.x(), imageBounds.top()));
+  const QPointF bottom = pixmapItem_->mapToScene(QPointF(imagePosition.x(), imageBounds.bottom()));
+  const QPointF left = pixmapItem_->mapToScene(QPointF(imageBounds.left(), imagePosition.y()));
+  const QPointF right = pixmapItem_->mapToScene(QPointF(imageBounds.right(), imagePosition.y()));
+
+  QPen pen(Qt::yellow);
+  pen.setWidth(0);
+  painter->setPen(pen);
+  painter->drawLine(top, bottom);
+  painter->drawLine(left, right);
 }
 
 void ImageViewer2D::fitToWindow()
