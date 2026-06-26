@@ -154,6 +154,10 @@ void MainWindow::openImage(const QString& fileName)
   originalImage_ = image;
   volumeActive_ = false;
   rawVolumeActive_ = false;
+  if (cursorValueLabel_)
+  {
+    cursorValueLabel_->setText("-");
+  }
   viewer_->setImage(image);
   updateStatusBar();
   updateActions();
@@ -564,6 +568,7 @@ void MainWindow::createVolumeControlsDock()
   sizeValueLabel_ = new QLabel("-", panel);
   spacingValueLabel_ = new QLabel("-", panel);
   currentSliceValueLabel_ = new QLabel("-", panel);
+  cursorValueLabel_ = new QLabel("-", panel);
 
   windowSpinBox_ = new QSpinBox(panel);
   windowSpinBox_->setRange(1, 4096);
@@ -614,6 +619,7 @@ void MainWindow::createVolumeControlsDock()
   layout->addRow("Size:", sizeValueLabel_);
   layout->addRow("Spacing:", spacingValueLabel_);
   layout->addRow("Current:", currentSliceValueLabel_);
+  layout->addRow("Cursor:", cursorValueLabel_);
   layout->addRow(displayHeader);
   layout->addRow("Window:", windowSpinBox_);
   layout->addRow("Level:", levelSpinBox_);
@@ -716,6 +722,10 @@ void MainWindow::openSyntheticVolumeSlice()
   activeSliceIndex_ = activeSliceCount() / 2;
   volumeActive_ = true;
   rawVolumeActive_ = false;
+  if (cursorValueLabel_)
+  {
+    cursorValueLabel_->setText("-");
+  }
 
   updateVolumeInfoLabels();
   displayCurrentSlice();
@@ -744,6 +754,10 @@ void MainWindow::openRawVolume()
     activeSliceIndex_ = activeSliceCount() / 2;
     volumeActive_ = true;
     rawVolumeActive_ = true;
+    if (cursorValueLabel_)
+    {
+      cursorValueLabel_->setText("-");
+    }
 
     updateVolumeInfoLabels();
     displayCurrentSlice();
@@ -872,10 +886,21 @@ void MainWindow::updateMouseImagePosition(int x, int y)
   int voxelZ = 0;
   if (!voxelCoordinatesFromImagePosition(x, y, voxelX, voxelY, voxelZ))
   {
+    if (cursorValueLabel_)
+    {
+      cursorValueLabel_->setText(volumeActive_ ? "-" : QString("x=%1 y=%2").arg(x).arg(y));
+    }
     statusBar()->showMessage(QString("Mouse x=%1 y=%2").arg(x).arg(y));
     return;
   }
 
+  if (cursorValueLabel_)
+  {
+    cursorValueLabel_->setText(QString("x=%1 y=%2 value=%3")
+                                   .arg(x)
+                                   .arg(y)
+                                   .arg(voxelValueAt(voxelX, voxelY, voxelZ)));
+  }
   statusBar()->showMessage(QString("%1 %2 slice %3/%4 | Mouse x=%5 y=%6 | Voxel value=%7")
                                .arg(currentModeText())
                                .arg(sliceOrientationName(activeSliceOrientation_))

@@ -156,6 +156,7 @@ private:
   QLabel* sizeValueLabel_ = nullptr;
   QLabel* spacingValueLabel_ = nullptr;
   QLabel* currentSliceValueLabel_ = nullptr;
+  QLabel* cursorValueLabel_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
   QPushButton* resetWindowLevelButton_ = nullptr;
