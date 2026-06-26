@@ -536,6 +536,7 @@ void MainWindow::createVolumeControlsDock()
   sliceOrientationComboBox_->addItem("Coronal");
   sliceOrientationComboBox_->addItem("Sagittal");
   sliceOrientationComboBox_->setCurrentIndex(0);
+  sliceOrientationComboBox_->setEnabled(false);
   sliceOrientationComboBox_->setToolTip("Slice Orientation");
   sliceOrientationComboBox_->setStatusTip("Slice Orientation");
   connect(sliceOrientationComboBox_,
@@ -564,6 +565,7 @@ void MainWindow::createVolumeControlsDock()
   windowSpinBox_ = new QSpinBox(panel);
   windowSpinBox_->setRange(1, 4096);
   windowSpinBox_->setValue(255);
+  windowSpinBox_->setEnabled(false);
   windowSpinBox_->setToolTip("Window");
   windowSpinBox_->setStatusTip("Window");
   connect(windowSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
@@ -571,6 +573,7 @@ void MainWindow::createVolumeControlsDock()
   levelSpinBox_ = new QSpinBox(panel);
   levelSpinBox_->setRange(-2048, 4096);
   levelSpinBox_->setValue(127);
+  levelSpinBox_->setEnabled(false);
   levelSpinBox_->setToolTip("Level");
   levelSpinBox_->setStatusTip("Level");
   connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
@@ -883,6 +886,10 @@ void MainWindow::updateSliceActions()
 
   previousSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
   nextSliceAction_->setEnabled(hasVolume && activeSliceIndex_ + 1 < activeSliceCount());
+  if (sliceOrientationComboBox_)
+  {
+    sliceOrientationComboBox_->setEnabled(hasVolume);
+  }
   if (sliceSlider_)
   {
     sliceSlider_->setEnabled(hasVolume);
@@ -890,6 +897,14 @@ void MainWindow::updateSliceActions()
   if (sliceSpinBox_)
   {
     sliceSpinBox_->setEnabled(hasVolume);
+  }
+  if (windowSpinBox_)
+  {
+    windowSpinBox_->setEnabled(hasVolume);
+  }
+  if (levelSpinBox_)
+  {
+    levelSpinBox_->setEnabled(hasVolume);
   }
   if (resetWindowLevelButton_)
   {
