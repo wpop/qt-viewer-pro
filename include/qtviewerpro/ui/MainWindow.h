@@ -67,6 +67,7 @@ private slots:
   void previousSlice();
   void nextSlice();
   void setSliceFromSlider(int sliceIndex);
+  void setSliceFromSpinBox(int sliceNumber);
   void setSliceOrientation(int orientationIndex);
   void updateWindowLevel();
   void showAboutDialog();
@@ -135,6 +136,7 @@ private:
   QAction* aboutAction_ = nullptr;
   QComboBox* sliceOrientationComboBox_ = nullptr;
   QSlider* sliceSlider_ = nullptr;
+  QSpinBox* sliceSpinBox_ = nullptr;
   QLabel* modeValueLabel_ = nullptr;
   QLabel* sizeValueLabel_ = nullptr;
   QLabel* spacingValueLabel_ = nullptr;

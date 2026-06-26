@@ -548,6 +548,13 @@ void MainWindow::createVolumeControlsDock()
   sliceSlider_->setStatusTip("Slice");
   connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
 
+  sliceSpinBox_ = new QSpinBox(panel);
+  sliceSpinBox_->setRange(1, 1);
+  sliceSpinBox_->setEnabled(false);
+  sliceSpinBox_->setToolTip("Slice Index");
+  sliceSpinBox_->setStatusTip("Slice Index");
+  connect(sliceSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::setSliceFromSpinBox);
+
   modeValueLabel_ = new QLabel("-", panel);
   sizeValueLabel_ = new QLabel("-", panel);
   spacingValueLabel_ = new QLabel("-", panel);
@@ -569,6 +576,7 @@ void MainWindow::createVolumeControlsDock()
 
   layout->addRow("Orientation:", sliceOrientationComboBox_);
   layout->addRow("Slice:", sliceSlider_);
+  layout->addRow("Slice Index:", sliceSpinBox_);
   layout->addRow("Mode:", modeValueLabel_);
   layout->addRow("Size:", sizeValueLabel_);
   layout->addRow("Spacing:", spacingValueLabel_);
@@ -744,6 +752,18 @@ void MainWindow::setSliceFromSlider(int sliceIndex)
   displayCurrentSlice();
 }
 
+void MainWindow::setSliceFromSpinBox(int sliceNumber)
+{
+  if (!volumeActive_ || sliceNumber <= 0 ||
+      static_cast<std::size_t>(sliceNumber) > activeSliceCount())
+  {
+    return;
+  }
+
+  activeSliceIndex_ = static_cast<std::size_t>(sliceNumber - 1);
+  displayCurrentSlice();
+}
+
 void MainWindow::setSliceOrientation(int orientationIndex)
 {
   switch (orientationIndex)
@@ -796,6 +816,12 @@ void MainWindow::displayCurrentSlice()
     sliceSlider_->setRange(0, static_cast<int>(activeSliceCount() - 1));
     sliceSlider_->setValue(static_cast<int>(activeSliceIndex_));
   }
+  if (sliceSpinBox_)
+  {
+    const QSignalBlocker blocker(sliceSpinBox_);
+    sliceSpinBox_->setRange(1, static_cast<int>(activeSliceCount()));
+    sliceSpinBox_->setValue(static_cast<int>(activeSliceIndex_ + 1));
+  }
   updateVolumeInfoLabels();
   updateActions();
   const QString sliceLabel = rawVolumeActive_ ? "RAW volume" : "Synthetic";
@@ -835,6 +861,10 @@ void MainWindow::updateSliceActions()
   if (sliceSlider_)
   {
     sliceSlider_->setEnabled(hasVolume);
+  }
+  if (sliceSpinBox_)
+  {
+    sliceSpinBox_->setEnabled(hasVolume);
   }
 }
 
