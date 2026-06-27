@@ -22,7 +22,11 @@ protected:
   void paintGL() override;
 
 private:
+  void uploadTextureIfNeeded();
+
   QImage image_;
+  GLuint textureId_ = 0;
+  bool textureDirty_ = false;
 };
 
 } // namespace qvp
