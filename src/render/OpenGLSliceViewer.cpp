@@ -1,5 +1,6 @@
 #include "qtviewerpro/render/OpenGLSliceViewer.h"
 
+#include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
 #include <QWheelEvent>
@@ -51,8 +52,14 @@ bool OpenGLSliceViewer::hasImage() const
 void OpenGLSliceViewer::resetView()
 {
   zoomFactor_ = 1.0F;
+  panOffset_ = QPointF(0.0, 0.0);
   updateQuadGeometryWithCurrentContext();
   update();
+}
+
+QPointF OpenGLSliceViewer::panOffset() const
+{
+  return panOffset_;
 }
 
 float OpenGLSliceViewer::zoomFactor() const
@@ -96,6 +103,54 @@ void OpenGLSliceViewer::paintGL()
 
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);
+}
+
+void OpenGLSliceViewer::mousePressEvent(QMouseEvent* event)
+{
+  if (event->button() == Qt::LeftButton)
+  {
+    isPanning_ = true;
+    lastMousePosition_ = event->position().toPoint();
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mousePressEvent(event);
+}
+
+void OpenGLSliceViewer::mouseMoveEvent(QMouseEvent* event)
+{
+  if (isPanning_)
+  {
+    const QPoint currentPosition = event->position().toPoint();
+    const QPoint delta = currentPosition - lastMousePosition_;
+
+    if (width() > 0 && height() > 0)
+    {
+      panOffset_ += QPointF(2.0 * static_cast<double>(delta.x()) / static_cast<double>(width()),
+                            -2.0 * static_cast<double>(delta.y()) / static_cast<double>(height()));
+      updateQuadGeometryWithCurrentContext();
+      update();
+    }
+
+    lastMousePosition_ = currentPosition;
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mouseMoveEvent(event);
+}
+
+void OpenGLSliceViewer::mouseReleaseEvent(QMouseEvent* event)
+{
+  if (event->button() == Qt::LeftButton && isPanning_)
+  {
+    isPanning_ = false;
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mouseReleaseEvent(event);
 }
 
 void OpenGLSliceViewer::wheelEvent(QWheelEvent* event)
@@ -269,13 +324,20 @@ void OpenGLSliceViewer::updateQuadGeometry()
   halfWidth *= zoomFactor_;
   halfHeight *= zoomFactor_;
 
+  const float centerX = static_cast<float>(panOffset_.x());
+  const float centerY = static_cast<float>(panOffset_.y());
+  const float left = centerX - halfWidth;
+  const float right = centerX + halfWidth;
+  const float bottom = centerY - halfHeight;
+  const float top = centerY + halfHeight;
+
   const float quadVertices[] = {
-      -halfWidth, -halfHeight, 0.0F, 1.0F,
-       halfWidth, -halfHeight, 1.0F, 1.0F,
-       halfWidth,  halfHeight, 1.0F, 0.0F,
-      -halfWidth, -halfHeight, 0.0F, 1.0F,
-       halfWidth,  halfHeight, 1.0F, 0.0F,
-      -halfWidth,  halfHeight, 0.0F, 0.0F,
+      left,  bottom, 0.0F, 1.0F,
+      right, bottom, 1.0F, 1.0F,
+      right, top,    1.0F, 0.0F,
+      left,  bottom, 0.0F, 1.0F,
+      right, top,    1.0F, 0.0F,
+      left,  top,    0.0F, 0.0F,
   };
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);

@@ -3,7 +3,10 @@
 #include <QImage>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
+#include <QPoint>
+#include <QPointF>
 
+class QMouseEvent;
 class QWheelEvent;
 
 namespace qvp
@@ -18,12 +21,16 @@ public:
   void setImage(const QImage& image);
   bool hasImage() const;
   void resetView();
+  QPointF panOffset() const;
   float zoomFactor() const;
 
 protected:
   void initializeGL() override;
   void resizeGL(int width, int height) override;
   void paintGL() override;
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
 
 private:
@@ -40,6 +47,9 @@ private:
   GLuint vao_ = 0;
   GLuint vbo_ = 0;
   float zoomFactor_ = 1.0F;
+  QPoint lastMousePosition_;
+  QPointF panOffset_ = QPointF(0.0, 0.0);
+  bool isPanning_ = false;
   bool textureDirty_ = false;
 };
 
