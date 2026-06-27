@@ -596,8 +596,10 @@ void MainWindow::openOpenGLViewerDemo()
 
   auto* buttonLayout = new QHBoxLayout();
   auto* openImageButton = new QPushButton("Open Image...", demoWindow);
+  auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
   buttonLayout->addWidget(openImageButton);
+  buttonLayout->addWidget(loadSyntheticSliceButton);
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
@@ -623,6 +625,15 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     openGLViewer->setImage(image);
+  });
+  connect(loadSyntheticSliceButton, &QPushButton::clicked, demoWindow, [this, openGLViewer]() {
+    const VolumeData volume = createSyntheticVolume();
+    const auto middleSliceIndex = volume.depth() / 2;
+    const auto slice = SliceExtractor::extract(volume, SliceOrientation::Axial, middleSliceIndex);
+    const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.0F);
+
+    openGLViewer->setSliceImage(image);
+    openGLViewer->resetView();
   });
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
