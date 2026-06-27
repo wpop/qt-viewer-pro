@@ -82,6 +82,32 @@ QString sliceOrientationName(qvp::SliceOrientation orientation)
   return "Axial";
 }
 
+QImage createOpenGLDemoImage()
+{
+  constexpr int kImageSize = 256;
+  QImage image(kImageSize, kImageSize, QImage::Format_RGBA8888);
+
+  for (int y = 0; y < image.height(); ++y)
+  {
+    auto* row = image.scanLine(y);
+    for (int x = 0; x < image.width(); ++x)
+    {
+      const int offset = x * 4;
+      const int gradient = (x + y) / 2;
+      const bool inSquare = x >= 88 && x < 168 && y >= 88 && y < 168;
+      const bool inCross = (x >= 124 && x < 132) || (y >= 124 && y < 132);
+      const int value = inSquare || inCross ? 240 : 24 + gradient / 2;
+
+      row[offset] = static_cast<uchar>(value);
+      row[offset + 1] = static_cast<uchar>(value);
+      row[offset + 2] = static_cast<uchar>(value);
+      row[offset + 3] = 255;
+    }
+  }
+
+  return image;
+}
+
 QString darkMedicalStyleSheet()
 {
   return QStringLiteral(R"(
@@ -568,6 +594,7 @@ void MainWindow::openOpenGLViewerDemo()
   layout->setContentsMargins(0, 0, 0, 0);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
+  openGLViewer->setImage(createOpenGLDemoImage());
   layout->addWidget(openGLViewer);
 
   demoWindow->show();
