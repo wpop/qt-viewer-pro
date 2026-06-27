@@ -591,11 +591,33 @@ void MainWindow::openOpenGLViewerDemo()
   demoWindow->resize(640, 480);
 
   auto* layout = new QVBoxLayout(demoWindow);
-  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setContentsMargins(4, 4, 4, 4);
+
+  auto* openImageButton = new QPushButton("Open Image...", demoWindow);
+  layout->addWidget(openImageButton);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
   openGLViewer->setImage(createOpenGLDemoImage());
   layout->addWidget(openGLViewer);
+
+  connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer]() {
+    const QString fileName = QFileDialog::getOpenFileName(
+        demoWindow, "Open Image", QString(), "Images (*.png *.jpg *.jpeg *.bmp)");
+
+    if (fileName.isEmpty())
+    {
+      return;
+    }
+
+    const QImage image(fileName);
+    if (image.isNull())
+    {
+      QMessageBox::warning(demoWindow, "Open Failed", "Could not load the selected image.");
+      return;
+    }
+
+    openGLViewer->setImage(image);
+  });
 
   demoWindow->show();
 }
