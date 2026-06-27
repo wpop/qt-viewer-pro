@@ -29,6 +29,23 @@ void OpenGLSliceViewer::setImage(const QImage& image)
 {
   image_ = image;
   textureDirty_ = true;
+
+  if (vbo_ != 0 && context())
+  {
+    const bool contextAlreadyCurrent = QOpenGLContext::currentContext() == context();
+    if (!contextAlreadyCurrent)
+    {
+      makeCurrent();
+    }
+
+    updateQuadGeometry();
+
+    if (!contextAlreadyCurrent)
+    {
+      doneCurrent();
+    }
+  }
+
   update();
 }
 
@@ -48,6 +65,7 @@ void OpenGLSliceViewer::initializeGL()
 void OpenGLSliceViewer::resizeGL(int width, int height)
 {
   glViewport(0, 0, width, height);
+  updateQuadGeometry();
 }
 
 void OpenGLSliceViewer::paintGL()
@@ -133,15 +151,6 @@ void main()
     return;
   }
 
-  static constexpr float kQuadVertices[] = {
-      -1.0F, -1.0F, 0.0F, 1.0F,
-       1.0F, -1.0F, 1.0F, 1.0F,
-       1.0F,  1.0F, 1.0F, 0.0F,
-      -1.0F, -1.0F, 0.0F, 1.0F,
-       1.0F,  1.0F, 1.0F, 0.0F,
-      -1.0F,  1.0F, 0.0F, 0.0F,
-  };
-
   auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
   extraFunctions->glGenVertexArrays(1, &vao_);
   glGenBuffers(1, &vbo_);
@@ -149,9 +158,9 @@ void main()
   extraFunctions->glBindVertexArray(vao_);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_);
   glBufferData(GL_ARRAY_BUFFER,
-               static_cast<qopengl_GLsizeiptr>(sizeof(kQuadVertices)),
-               kQuadVertices,
-               GL_STATIC_DRAW);
+               static_cast<qopengl_GLsizeiptr>(24 * sizeof(float)),
+               nullptr,
+               GL_DYNAMIC_DRAW);
 
   constexpr GLsizei kStride = 4 * sizeof(float);
   glEnableVertexAttribArray(0);
@@ -167,6 +176,8 @@ void main()
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   extraFunctions->glBindVertexArray(0);
+
+  updateQuadGeometry();
 }
 
 void OpenGLSliceViewer::destroyRenderingResources()
@@ -205,6 +216,49 @@ GLuint OpenGLSliceViewer::compileShader(GLenum shaderType, const char* source)
   }
 
   return shader;
+}
+
+void OpenGLSliceViewer::updateQuadGeometry()
+{
+  if (vbo_ == 0)
+  {
+    return;
+  }
+
+  float halfWidth = 1.0F;
+  float halfHeight = 1.0F;
+
+  if (!image_.isNull() && width() > 0 && height() > 0 && image_.width() > 0 && image_.height() > 0)
+  {
+    const float widgetAspect = static_cast<float>(width()) / static_cast<float>(height());
+    const float imageAspect =
+        static_cast<float>(image_.width()) / static_cast<float>(image_.height());
+
+    if (imageAspect > widgetAspect)
+    {
+      halfHeight = widgetAspect / imageAspect;
+    }
+    else
+    {
+      halfWidth = imageAspect / widgetAspect;
+    }
+  }
+
+  const float quadVertices[] = {
+      -halfWidth, -halfHeight, 0.0F, 1.0F,
+       halfWidth, -halfHeight, 1.0F, 1.0F,
+       halfWidth,  halfHeight, 1.0F, 0.0F,
+      -halfWidth, -halfHeight, 0.0F, 1.0F,
+       halfWidth,  halfHeight, 1.0F, 0.0F,
+      -halfWidth,  halfHeight, 0.0F, 0.0F,
+  };
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+  glBufferSubData(GL_ARRAY_BUFFER,
+                  0,
+                  static_cast<qopengl_GLsizeiptr>(sizeof(quadVertices)),
+                  quadVertices);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void OpenGLSliceViewer::uploadTextureIfNeeded()
