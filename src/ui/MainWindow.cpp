@@ -43,6 +43,8 @@
 
 #include <cmath>
 #include <exception>
+#include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -599,9 +601,19 @@ void MainWindow::openOpenGLViewerDemo()
   auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
   auto* loadRawSliceButton = new QPushButton("Load RAW Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
+  auto* windowSpinBox = new QSpinBox(demoWindow);
+  windowSpinBox->setRange(1, 4096);
+  windowSpinBox->setValue(255);
+  auto* levelSpinBox = new QSpinBox(demoWindow);
+  levelSpinBox->setRange(-2048, 4096);
+  levelSpinBox->setValue(127);
   buttonLayout->addWidget(openImageButton);
   buttonLayout->addWidget(loadSyntheticSliceButton);
   buttonLayout->addWidget(loadRawSliceButton);
+  buttonLayout->addWidget(new QLabel("Window", demoWindow));
+  buttonLayout->addWidget(windowSpinBox);
+  buttonLayout->addWidget(new QLabel("Level", demoWindow));
+  buttonLayout->addWidget(levelSpinBox);
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
@@ -610,7 +622,39 @@ void MainWindow::openOpenGLViewerDemo()
   openGLViewer->setImage(createOpenGLDemoImage());
   layout->addWidget(openGLViewer);
 
-  connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer]() {
+  auto currentVolume = std::make_shared<std::optional<VolumeData>>();
+  auto currentSliceIndex = std::make_shared<std::size_t>(0);
+  auto currentOrientation = std::make_shared<SliceOrientation>(SliceOrientation::Axial);
+  auto hasCurrentVolumeSlice = std::make_shared<bool>(false);
+
+  auto updateOpenGLVolumeSlice = [demoWindow,
+                                  openGLViewer,
+                                  windowSpinBox,
+                                  levelSpinBox,
+                                  currentVolume,
+                                  currentSliceIndex,
+                                  currentOrientation,
+                                  hasCurrentVolumeSlice]() {
+    if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
+    {
+      return;
+    }
+
+    try
+    {
+      const auto slice =
+          SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+      const QImage image = SliceImageConverter::toGrayscaleImage(
+          slice, static_cast<float>(windowSpinBox->value()), static_cast<float>(levelSpinBox->value()));
+      openGLViewer->setSliceImage(image);
+    }
+    catch (const std::exception& error)
+    {
+      QMessageBox::warning(demoWindow, "Slice Update Error", error.what());
+    }
+  };
+
+  connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer, hasCurrentVolumeSlice]() {
     const QString fileName = QFileDialog::getOpenFileName(
         demoWindow, "Open Image", QString(), "Images (*.png *.jpg *.jpeg *.bmp)");
 
@@ -627,17 +671,35 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     openGLViewer->setImage(image);
+    *hasCurrentVolumeSlice = false;
   });
-  connect(loadSyntheticSliceButton, &QPushButton::clicked, demoWindow, [this, openGLViewer]() {
-    const VolumeData volume = createSyntheticVolume();
-    const auto middleSliceIndex = volume.depth() / 2;
-    const auto slice = SliceExtractor::extract(volume, SliceOrientation::Axial, middleSliceIndex);
-    const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.0F);
-
-    openGLViewer->setSliceImage(image);
+  connect(loadSyntheticSliceButton,
+          &QPushButton::clicked,
+          demoWindow,
+          [this,
+           openGLViewer,
+           currentVolume,
+           currentSliceIndex,
+           currentOrientation,
+           hasCurrentVolumeSlice,
+           updateOpenGLVolumeSlice]() {
+    *currentVolume = createSyntheticVolume();
+    *currentSliceIndex = currentVolume->value().depth() / 2;
+    *currentOrientation = SliceOrientation::Axial;
+    *hasCurrentVolumeSlice = true;
+    updateOpenGLVolumeSlice();
     openGLViewer->resetView();
   });
-  connect(loadRawSliceButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer]() {
+  connect(loadRawSliceButton,
+          &QPushButton::clicked,
+          demoWindow,
+          [demoWindow,
+           openGLViewer,
+           currentVolume,
+           currentSliceIndex,
+           currentOrientation,
+           hasCurrentVolumeSlice,
+           updateOpenGLVolumeSlice]() {
     const QString metadataPath =
         QFileDialog::getOpenFileName(demoWindow, "Open RAW Volume Metadata", QString(),
                                      "JSON Metadata (*.json);;All Files (*)");
@@ -656,12 +718,11 @@ void MainWindow::openOpenGLViewerDemo()
 
     try
     {
-      const VolumeData volume = RawVolumeLoader::load(metadataPath, rawPath);
-      const auto middleSliceIndex = volume.depth() / 2;
-      const auto slice = SliceExtractor::extract(volume, SliceOrientation::Axial, middleSliceIndex);
-      const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.0F);
-
-      openGLViewer->setSliceImage(image);
+      *currentVolume = RawVolumeLoader::load(metadataPath, rawPath);
+      *currentSliceIndex = currentVolume->value().depth() / 2;
+      *currentOrientation = SliceOrientation::Axial;
+      *hasCurrentVolumeSlice = true;
+      updateOpenGLVolumeSlice();
       openGLViewer->resetView();
     }
     catch (const std::exception& error)
@@ -669,6 +730,8 @@ void MainWindow::openOpenGLViewerDemo()
       QMessageBox::warning(demoWindow, "RAW Volume Load Error", error.what());
     }
   });
+  connect(windowSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
+  connect(levelSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
   demoWindow->show();
