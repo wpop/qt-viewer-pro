@@ -19,6 +19,7 @@ public:
   ~OpenGLSliceViewer() override;
 
   void setImage(const QImage& image);
+  void setSliceImage(const QImage& image);
   bool hasImage() const;
   void resetView();
   QPointF panOffset() const;
