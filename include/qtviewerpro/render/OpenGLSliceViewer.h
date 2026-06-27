@@ -22,10 +22,16 @@ protected:
   void paintGL() override;
 
 private:
+  void initializeRenderingResources();
+  void destroyRenderingResources();
+  GLuint compileShader(GLenum shaderType, const char* source);
   void uploadTextureIfNeeded();
 
   QImage image_;
   GLuint textureId_ = 0;
+  GLuint shaderProgram_ = 0;
+  GLuint vao_ = 0;
+  GLuint vbo_ = 0;
   bool textureDirty_ = false;
 };
 
