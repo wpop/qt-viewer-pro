@@ -597,9 +597,11 @@ void MainWindow::openOpenGLViewerDemo()
   auto* buttonLayout = new QHBoxLayout();
   auto* openImageButton = new QPushButton("Open Image...", demoWindow);
   auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
+  auto* loadRawSliceButton = new QPushButton("Load RAW Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
   buttonLayout->addWidget(openImageButton);
   buttonLayout->addWidget(loadSyntheticSliceButton);
+  buttonLayout->addWidget(loadRawSliceButton);
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
@@ -634,6 +636,38 @@ void MainWindow::openOpenGLViewerDemo()
 
     openGLViewer->setSliceImage(image);
     openGLViewer->resetView();
+  });
+  connect(loadRawSliceButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer]() {
+    const QString metadataPath =
+        QFileDialog::getOpenFileName(demoWindow, "Open RAW Volume Metadata", QString(),
+                                     "JSON Metadata (*.json);;All Files (*)");
+    if (metadataPath.isEmpty())
+    {
+      return;
+    }
+
+    const QString rawPath =
+        QFileDialog::getOpenFileName(demoWindow, "Open RAW Volume Data", QString(),
+                                     "RAW Volume Data (*.raw);;All Files (*)");
+    if (rawPath.isEmpty())
+    {
+      return;
+    }
+
+    try
+    {
+      const VolumeData volume = RawVolumeLoader::load(metadataPath, rawPath);
+      const auto middleSliceIndex = volume.depth() / 2;
+      const auto slice = SliceExtractor::extract(volume, SliceOrientation::Axial, middleSliceIndex);
+      const QImage image = SliceImageConverter::toGrayscaleImage(slice, 255.0F, 127.0F);
+
+      openGLViewer->setSliceImage(image);
+      openGLViewer->resetView();
+    }
+    catch (const std::exception& error)
+    {
+      QMessageBox::warning(demoWindow, "RAW Volume Load Error", error.what());
+    }
   });
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
