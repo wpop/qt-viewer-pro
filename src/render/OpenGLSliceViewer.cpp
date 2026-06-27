@@ -2,6 +2,16 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
+#include <QWheelEvent>
+
+#include <algorithm>
+
+namespace
+{
+constexpr float kZoomStep = 1.25F;
+constexpr float kMinZoomFactor = 0.1F;
+constexpr float kMaxZoomFactor = 20.0F;
+}
 
 namespace qvp
 {
@@ -29,29 +39,25 @@ void OpenGLSliceViewer::setImage(const QImage& image)
 {
   image_ = image;
   textureDirty_ = true;
-
-  if (vbo_ != 0 && context())
-  {
-    const bool contextAlreadyCurrent = QOpenGLContext::currentContext() == context();
-    if (!contextAlreadyCurrent)
-    {
-      makeCurrent();
-    }
-
-    updateQuadGeometry();
-
-    if (!contextAlreadyCurrent)
-    {
-      doneCurrent();
-    }
-  }
-
+  updateQuadGeometryWithCurrentContext();
   update();
 }
 
 bool OpenGLSliceViewer::hasImage() const
 {
   return !image_.isNull();
+}
+
+void OpenGLSliceViewer::resetView()
+{
+  zoomFactor_ = 1.0F;
+  updateQuadGeometryWithCurrentContext();
+  update();
+}
+
+float OpenGLSliceViewer::zoomFactor() const
+{
+  return zoomFactor_;
 }
 
 void OpenGLSliceViewer::initializeGL()
@@ -90,6 +96,22 @@ void OpenGLSliceViewer::paintGL()
 
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);
+}
+
+void OpenGLSliceViewer::wheelEvent(QWheelEvent* event)
+{
+  if (event->angleDelta().y() > 0)
+  {
+    zoomFactor_ = std::clamp(zoomFactor_ * kZoomStep, kMinZoomFactor, kMaxZoomFactor);
+  }
+  else if (event->angleDelta().y() < 0)
+  {
+    zoomFactor_ = std::clamp(zoomFactor_ / kZoomStep, kMinZoomFactor, kMaxZoomFactor);
+  }
+
+  updateQuadGeometryWithCurrentContext();
+  update();
+  event->accept();
 }
 
 void OpenGLSliceViewer::initializeRenderingResources()
@@ -244,6 +266,9 @@ void OpenGLSliceViewer::updateQuadGeometry()
     }
   }
 
+  halfWidth *= zoomFactor_;
+  halfHeight *= zoomFactor_;
+
   const float quadVertices[] = {
       -halfWidth, -halfHeight, 0.0F, 1.0F,
        halfWidth, -halfHeight, 1.0F, 1.0F,
@@ -259,6 +284,27 @@ void OpenGLSliceViewer::updateQuadGeometry()
                   static_cast<qopengl_GLsizeiptr>(sizeof(quadVertices)),
                   quadVertices);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void OpenGLSliceViewer::updateQuadGeometryWithCurrentContext()
+{
+  if (vbo_ == 0 || !context())
+  {
+    return;
+  }
+
+  const bool contextAlreadyCurrent = QOpenGLContext::currentContext() == context();
+  if (!contextAlreadyCurrent)
+  {
+    makeCurrent();
+  }
+
+  updateQuadGeometry();
+
+  if (!contextAlreadyCurrent)
+  {
+    doneCurrent();
+  }
 }
 
 void OpenGLSliceViewer::uploadTextureIfNeeded()
