@@ -25,6 +25,7 @@ private:
   void initializeRenderingResources();
   void destroyRenderingResources();
   GLuint compileShader(GLenum shaderType, const char* source);
+  void updateQuadGeometry();
   void uploadTextureIfNeeded();
 
   QImage image_;
