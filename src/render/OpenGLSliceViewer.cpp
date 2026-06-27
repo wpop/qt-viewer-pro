@@ -44,6 +44,11 @@ void OpenGLSliceViewer::setImage(const QImage& image)
   update();
 }
 
+void OpenGLSliceViewer::setSliceImage(const QImage& image)
+{
+  setImage(image);
+}
+
 bool OpenGLSliceViewer::hasImage() const
 {
   return !image_.isNull();
