@@ -9,6 +9,17 @@ OpenGLSliceViewer::OpenGLSliceViewer(QWidget* parent) : QOpenGLWidget(parent)
 
 OpenGLSliceViewer::~OpenGLSliceViewer() = default;
 
+void OpenGLSliceViewer::setImage(const QImage& image)
+{
+  image_ = image;
+  update();
+}
+
+bool OpenGLSliceViewer::hasImage() const
+{
+  return !image_.isNull();
+}
+
 void OpenGLSliceViewer::initializeGL()
 {
   initializeOpenGLFunctions();
