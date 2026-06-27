@@ -16,6 +16,7 @@
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
 #include <QKeySequence>
@@ -593,8 +594,13 @@ void MainWindow::openOpenGLViewerDemo()
   auto* layout = new QVBoxLayout(demoWindow);
   layout->setContentsMargins(4, 4, 4, 4);
 
+  auto* buttonLayout = new QHBoxLayout();
   auto* openImageButton = new QPushButton("Open Image...", demoWindow);
-  layout->addWidget(openImageButton);
+  auto* resetViewButton = new QPushButton("Reset View", demoWindow);
+  buttonLayout->addWidget(openImageButton);
+  buttonLayout->addWidget(resetViewButton);
+  buttonLayout->addStretch();
+  layout->addLayout(buttonLayout);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
   openGLViewer->setImage(createOpenGLDemoImage());
@@ -618,6 +624,7 @@ void MainWindow::openOpenGLViewerDemo()
 
     openGLViewer->setImage(image);
   });
+  connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
   demoWindow->show();
 }
