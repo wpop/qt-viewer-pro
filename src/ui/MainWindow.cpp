@@ -6,6 +6,7 @@
 #include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
+#include "qtviewerpro/render/OpenGLSliceViewer.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
 #include <QAction>
@@ -29,6 +30,7 @@
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QToolBar>
+#include <QVBoxLayout>
 #include <QWidget>
 
 #include <QSize>
@@ -396,6 +398,13 @@ void MainWindow::createDemoMenu()
 {
   QMenu* demoMenu = menuBar()->addMenu("&Demo");
 
+  openOpenGLViewerDemoAction_ = demoMenu->addAction("Open OpenGL Viewer");
+  openOpenGLViewerDemoAction_->setStatusTip("Open the OpenGL slice viewer demo");
+  connect(openOpenGLViewerDemoAction_, &QAction::triggered, this,
+          &MainWindow::openOpenGLViewerDemo);
+
+  demoMenu->addSeparator();
+
   openSyntheticVolumeSliceAction_ = demoMenu->addAction("Open Synthetic Volume Slice");
   openSyntheticVolumeSliceAction_->setStatusTip("Display a synthetic axial volume slice");
   connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
@@ -546,6 +555,22 @@ void MainWindow::clearRecentFiles()
   recentFiles_.clear();
   updateRecentFilesMenu();
   saveSettings();
+}
+
+void MainWindow::openOpenGLViewerDemo()
+{
+  auto* demoWindow = new QWidget(nullptr);
+  demoWindow->setAttribute(Qt::WA_DeleteOnClose);
+  demoWindow->setWindowTitle("OpenGL Slice Viewer Demo");
+  demoWindow->resize(640, 480);
+
+  auto* layout = new QVBoxLayout(demoWindow);
+  layout->setContentsMargins(0, 0, 0, 0);
+
+  auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
+  layout->addWidget(openGLViewer);
+
+  demoWindow->show();
 }
 
 void MainWindow::createToolBar()

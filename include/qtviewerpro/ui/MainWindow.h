@@ -64,6 +64,7 @@ private slots:
   void flipVertical();
   void convertToGrayscale();
   void resetImage();
+  void openOpenGLViewerDemo();
   void openSyntheticVolumeSlice();
   void openRawVolume();
   void previousSlice();
@@ -144,6 +145,7 @@ private:
 
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
+  QAction* openOpenGLViewerDemoAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
   QAction* previousSliceAction_ = nullptr;

@@ -152,6 +152,7 @@ target_link_libraries(qt-viewer-pro
         qt-viewer-pro-core
         qt-viewer-pro-processing
         qt-viewer-pro-io
+        qt-viewer-pro-render
         Qt6::Widgets
         ${OpenCV_LIBS}
 )
