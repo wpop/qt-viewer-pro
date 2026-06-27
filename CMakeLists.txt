@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test)
 find_package(OpenCV REQUIRED)
 
 qt_standard_project_setup()
@@ -96,6 +96,30 @@ target_link_libraries(qt-viewer-pro-io
         qt-viewer-pro-core
     PRIVATE
         Qt6::Core
+)
+
+# Render library
+set(QTVIEWERPRO_RENDER_SOURCES
+    src/render/OpenGLSliceViewer.cpp
+)
+
+set(QTVIEWERPRO_RENDER_HEADERS
+    include/qtviewerpro/render/OpenGLSliceViewer.h
+)
+
+add_library(qt-viewer-pro-render
+    ${QTVIEWERPRO_RENDER_SOURCES}
+    ${QTVIEWERPRO_RENDER_HEADERS}
+)
+
+target_include_directories(qt-viewer-pro-render
+    PUBLIC
+        include
+)
+
+target_link_libraries(qt-viewer-pro-render
+    PUBLIC
+        Qt6::OpenGLWidgets
 )
 
 # Application target
