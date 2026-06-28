@@ -659,6 +659,8 @@ void MainWindow::openOpenGLViewerDemo()
   auto currentOrientation = std::make_shared<SliceOrientation>(SliceOrientation::Axial);
   auto hasCurrentVolumeSlice = std::make_shared<bool>(false);
   auto currentCrosshairPosition = std::make_shared<QPointF>(0.0, 0.0);
+  auto currentDisplaySize = std::make_shared<QSize>(0, 0);
+  const QImage openGLDemoImage = createOpenGLDemoImage();
 
   auto sliceDimensions = [currentVolume, currentOrientation, hasCurrentVolumeSlice]() -> std::pair<std::size_t, std::size_t> {
     if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
@@ -692,6 +694,7 @@ void MainWindow::openOpenGLViewerDemo()
 
   auto updateCrosshairLabel = [crosshairPositionLabel,
                                currentCrosshairPosition,
+                               currentDisplaySize,
                                currentVolume,
                                currentOrientation,
                                currentSliceIndex,
@@ -699,26 +702,39 @@ void MainWindow::openOpenGLViewerDemo()
                                sliceDimensions,
                                normalizeToPixelIndex](int value) {
     const QPointF position = *currentCrosshairPosition;
-    const QString baseText = QString("Crosshair: x=%1 y=%2 value=%3")
-                                 .arg(position.x(), 0, 'f', 3)
-                                 .arg(position.y(), 0, 'f', 3)
-                                 .arg(value);
+    const std::size_t pixelWidth = static_cast<std::size_t>(std::max(0, currentDisplaySize->width()));
+    const std::size_t pixelHeight = static_cast<std::size_t>(std::max(0, currentDisplaySize->height()));
+    if (pixelWidth == 0 || pixelHeight == 0)
+    {
+      crosshairPositionLabel->setText(QString("Crosshair: x=%1 y=%2 value=%3")
+                                          .arg(position.x(), 0, 'f', 3)
+                                          .arg(position.y(), 0, 'f', 3)
+                                          .arg(value));
+      return;
+    }
+
+    const std::size_t pixelX = normalizeToPixelIndex(position.x(), pixelWidth);
+    const std::size_t pixelY = normalizeToPixelIndex(-position.y(), pixelHeight);
+
+    QString labelText = QString("Crosshair: x=%1 y=%2 pixel=(%3,%4) value=%5")
+                            .arg(position.x(), 0, 'f', 3)
+                            .arg(position.y(), 0, 'f', 3)
+                            .arg(pixelX)
+                            .arg(pixelY)
+                            .arg(value);
 
     if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
     {
-      crosshairPositionLabel->setText(baseText);
+      crosshairPositionLabel->setText(labelText);
       return;
     }
 
     const auto [sliceWidth, sliceHeight] = sliceDimensions();
     if (sliceWidth == 0 || sliceHeight == 0)
     {
-      crosshairPositionLabel->setText(baseText);
+      crosshairPositionLabel->setText(labelText);
       return;
     }
-
-    const std::size_t pixelX = normalizeToPixelIndex(position.x(), sliceWidth);
-    const std::size_t pixelY = normalizeToPixelIndex(-position.y(), sliceHeight);
 
     std::size_t voxelX = pixelX;
     std::size_t voxelY = pixelY;
@@ -751,7 +767,7 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     crosshairPositionLabel->setText(QString("%1 voxel=(%2,%3,%4)")
-                                        .arg(baseText)
+                                        .arg(labelText)
                                         .arg(voxelX)
                                         .arg(voxelY)
                                         .arg(voxelZ));
@@ -829,6 +845,7 @@ void MainWindow::openOpenGLViewerDemo()
 
   connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow,
                                                                openGLViewer,
+                                                               currentDisplaySize,
                                                                hasCurrentVolumeSlice,
                                                                updateSliceLabel]() {
     const QString fileName = QFileDialog::getOpenFileName(
@@ -847,6 +864,7 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     *hasCurrentVolumeSlice = false;
+    *currentDisplaySize = image.size();
     openGLViewer->setImage(image);
     updateSliceLabel();
   });
@@ -859,6 +877,7 @@ void MainWindow::openOpenGLViewerDemo()
            currentVolume,
            currentSliceIndex,
            currentOrientation,
+           currentDisplaySize,
            hasCurrentVolumeSlice,
            configureSliceSlider,
            updateSliceLabel,
@@ -867,6 +886,8 @@ void MainWindow::openOpenGLViewerDemo()
     *currentOrientation = SliceOrientation::Axial;
     *currentSliceIndex = currentVolume->value().depth() / 2;
     *hasCurrentVolumeSlice = true;
+    const auto slice = SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+    *currentDisplaySize = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
     const QSignalBlocker blocker(orientationComboBox);
     orientationComboBox->setCurrentIndex(0);
     configureSliceSlider();
@@ -883,6 +904,7 @@ void MainWindow::openOpenGLViewerDemo()
            currentVolume,
            currentSliceIndex,
            currentOrientation,
+           currentDisplaySize,
            hasCurrentVolumeSlice,
            configureSliceSlider,
            updateSliceLabel,
@@ -909,6 +931,8 @@ void MainWindow::openOpenGLViewerDemo()
       *currentOrientation = SliceOrientation::Axial;
       *currentSliceIndex = currentVolume->value().depth() / 2;
       *hasCurrentVolumeSlice = true;
+      const auto slice = SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+      *currentDisplaySize = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
       const QSignalBlocker blocker(orientationComboBox);
       orientationComboBox->setCurrentIndex(0);
       configureSliceSlider();
@@ -941,9 +965,11 @@ void MainWindow::openOpenGLViewerDemo()
           qOverload<int>(&QComboBox::currentIndexChanged),
           demoWindow,
           [currentSliceIndex,
+           currentVolume,
            currentOrientation,
            hasCurrentVolumeSlice,
            currentSliceCount,
+           currentDisplaySize,
            configureSliceSlider,
            updateSliceLabel,
            updateOpenGLVolumeSlice](int orientationIndex) {
@@ -973,6 +999,8 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     *currentSliceIndex = sliceCount / 2;
+    const auto slice = SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+    *currentDisplaySize = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
     configureSliceSlider();
     updateSliceLabel();
     updateOpenGLVolumeSlice();
@@ -981,8 +1009,11 @@ void MainWindow::openOpenGLViewerDemo()
           &QPushButton::clicked,
           demoWindow,
           [sliceSlider,
+           currentVolume,
            currentSliceIndex,
+           currentOrientation,
            hasCurrentVolumeSlice,
+           currentDisplaySize,
            currentSliceCount,
            updateSliceLabel,
            updateOpenGLVolumeSlice]() {
@@ -1002,6 +1033,8 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     --(*currentSliceIndex);
+    const auto slice = SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+    *currentDisplaySize = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
     const QSignalBlocker blocker(sliceSlider);
     sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
     updateSliceLabel();
@@ -1011,8 +1044,11 @@ void MainWindow::openOpenGLViewerDemo()
           &QPushButton::clicked,
           demoWindow,
           [sliceSlider,
+           currentVolume,
            currentSliceIndex,
+           currentOrientation,
            hasCurrentVolumeSlice,
+           currentDisplaySize,
            currentSliceCount,
            updateSliceLabel,
            updateOpenGLVolumeSlice]() {
@@ -1034,6 +1070,8 @@ void MainWindow::openOpenGLViewerDemo()
     }
 
     ++(*currentSliceIndex);
+    const auto slice = SliceExtractor::extract(currentVolume->value(), *currentOrientation, *currentSliceIndex);
+    *currentDisplaySize = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
     const QSignalBlocker blocker(sliceSlider);
     sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
     updateSliceLabel();
@@ -1098,7 +1136,8 @@ void MainWindow::openOpenGLViewerDemo()
           [currentCrosshairPosition](const QPointF position) {
             *currentCrosshairPosition = position;
           });
-  openGLViewer->setImage(createOpenGLDemoImage());
+  *currentDisplaySize = openGLDemoImage.size();
+  openGLViewer->setImage(openGLDemoImage);
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
   demoWindow->show();
