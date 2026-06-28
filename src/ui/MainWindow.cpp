@@ -612,12 +612,14 @@ void MainWindow::openOpenGLViewerDemo()
   auto* sliceSlider = new QSlider(Qt::Horizontal, demoWindow);
   sliceSlider->setRange(0, 0);
   sliceSlider->setValue(0);
+  auto* sliceIndexLabel = new QLabel("Slice: - / -", demoWindow);
   auto* nextSliceButton = new QPushButton("Z+", demoWindow);
   buttonLayout->addWidget(openImageButton);
   buttonLayout->addWidget(loadSyntheticSliceButton);
   buttonLayout->addWidget(loadRawSliceButton);
   buttonLayout->addWidget(previousSliceButton);
   buttonLayout->addWidget(sliceSlider);
+  buttonLayout->addWidget(sliceIndexLabel);
   buttonLayout->addWidget(nextSliceButton);
   buttonLayout->addWidget(new QLabel("Window", demoWindow));
   buttonLayout->addWidget(windowSpinBox);
@@ -674,7 +676,22 @@ void MainWindow::openOpenGLViewerDemo()
     sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
   };
 
-  connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow, openGLViewer, hasCurrentVolumeSlice]() {
+  auto updateSliceLabel = [sliceIndexLabel, currentVolume, currentSliceIndex, hasCurrentVolumeSlice]() {
+    if (!*hasCurrentVolumeSlice || !currentVolume->has_value() || currentVolume->value().depth() == 0)
+    {
+      sliceIndexLabel->setText("Slice: - / -");
+      return;
+    }
+
+    sliceIndexLabel->setText(QString("Slice: %1 / %2")
+                                 .arg(*currentSliceIndex + 1)
+                                 .arg(currentVolume->value().depth()));
+  };
+
+  connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow,
+                                                               openGLViewer,
+                                                               hasCurrentVolumeSlice,
+                                                               updateSliceLabel]() {
     const QString fileName = QFileDialog::getOpenFileName(
         demoWindow, "Open Image", QString(), "Images (*.png *.jpg *.jpeg *.bmp)");
 
@@ -692,6 +709,7 @@ void MainWindow::openOpenGLViewerDemo()
 
     openGLViewer->setImage(image);
     *hasCurrentVolumeSlice = false;
+    updateSliceLabel();
   });
   connect(loadSyntheticSliceButton,
           &QPushButton::clicked,
@@ -703,12 +721,14 @@ void MainWindow::openOpenGLViewerDemo()
            currentOrientation,
            hasCurrentVolumeSlice,
            configureSliceSlider,
+           updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     *currentVolume = createSyntheticVolume();
     *currentSliceIndex = currentVolume->value().depth() / 2;
     *currentOrientation = SliceOrientation::Axial;
     *hasCurrentVolumeSlice = true;
     configureSliceSlider();
+    updateSliceLabel();
     updateOpenGLVolumeSlice();
     openGLViewer->resetView();
   });
@@ -722,6 +742,7 @@ void MainWindow::openOpenGLViewerDemo()
            currentOrientation,
            hasCurrentVolumeSlice,
            configureSliceSlider,
+           updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     const QString metadataPath =
         QFileDialog::getOpenFileName(demoWindow, "Open RAW Volume Metadata", QString(),
@@ -746,6 +767,7 @@ void MainWindow::openOpenGLViewerDemo()
       *currentOrientation = SliceOrientation::Axial;
       *hasCurrentVolumeSlice = true;
       configureSliceSlider();
+      updateSliceLabel();
       updateOpenGLVolumeSlice();
       openGLViewer->resetView();
     }
@@ -757,13 +779,52 @@ void MainWindow::openOpenGLViewerDemo()
   connect(sliceSlider,
           &QSlider::valueChanged,
           demoWindow,
-          [currentSliceIndex, hasCurrentVolumeSlice, updateOpenGLVolumeSlice](int sliceIndex) {
+          [currentSliceIndex,
+           hasCurrentVolumeSlice,
+           updateSliceLabel,
+           updateOpenGLVolumeSlice](int sliceIndex) {
     if (!*hasCurrentVolumeSlice)
     {
       return;
     }
 
     *currentSliceIndex = static_cast<std::size_t>(sliceIndex);
+    updateSliceLabel();
+    updateOpenGLVolumeSlice();
+  });
+  connect(previousSliceButton,
+          &QPushButton::clicked,
+          demoWindow,
+          [sliceSlider,
+           currentVolume,
+           currentSliceIndex,
+           hasCurrentVolumeSlice,
+           updateSliceLabel,
+           updateOpenGLVolumeSlice]() {
+    if (!*hasCurrentVolumeSlice)
+    {
+      return;
+    }
+
+    if (!currentVolume->has_value())
+    {
+      return;
+    }
+
+    if (currentVolume->value().depth() == 0)
+    {
+      return;
+    }
+
+    if (*currentSliceIndex == 0)
+    {
+      return;
+    }
+
+    --(*currentSliceIndex);
+    const QSignalBlocker blocker(sliceSlider);
+    sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
+    updateSliceLabel();
     updateOpenGLVolumeSlice();
   });
   connect(nextSliceButton,
@@ -773,6 +834,7 @@ void MainWindow::openOpenGLViewerDemo()
            currentVolume,
            currentSliceIndex,
            hasCurrentVolumeSlice,
+           updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     if (!*hasCurrentVolumeSlice)
     {
@@ -798,6 +860,7 @@ void MainWindow::openOpenGLViewerDemo()
     ++(*currentSliceIndex);
     const QSignalBlocker blocker(sliceSlider);
     sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
+    updateSliceLabel();
     updateOpenGLVolumeSlice();
   });
   connect(windowSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
