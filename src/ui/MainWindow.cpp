@@ -754,6 +754,18 @@ void MainWindow::openOpenGLViewerDemo()
       QMessageBox::warning(demoWindow, "RAW Volume Load Error", error.what());
     }
   });
+  connect(sliceSlider,
+          &QSlider::valueChanged,
+          demoWindow,
+          [currentSliceIndex, hasCurrentVolumeSlice, updateOpenGLVolumeSlice](int sliceIndex) {
+    if (!*hasCurrentVolumeSlice)
+    {
+      return;
+    }
+
+    *currentSliceIndex = static_cast<std::size_t>(sliceIndex);
+    updateOpenGLVolumeSlice();
+  });
   connect(windowSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(levelSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(resetWindowLevelButton, &QPushButton::clicked, demoWindow, [windowSpinBox,
