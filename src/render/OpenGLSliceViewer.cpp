@@ -12,6 +12,27 @@ namespace
 constexpr float kZoomStep = 1.25F;
 constexpr float kMinZoomFactor = 0.1F;
 constexpr float kMaxZoomFactor = 20.0F;
+
+QPointF widgetPositionToImageLocalPosition(const QPointF& widgetPosition,
+                                           const QSize& widgetSize,
+                                           const QPointF& panOffset,
+                                           float halfWidth,
+                                           float halfHeight)
+{
+  if (widgetSize.width() <= 0 || widgetSize.height() <= 0 || halfWidth <= 0.0F ||
+      halfHeight <= 0.0F)
+  {
+    return QPointF(0.0, 0.0);
+  }
+
+  const double ndcX = (2.0 * widgetPosition.x() / static_cast<double>(widgetSize.width())) - 1.0;
+  const double ndcY = 1.0 - (2.0 * widgetPosition.y() / static_cast<double>(widgetSize.height()));
+
+  const double localX = (ndcX - panOffset.x()) / static_cast<double>(halfWidth);
+  const double localY = (ndcY - panOffset.y()) / static_cast<double>(halfHeight);
+
+  return QPointF(std::clamp(localX, -1.0, 1.0), std::clamp(localY, -1.0, 1.0));
+}
 }
 
 namespace qvp
@@ -19,6 +40,7 @@ namespace qvp
 
 OpenGLSliceViewer::OpenGLSliceViewer(QWidget* parent) : QOpenGLWidget(parent)
 {
+  setMouseTracking(true);
 }
 
 OpenGLSliceViewer::~OpenGLSliceViewer()
@@ -39,6 +61,7 @@ OpenGLSliceViewer::~OpenGLSliceViewer()
 void OpenGLSliceViewer::setImage(const QImage& image)
 {
   image_ = image;
+  crosshairPosition_ = QPointF(0.0, 0.0);
   textureDirty_ = true;
   updateQuadGeometryWithCurrentContext();
   update();
@@ -144,6 +167,18 @@ void OpenGLSliceViewer::mouseMoveEvent(QMouseEvent* event)
     }
 
     lastMousePosition_ = currentPosition;
+    event->accept();
+    return;
+  }
+
+  if (hasImage())
+  {
+    float halfWidth = 1.0F;
+    float halfHeight = 1.0F;
+    computeQuadExtents(halfWidth, halfHeight);
+    crosshairPosition_ =
+        widgetPositionToImageLocalPosition(event->position(), size(), panOffset_, halfWidth, halfHeight);
+    update();
     event->accept();
     return;
   }
@@ -464,11 +499,15 @@ void OpenGLSliceViewer::drawCrosshair()
 
   const float centerX = static_cast<float>(panOffset_.x());
   const float centerY = static_cast<float>(panOffset_.y());
+  const float crosshairCenterX =
+      centerX + (static_cast<float>(crosshairPosition_.x()) * halfWidth);
+  const float crosshairCenterY =
+      centerY + (static_cast<float>(crosshairPosition_.y()) * halfHeight);
   const float crosshairVertices[] = {
-      centerX - halfWidth, centerY,
-      centerX + halfWidth, centerY,
-      centerX, centerY - halfHeight,
-      centerX, centerY + halfHeight,
+      centerX - halfWidth, crosshairCenterY,
+      centerX + halfWidth, crosshairCenterY,
+      crosshairCenterX, centerY - halfHeight,
+      crosshairCenterX, centerY + halfHeight,
   };
 
   glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);

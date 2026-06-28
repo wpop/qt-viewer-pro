@@ -55,6 +55,7 @@ private:
   float zoomFactor_ = 1.0F;
   QPoint lastMousePosition_;
   QPointF panOffset_ = QPointF(0.0, 0.0);
+  QPointF crosshairPosition_ = QPointF(0.0, 0.0);
   bool isPanning_ = false;
   bool textureDirty_ = false;
   bool showCrosshair_ = true;
