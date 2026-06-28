@@ -10,22 +10,36 @@ WIDTH = 64
 HEIGHT = 64
 DEPTH = 32
 SPACING = 1.0
-INSIDE_VALUE = 240.0
-OUTSIDE_VALUE = 35.0
-SPHERE_RADIUS = 1.02
+BACKGROUND_VALUE = 18.0
+
+
+def clamp(value, lower, upper):
+    return max(lower, min(upper, value))
 
 
 def voxel_value(x, y, z):
-    center_x = (WIDTH - 1) / 2.0
-    center_y = (HEIGHT - 1) / 2.0
-    center_z = (DEPTH - 1) / 2.0
+    x_norm = x / (WIDTH - 1)
+    y_norm = y / (HEIGHT - 1)
+    z_norm = z / (DEPTH - 1)
 
-    dx = (x - center_x) / center_x
-    dy = (y - center_y) / center_y
-    dz = (z - center_z) / center_z
-    distance = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+    value = BACKGROUND_VALUE
+    value += 150.0 * x_norm
+    value += 65.0 * (1.0 - y_norm)
+    value += 40.0 * z_norm
 
-    return INSIDE_VALUE if distance <= SPHERE_RADIUS else OUTSIDE_VALUE
+    if 9 <= x <= 24 and 36 <= y <= 54 and 4 <= z <= 14:
+        value += 70.0
+
+    if 42 <= x <= 58 and 10 <= y <= 24 and 16 <= z <= 28:
+        value += 115.0
+
+    diagonal_band = 40.0 if x >= int(0.65 * y) + 14 and z <= 18 else 0.0
+    value += diagonal_band
+
+    if (x + (2 * y) + (3 * z)) % 17 == 0:
+        value += 25.0
+
+    return clamp(value, 0.0, 255.0)
 
 
 def main():

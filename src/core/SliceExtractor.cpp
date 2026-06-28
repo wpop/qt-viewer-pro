@@ -9,12 +9,6 @@ namespace qvp
 
 namespace
 {
-
-std::size_t voxelIndex(const VolumeData& volume, std::size_t x, std::size_t y, std::size_t z)
-{
-  return (z * volume.height() * volume.width()) + (y * volume.width()) + x;
-}
-
 } // namespace
 
 SliceData SliceExtractor::extract(const VolumeData& volume,
@@ -32,19 +26,23 @@ SliceData SliceExtractor::extract(const VolumeData& volume,
       throw std::out_of_range("Axial slice index is out of range");
     }
 
+    const std::size_t sliceWidth = volume.width();
+    const std::size_t sliceHeight = volume.height();
     std::vector<float> slice;
-    slice.reserve(volume.width() * volume.height());
+    slice.reserve(sliceWidth * sliceHeight);
 
     for (std::size_t y = 0; y < volume.height(); ++y)
     {
       for (std::size_t x = 0; x < volume.width(); ++x)
       {
-        slice.push_back(voxels.at(voxelIndex(volume, x, y, sliceIndex)));
+        const std::size_t voxelIndex =
+            (sliceIndex * volume.height() * volume.width()) + (y * volume.width()) + x;
+        slice.push_back(voxels.at(voxelIndex));
       }
     }
 
-    return SliceData(volume.width(),
-                     volume.height(),
+    return SliceData(sliceWidth,
+                     sliceHeight,
                      volume.spacingX(),
                      volume.spacingY(),
                      orientation,
@@ -58,19 +56,23 @@ SliceData SliceExtractor::extract(const VolumeData& volume,
       throw std::out_of_range("Coronal slice index is out of range");
     }
 
+    const std::size_t sliceWidth = volume.width();
+    const std::size_t sliceHeight = volume.depth();
     std::vector<float> slice;
-    slice.reserve(volume.width() * volume.depth());
+    slice.reserve(sliceWidth * sliceHeight);
 
     for (std::size_t z = 0; z < volume.depth(); ++z)
     {
       for (std::size_t x = 0; x < volume.width(); ++x)
       {
-        slice.push_back(voxels.at(voxelIndex(volume, x, sliceIndex, z)));
+        const std::size_t voxelIndex =
+            (z * volume.height() * volume.width()) + (sliceIndex * volume.width()) + x;
+        slice.push_back(voxels.at(voxelIndex));
       }
     }
 
-    return SliceData(volume.width(),
-                     volume.depth(),
+    return SliceData(sliceWidth,
+                     sliceHeight,
                      volume.spacingX(),
                      volume.spacingZ(),
                      orientation,
@@ -84,19 +86,23 @@ SliceData SliceExtractor::extract(const VolumeData& volume,
       throw std::out_of_range("Sagittal slice index is out of range");
     }
 
+    const std::size_t sliceWidth = volume.height();
+    const std::size_t sliceHeight = volume.depth();
     std::vector<float> slice;
-    slice.reserve(volume.height() * volume.depth());
+    slice.reserve(sliceWidth * sliceHeight);
 
     for (std::size_t z = 0; z < volume.depth(); ++z)
     {
       for (std::size_t y = 0; y < volume.height(); ++y)
       {
-        slice.push_back(voxels.at(voxelIndex(volume, sliceIndex, y, z)));
+        const std::size_t voxelIndex =
+            (z * volume.height() * volume.width()) + (y * volume.width()) + sliceIndex;
+        slice.push_back(voxels.at(voxelIndex));
       }
     }
 
-    return SliceData(volume.height(),
-                     volume.depth(),
+    return SliceData(sliceWidth,
+                     sliceHeight,
                      volume.spacingY(),
                      volume.spacingZ(),
                      orientation,

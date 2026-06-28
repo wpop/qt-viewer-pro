@@ -601,6 +601,8 @@ void MainWindow::openOpenGLViewerDemo()
   auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
   auto* loadRawSliceButton = new QPushButton("Load RAW Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
+  auto* orientationComboBox = new QComboBox(demoWindow);
+  orientationComboBox->addItems({"Axial", "Coronal", "Sagittal"});
   auto* windowSpinBox = new QSpinBox(demoWindow);
   windowSpinBox->setRange(1, 4096);
   windowSpinBox->setValue(255);
@@ -617,6 +619,8 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(openImageButton);
   buttonLayout->addWidget(loadSyntheticSliceButton);
   buttonLayout->addWidget(loadRawSliceButton);
+  buttonLayout->addWidget(new QLabel("Orientation", demoWindow));
+  buttonLayout->addWidget(orientationComboBox);
   buttonLayout->addWidget(previousSliceButton);
   buttonLayout->addWidget(sliceSlider);
   buttonLayout->addWidget(sliceIndexLabel);
@@ -638,6 +642,25 @@ void MainWindow::openOpenGLViewerDemo()
   auto currentSliceIndex = std::make_shared<std::size_t>(0);
   auto currentOrientation = std::make_shared<SliceOrientation>(SliceOrientation::Axial);
   auto hasCurrentVolumeSlice = std::make_shared<bool>(false);
+
+  auto currentSliceCount = [currentVolume, currentOrientation, hasCurrentVolumeSlice]() -> std::size_t {
+    if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
+    {
+      return 0;
+    }
+
+    switch (*currentOrientation)
+    {
+    case SliceOrientation::Coronal:
+      return currentVolume->value().height();
+    case SliceOrientation::Sagittal:
+      return currentVolume->value().width();
+    case SliceOrientation::Axial:
+      return currentVolume->value().depth();
+    }
+
+    return currentVolume->value().depth();
+  };
 
   auto updateOpenGLVolumeSlice = [demoWindow,
                                   openGLViewer,
@@ -665,19 +688,21 @@ void MainWindow::openOpenGLViewerDemo()
     }
   };
 
-  auto configureSliceSlider = [sliceSlider, currentVolume, currentSliceIndex]() {
-    if (!currentVolume->has_value() || currentVolume->value().depth() == 0)
+  auto configureSliceSlider = [sliceSlider, currentSliceIndex, currentSliceCount]() {
+    const std::size_t sliceCount = currentSliceCount();
+    if (sliceCount == 0)
     {
       return;
     }
 
     const QSignalBlocker blocker(sliceSlider);
-    sliceSlider->setRange(0, static_cast<int>(currentVolume->value().depth() - 1));
+    sliceSlider->setRange(0, static_cast<int>(sliceCount - 1));
     sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
   };
 
-  auto updateSliceLabel = [sliceIndexLabel, currentVolume, currentSliceIndex, hasCurrentVolumeSlice]() {
-    if (!*hasCurrentVolumeSlice || !currentVolume->has_value() || currentVolume->value().depth() == 0)
+  auto updateSliceLabel = [sliceIndexLabel, currentSliceIndex, currentSliceCount]() {
+    const std::size_t sliceCount = currentSliceCount();
+    if (sliceCount == 0)
     {
       sliceIndexLabel->setText("Slice: - / -");
       return;
@@ -685,7 +710,7 @@ void MainWindow::openOpenGLViewerDemo()
 
     sliceIndexLabel->setText(QString("Slice: %1 / %2")
                                  .arg(*currentSliceIndex + 1)
-                                 .arg(currentVolume->value().depth()));
+                                 .arg(sliceCount));
   };
 
   connect(openImageButton, &QPushButton::clicked, demoWindow, [demoWindow,
@@ -716,6 +741,7 @@ void MainWindow::openOpenGLViewerDemo()
           demoWindow,
           [this,
            openGLViewer,
+           orientationComboBox,
            currentVolume,
            currentSliceIndex,
            currentOrientation,
@@ -724,9 +750,11 @@ void MainWindow::openOpenGLViewerDemo()
            updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     *currentVolume = createSyntheticVolume();
-    *currentSliceIndex = currentVolume->value().depth() / 2;
     *currentOrientation = SliceOrientation::Axial;
+    *currentSliceIndex = currentVolume->value().depth() / 2;
     *hasCurrentVolumeSlice = true;
+    const QSignalBlocker blocker(orientationComboBox);
+    orientationComboBox->setCurrentIndex(0);
     configureSliceSlider();
     updateSliceLabel();
     updateOpenGLVolumeSlice();
@@ -737,6 +765,7 @@ void MainWindow::openOpenGLViewerDemo()
           demoWindow,
           [demoWindow,
            openGLViewer,
+           orientationComboBox,
            currentVolume,
            currentSliceIndex,
            currentOrientation,
@@ -763,9 +792,11 @@ void MainWindow::openOpenGLViewerDemo()
     try
     {
       *currentVolume = RawVolumeLoader::load(metadataPath, rawPath);
-      *currentSliceIndex = currentVolume->value().depth() / 2;
       *currentOrientation = SliceOrientation::Axial;
+      *currentSliceIndex = currentVolume->value().depth() / 2;
       *hasCurrentVolumeSlice = true;
+      const QSignalBlocker blocker(orientationComboBox);
+      orientationComboBox->setCurrentIndex(0);
       configureSliceSlider();
       updateSliceLabel();
       updateOpenGLVolumeSlice();
@@ -792,13 +823,53 @@ void MainWindow::openOpenGLViewerDemo()
     updateSliceLabel();
     updateOpenGLVolumeSlice();
   });
+  connect(orientationComboBox,
+          qOverload<int>(&QComboBox::currentIndexChanged),
+          demoWindow,
+          [currentSliceIndex,
+           currentOrientation,
+           hasCurrentVolumeSlice,
+           currentSliceCount,
+           configureSliceSlider,
+           updateSliceLabel,
+           updateOpenGLVolumeSlice](int orientationIndex) {
+    if (!*hasCurrentVolumeSlice)
+    {
+      return;
+    }
+
+    switch (orientationIndex)
+    {
+    case 1:
+      *currentOrientation = SliceOrientation::Coronal;
+      break;
+    case 2:
+      *currentOrientation = SliceOrientation::Sagittal;
+      break;
+    default:
+      *currentOrientation = SliceOrientation::Axial;
+      break;
+    }
+
+    const std::size_t sliceCount = currentSliceCount();
+    if (sliceCount == 0)
+    {
+      updateSliceLabel();
+      return;
+    }
+
+    *currentSliceIndex = sliceCount / 2;
+    configureSliceSlider();
+    updateSliceLabel();
+    updateOpenGLVolumeSlice();
+  });
   connect(previousSliceButton,
           &QPushButton::clicked,
           demoWindow,
           [sliceSlider,
-           currentVolume,
            currentSliceIndex,
            hasCurrentVolumeSlice,
+           currentSliceCount,
            updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     if (!*hasCurrentVolumeSlice)
@@ -806,12 +877,7 @@ void MainWindow::openOpenGLViewerDemo()
       return;
     }
 
-    if (!currentVolume->has_value())
-    {
-      return;
-    }
-
-    if (currentVolume->value().depth() == 0)
+    if (currentSliceCount() == 0)
     {
       return;
     }
@@ -831,9 +897,9 @@ void MainWindow::openOpenGLViewerDemo()
           &QPushButton::clicked,
           demoWindow,
           [sliceSlider,
-           currentVolume,
            currentSliceIndex,
            hasCurrentVolumeSlice,
+           currentSliceCount,
            updateSliceLabel,
            updateOpenGLVolumeSlice]() {
     if (!*hasCurrentVolumeSlice)
@@ -841,17 +907,13 @@ void MainWindow::openOpenGLViewerDemo()
       return;
     }
 
-    if (!currentVolume->has_value())
+    const std::size_t sliceCount = currentSliceCount();
+    if (sliceCount == 0)
     {
       return;
     }
 
-    if (currentVolume->value().depth() == 0)
-    {
-      return;
-    }
-
-    const std::size_t maxSliceIndex = currentVolume->value().depth() - 1;
+    const std::size_t maxSliceIndex = sliceCount - 1;
     if (*currentSliceIndex >= maxSliceIndex)
     {
       return;
