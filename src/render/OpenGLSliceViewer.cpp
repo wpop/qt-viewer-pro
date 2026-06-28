@@ -458,17 +458,11 @@ void OpenGLSliceViewer::drawCrosshair()
     return;
   }
 
-  float halfWidth = 1.0F;
-  float halfHeight = 1.0F;
-  computeQuadExtents(halfWidth, halfHeight);
-
-  const float centerX = static_cast<float>(panOffset_.x());
-  const float centerY = static_cast<float>(panOffset_.y());
   const float crosshairVertices[] = {
-      centerX - halfWidth, centerY,
-      centerX + halfWidth, centerY,
-      centerX, centerY - halfHeight,
-      centerX, centerY + halfHeight,
+      -1.0F, 0.0F,
+      1.0F,  0.0F,
+      0.0F,  -1.0F,
+      0.0F,  1.0F,
   };
 
   glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);
@@ -480,12 +474,20 @@ void OpenGLSliceViewer::drawCrosshair()
 
   glUseProgram(crosshairShaderProgram_);
   const GLint colorLocation = glGetUniformLocation(crosshairShaderProgram_, "crosshairColor");
-  glUniform4f(colorLocation, 1.0F, 0.95F, 0.2F, 1.0F);
 
   auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
   extraFunctions->glBindVertexArray(crosshairVao_);
+
+  glLineWidth(2.0F);
+  glUniform4f(colorLocation, 0.0F, 0.0F, 0.0F, 0.65F);
   glDrawArrays(GL_LINES, 0, 4);
+
+  glLineWidth(1.0F);
+  glUniform4f(colorLocation, 1.0F, 1.0F, 1.0F, 0.90F);
+  glDrawArrays(GL_LINES, 0, 4);
+
   extraFunctions->glBindVertexArray(0);
+  glLineWidth(1.0F);
   glUseProgram(0);
 }
 
