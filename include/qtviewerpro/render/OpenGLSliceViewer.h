@@ -21,6 +21,8 @@ public:
   void setImage(const QImage& image);
   void setSliceImage(const QImage& image);
   bool hasImage() const;
+  void setCrosshairVisible(bool visible);
+  bool isCrosshairVisible() const;
   void resetView();
   QPointF panOffset() const;
   float zoomFactor() const;
