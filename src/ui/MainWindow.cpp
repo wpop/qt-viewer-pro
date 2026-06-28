@@ -766,6 +766,40 @@ void MainWindow::openOpenGLViewerDemo()
     *currentSliceIndex = static_cast<std::size_t>(sliceIndex);
     updateOpenGLVolumeSlice();
   });
+  connect(nextSliceButton,
+          &QPushButton::clicked,
+          demoWindow,
+          [sliceSlider,
+           currentVolume,
+           currentSliceIndex,
+           hasCurrentVolumeSlice,
+           updateOpenGLVolumeSlice]() {
+    if (!*hasCurrentVolumeSlice)
+    {
+      return;
+    }
+
+    if (!currentVolume->has_value())
+    {
+      return;
+    }
+
+    if (currentVolume->value().depth() == 0)
+    {
+      return;
+    }
+
+    const std::size_t maxSliceIndex = currentVolume->value().depth() - 1;
+    if (*currentSliceIndex >= maxSliceIndex)
+    {
+      return;
+    }
+
+    ++(*currentSliceIndex);
+    const QSignalBlocker blocker(sliceSlider);
+    sliceSlider->setValue(static_cast<int>(*currentSliceIndex));
+    updateOpenGLVolumeSlice();
+  });
   connect(windowSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(levelSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(resetWindowLevelButton, &QPushButton::clicked, demoWindow, [windowSpinBox,
