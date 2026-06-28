@@ -38,6 +38,8 @@ private:
   void initializeRenderingResources();
   void destroyRenderingResources();
   GLuint compileShader(GLenum shaderType, const char* source);
+  void drawCrosshair();
+  void computeQuadExtents(float& halfWidth, float& halfHeight) const;
   void updateQuadGeometry();
   void updateQuadGeometryWithCurrentContext();
   void uploadTextureIfNeeded();
@@ -47,11 +49,15 @@ private:
   GLuint shaderProgram_ = 0;
   GLuint vao_ = 0;
   GLuint vbo_ = 0;
+  GLuint crosshairShaderProgram_ = 0;
+  GLuint crosshairVao_ = 0;
+  GLuint crosshairVbo_ = 0;
   float zoomFactor_ = 1.0F;
   QPoint lastMousePosition_;
   QPointF panOffset_ = QPointF(0.0, 0.0);
   bool isPanning_ = false;
   bool textureDirty_ = false;
+  bool showCrosshair_ = true;
 };
 
 } // namespace qvp

@@ -106,6 +106,11 @@ void OpenGLSliceViewer::paintGL()
   glDrawArrays(GL_TRIANGLES, 0, 6);
   extraFunctions->glBindVertexArray(0);
 
+  if (showCrosshair_)
+  {
+    drawCrosshair();
+  }
+
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);
 }
@@ -203,6 +208,28 @@ void main()
   outputColor = texture(imageTexture, fragmentTexCoord);
 }
 )";
+  static constexpr char kCrosshairVertexShaderSource[] = R"(
+#version 330 core
+layout (location = 0) in vec2 position;
+
+void main()
+{
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+)";
+
+  static constexpr char kCrosshairFragmentShaderSource[] = R"(
+#version 330 core
+
+out vec4 outputColor;
+
+uniform vec4 crosshairColor;
+
+void main()
+{
+  outputColor = crosshairColor;
+}
+)";
 
   const GLuint vertexShader = compileShader(GL_VERTEX_SHADER, kVertexShaderSource);
   const GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, kFragmentShaderSource);
@@ -259,6 +286,52 @@ void main()
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   extraFunctions->glBindVertexArray(0);
 
+  const GLuint crosshairVertexShader =
+      compileShader(GL_VERTEX_SHADER, kCrosshairVertexShaderSource);
+  const GLuint crosshairFragmentShader =
+      compileShader(GL_FRAGMENT_SHADER, kCrosshairFragmentShaderSource);
+  if (crosshairVertexShader == 0 || crosshairFragmentShader == 0)
+  {
+    glDeleteShader(crosshairVertexShader);
+    glDeleteShader(crosshairFragmentShader);
+    return;
+  }
+
+  crosshairShaderProgram_ = glCreateProgram();
+  glAttachShader(crosshairShaderProgram_, crosshairVertexShader);
+  glAttachShader(crosshairShaderProgram_, crosshairFragmentShader);
+  glLinkProgram(crosshairShaderProgram_);
+
+  glGetProgramiv(crosshairShaderProgram_, GL_LINK_STATUS, &linkStatus);
+
+  glDetachShader(crosshairShaderProgram_, crosshairVertexShader);
+  glDetachShader(crosshairShaderProgram_, crosshairFragmentShader);
+  glDeleteShader(crosshairVertexShader);
+  glDeleteShader(crosshairFragmentShader);
+
+  if (linkStatus != GL_TRUE)
+  {
+    glDeleteProgram(crosshairShaderProgram_);
+    crosshairShaderProgram_ = 0;
+    return;
+  }
+
+  extraFunctions->glGenVertexArrays(1, &crosshairVao_);
+  glGenBuffers(1, &crosshairVbo_);
+
+  extraFunctions->glBindVertexArray(crosshairVao_);
+  glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<qopengl_GLsizeiptr>(8 * sizeof(float)),
+               nullptr,
+               GL_DYNAMIC_DRAW);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  extraFunctions->glBindVertexArray(0);
+
   updateQuadGeometry();
 }
 
@@ -274,6 +347,24 @@ void OpenGLSliceViewer::destroyRenderingResources()
   {
     QOpenGLContext::currentContext()->extraFunctions()->glDeleteVertexArrays(1, &vao_);
     vao_ = 0;
+  }
+
+  if (crosshairVbo_ != 0)
+  {
+    glDeleteBuffers(1, &crosshairVbo_);
+    crosshairVbo_ = 0;
+  }
+
+  if (crosshairVao_ != 0)
+  {
+    QOpenGLContext::currentContext()->extraFunctions()->glDeleteVertexArrays(1, &crosshairVao_);
+    crosshairVao_ = 0;
+  }
+
+  if (crosshairShaderProgram_ != 0)
+  {
+    glDeleteProgram(crosshairShaderProgram_);
+    crosshairShaderProgram_ = 0;
   }
 
   if (shaderProgram_ != 0)
@@ -300,15 +391,10 @@ GLuint OpenGLSliceViewer::compileShader(GLenum shaderType, const char* source)
   return shader;
 }
 
-void OpenGLSliceViewer::updateQuadGeometry()
+void OpenGLSliceViewer::computeQuadExtents(float& halfWidth, float& halfHeight) const
 {
-  if (vbo_ == 0)
-  {
-    return;
-  }
-
-  float halfWidth = 1.0F;
-  float halfHeight = 1.0F;
+  halfWidth = 1.0F;
+  halfHeight = 1.0F;
 
   if (!image_.isNull() && width() > 0 && height() > 0 && image_.width() > 0 && image_.height() > 0)
   {
@@ -328,6 +414,18 @@ void OpenGLSliceViewer::updateQuadGeometry()
 
   halfWidth *= zoomFactor_;
   halfHeight *= zoomFactor_;
+}
+
+void OpenGLSliceViewer::updateQuadGeometry()
+{
+  if (vbo_ == 0)
+  {
+    return;
+  }
+
+  float halfWidth = 1.0F;
+  float halfHeight = 1.0F;
+  computeQuadExtents(halfWidth, halfHeight);
 
   const float centerX = static_cast<float>(panOffset_.x());
   const float centerY = static_cast<float>(panOffset_.y());
@@ -351,6 +449,44 @@ void OpenGLSliceViewer::updateQuadGeometry()
                   static_cast<qopengl_GLsizeiptr>(sizeof(quadVertices)),
                   quadVertices);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void OpenGLSliceViewer::drawCrosshair()
+{
+  if (crosshairShaderProgram_ == 0 || crosshairVao_ == 0 || crosshairVbo_ == 0)
+  {
+    return;
+  }
+
+  float halfWidth = 1.0F;
+  float halfHeight = 1.0F;
+  computeQuadExtents(halfWidth, halfHeight);
+
+  const float centerX = static_cast<float>(panOffset_.x());
+  const float centerY = static_cast<float>(panOffset_.y());
+  const float crosshairVertices[] = {
+      centerX - halfWidth, centerY,
+      centerX + halfWidth, centerY,
+      centerX, centerY - halfHeight,
+      centerX, centerY + halfHeight,
+  };
+
+  glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);
+  glBufferSubData(GL_ARRAY_BUFFER,
+                  0,
+                  static_cast<qopengl_GLsizeiptr>(sizeof(crosshairVertices)),
+                  crosshairVertices);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glUseProgram(crosshairShaderProgram_);
+  const GLint colorLocation = glGetUniformLocation(crosshairShaderProgram_, "crosshairColor");
+  glUniform4f(colorLocation, 1.0F, 0.95F, 0.2F, 1.0F);
+
+  auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
+  extraFunctions->glBindVertexArray(crosshairVao_);
+  glDrawArrays(GL_LINES, 0, 4);
+  extraFunctions->glBindVertexArray(0);
+  glUseProgram(0);
 }
 
 void OpenGLSliceViewer::updateQuadGeometryWithCurrentContext()
