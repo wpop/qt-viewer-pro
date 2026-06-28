@@ -617,6 +617,7 @@ void MainWindow::openOpenGLViewerDemo()
   sliceSlider->setRange(0, 0);
   sliceSlider->setValue(0);
   auto* sliceIndexLabel = new QLabel("Slice: - / -", demoWindow);
+  auto* crosshairPositionLabel = new QLabel("Crosshair: x=0.000 y=0.000", demoWindow);
   auto* nextSliceButton = new QPushButton("Z+", demoWindow);
   buttonLayout->addWidget(openImageButton);
   buttonLayout->addWidget(loadSyntheticSliceButton);
@@ -634,6 +635,7 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(resetWindowLevelButton);
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addWidget(showCrosshairCheckBox);
+  buttonLayout->addWidget(crosshairPositionLabel);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
 
@@ -641,6 +643,13 @@ void MainWindow::openOpenGLViewerDemo()
   openGLViewer->setImage(createOpenGLDemoImage());
   connect(showCrosshairCheckBox, &QCheckBox::toggled, openGLViewer,
           &OpenGLSliceViewer::setCrosshairVisible);
+  connect(openGLViewer,
+          &OpenGLSliceViewer::crosshairPositionChanged,
+          demoWindow,
+          [crosshairPositionLabel](const QPointF position) {
+            crosshairPositionLabel->setText(
+                QString("Crosshair: x=%1 y=%2").arg(position.x(), 0, 'f', 3).arg(position.y(), 0, 'f', 3));
+          });
   layout->addWidget(openGLViewer);
 
   auto currentVolume = std::make_shared<std::optional<VolumeData>>();

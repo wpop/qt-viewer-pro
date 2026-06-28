@@ -187,8 +187,13 @@ void OpenGLSliceViewer::mouseMoveEvent(QMouseEvent* event)
     float halfWidth = 1.0F;
     float halfHeight = 1.0F;
     computeQuadExtents(halfWidth, halfHeight);
-    crosshairPosition_ =
-        widgetPositionToImageLocalPosition(event->position(), size(), panOffset_, halfWidth, halfHeight);
+    const QPointF newCrosshairPosition = widgetPositionToImageLocalPosition(
+        event->position(), size(), panOffset_, halfWidth, halfHeight);
+    if (crosshairPosition_ != newCrosshairPosition)
+    {
+      crosshairPosition_ = newCrosshairPosition;
+      emit crosshairPositionChanged(crosshairPosition_);
+    }
     update();
     event->accept();
     return;
