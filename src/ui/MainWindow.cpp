@@ -706,7 +706,7 @@ void MainWindow::openOpenGLViewerDemo()
     const std::size_t pixelHeight = static_cast<std::size_t>(std::max(0, currentDisplaySize->height()));
     if (pixelWidth == 0 || pixelHeight == 0)
     {
-      crosshairPositionLabel->setText(QString("Crosshair: x=%1 y=%2 value=%3")
+      crosshairPositionLabel->setText(QString("x=%1 y=%2 | val=%3")
                                           .arg(position.x(), 0, 'f', 3)
                                           .arg(position.y(), 0, 'f', 3)
                                           .arg(value));
@@ -716,12 +716,12 @@ void MainWindow::openOpenGLViewerDemo()
     const std::size_t pixelX = normalizeToPixelIndex(position.x(), pixelWidth);
     const std::size_t pixelY = normalizeToPixelIndex(-position.y(), pixelHeight);
 
-    QString labelText = QString("Crosshair: x=%1 y=%2 pixel=(%3,%4) value=%5")
-                            .arg(position.x(), 0, 'f', 3)
-                            .arg(position.y(), 0, 'f', 3)
-                            .arg(pixelX)
-                            .arg(pixelY)
-                            .arg(value);
+    const QString labelText = QString("x=%1 y=%2 | px=(%3,%4) | val=%5")
+                                  .arg(position.x(), 0, 'f', 3)
+                                  .arg(position.y(), 0, 'f', 3)
+                                  .arg(pixelX)
+                                  .arg(pixelY)
+                                  .arg(value);
 
     if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
     {
@@ -766,7 +766,7 @@ void MainWindow::openOpenGLViewerDemo()
       voxelZ = std::min(voxelZ, volume.depth() == 0 ? std::size_t{0} : volume.depth() - 1);
     }
 
-    crosshairPositionLabel->setText(QString("%1 voxel=(%2,%3,%4)")
+    crosshairPositionLabel->setText(QString("%1 | voxel=(%2,%3,%4)")
                                         .arg(labelText)
                                         .arg(voxelX)
                                         .arg(voxelY)
