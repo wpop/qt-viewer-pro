@@ -13,6 +13,7 @@ private slots:
   void extractsAxialSlice();
   void extractsCoronalSlice();
   void extractsSagittalSlice();
+  void extractsDistinctCoronalAndSagittalSlices();
   void throwsForInvalidSliceIndex();
 };
 
@@ -71,6 +72,19 @@ void TestSliceExtractor::extractsSagittalSlice()
   QCOMPARE(slice.orientation(), qvp::SliceOrientation::Sagittal);
   QCOMPARE(slice.sliceIndex(), std::size_t{1});
   QVERIFY(slice.pixels() == expected);
+}
+
+void TestSliceExtractor::extractsDistinctCoronalAndSagittalSlices()
+{
+  const auto volume = makeVolume();
+  const auto coronal = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Coronal, 1);
+  const auto sagittal = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Sagittal, 1);
+
+  QCOMPARE(coronal.width(), std::size_t{2});
+  QCOMPARE(coronal.height(), std::size_t{2});
+  QCOMPARE(sagittal.width(), std::size_t{3});
+  QCOMPARE(sagittal.height(), std::size_t{2});
+  QVERIFY(coronal.pixels() != sagittal.pixels());
 }
 
 void TestSliceExtractor::throwsForInvalidSliceIndex()
