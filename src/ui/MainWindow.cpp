@@ -646,16 +646,6 @@ void MainWindow::openOpenGLViewerDemo()
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
   connect(showCrosshairCheckBox, &QCheckBox::toggled, openGLViewer,
           &OpenGLSliceViewer::setCrosshairVisible);
-  connect(openGLViewer,
-          &OpenGLSliceViewer::crosshairPositionValueChanged,
-          demoWindow,
-          [crosshairPositionLabel](const QPointF position, int value) {
-            crosshairPositionLabel->setText(QString("Crosshair: x=%1 y=%2 value=%3")
-                                                .arg(position.x(), 0, 'f', 3)
-                                                .arg(position.y(), 0, 'f', 3)
-                                                .arg(value));
-          });
-  openGLViewer->setImage(createOpenGLDemoImage());
   layout->addWidget(openGLViewer);
   layout->setStretchFactor(openGLViewer, 1);
 
@@ -668,6 +658,104 @@ void MainWindow::openOpenGLViewerDemo()
   auto currentSliceIndex = std::make_shared<std::size_t>(0);
   auto currentOrientation = std::make_shared<SliceOrientation>(SliceOrientation::Axial);
   auto hasCurrentVolumeSlice = std::make_shared<bool>(false);
+  auto currentCrosshairPosition = std::make_shared<QPointF>(0.0, 0.0);
+
+  auto sliceDimensions = [currentVolume, currentOrientation, hasCurrentVolumeSlice]() -> std::pair<std::size_t, std::size_t> {
+    if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
+    {
+      return {0, 0};
+    }
+
+    switch (*currentOrientation)
+    {
+    case SliceOrientation::Coronal:
+      return {currentVolume->value().width(), currentVolume->value().depth()};
+    case SliceOrientation::Sagittal:
+      return {currentVolume->value().height(), currentVolume->value().depth()};
+    case SliceOrientation::Axial:
+      return {currentVolume->value().width(), currentVolume->value().height()};
+    }
+
+    return {0, 0};
+  };
+
+  auto normalizeToPixelIndex = [](double normalized, std::size_t size) -> std::size_t {
+    if (size == 0)
+    {
+      return 0;
+    }
+
+    const double clamped = std::clamp(normalized, -1.0, 1.0);
+    const double mapped = ((clamped + 1.0) * 0.5) * static_cast<double>(size - 1);
+    return static_cast<std::size_t>(std::clamp(mapped, 0.0, static_cast<double>(size - 1)));
+  };
+
+  auto updateCrosshairLabel = [crosshairPositionLabel,
+                               currentCrosshairPosition,
+                               currentVolume,
+                               currentOrientation,
+                               currentSliceIndex,
+                               hasCurrentVolumeSlice,
+                               sliceDimensions,
+                               normalizeToPixelIndex](int value) {
+    const QPointF position = *currentCrosshairPosition;
+    const QString baseText = QString("Crosshair: x=%1 y=%2 value=%3")
+                                 .arg(position.x(), 0, 'f', 3)
+                                 .arg(position.y(), 0, 'f', 3)
+                                 .arg(value);
+
+    if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
+    {
+      crosshairPositionLabel->setText(baseText);
+      return;
+    }
+
+    const auto [sliceWidth, sliceHeight] = sliceDimensions();
+    if (sliceWidth == 0 || sliceHeight == 0)
+    {
+      crosshairPositionLabel->setText(baseText);
+      return;
+    }
+
+    const std::size_t pixelX = normalizeToPixelIndex(position.x(), sliceWidth);
+    const std::size_t pixelY = normalizeToPixelIndex(-position.y(), sliceHeight);
+
+    std::size_t voxelX = pixelX;
+    std::size_t voxelY = pixelY;
+    std::size_t voxelZ = *currentSliceIndex;
+
+    switch (*currentOrientation)
+    {
+    case SliceOrientation::Coronal:
+      voxelY = *currentSliceIndex;
+      voxelZ = pixelY;
+      break;
+    case SliceOrientation::Sagittal:
+      voxelX = *currentSliceIndex;
+      voxelY = pixelX;
+      voxelZ = pixelY;
+      break;
+    case SliceOrientation::Axial:
+      voxelX = pixelX;
+      voxelY = pixelY;
+      voxelZ = *currentSliceIndex;
+      break;
+    }
+
+    if (currentVolume->has_value())
+    {
+      const VolumeData& volume = currentVolume->value();
+      voxelX = std::min(voxelX, volume.width() == 0 ? std::size_t{0} : volume.width() - 1);
+      voxelY = std::min(voxelY, volume.height() == 0 ? std::size_t{0} : volume.height() - 1);
+      voxelZ = std::min(voxelZ, volume.depth() == 0 ? std::size_t{0} : volume.depth() - 1);
+    }
+
+    crosshairPositionLabel->setText(QString("%1 voxel=(%2,%3,%4)")
+                                        .arg(baseText)
+                                        .arg(voxelX)
+                                        .arg(voxelY)
+                                        .arg(voxelZ));
+  };
 
   auto currentSliceCount = [currentVolume, currentOrientation, hasCurrentVolumeSlice]() -> std::size_t {
     if (!*hasCurrentVolumeSlice || !currentVolume->has_value())
@@ -758,8 +846,8 @@ void MainWindow::openOpenGLViewerDemo()
       return;
     }
 
-    openGLViewer->setImage(image);
     *hasCurrentVolumeSlice = false;
+    openGLViewer->setImage(image);
     updateSliceLabel();
   });
   connect(loadSyntheticSliceButton,
@@ -997,6 +1085,20 @@ void MainWindow::openOpenGLViewerDemo()
     levelSpinBox->setValue(127);
     updateOpenGLVolumeSlice();
   });
+  connect(openGLViewer,
+          &OpenGLSliceViewer::crosshairPositionValueChanged,
+          demoWindow,
+          [currentCrosshairPosition, updateCrosshairLabel](const QPointF position, int value) {
+            *currentCrosshairPosition = position;
+            updateCrosshairLabel(value);
+          });
+  connect(openGLViewer,
+          &OpenGLSliceViewer::crosshairPositionChanged,
+          demoWindow,
+          [currentCrosshairPosition](const QPointF position) {
+            *currentCrosshairPosition = position;
+          });
+  openGLViewer->setImage(createOpenGLDemoImage());
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
   demoWindow->show();
