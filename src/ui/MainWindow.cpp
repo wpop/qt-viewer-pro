@@ -644,16 +644,18 @@ void MainWindow::openOpenGLViewerDemo()
   layout->addLayout(buttonLayout);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
-  openGLViewer->setImage(createOpenGLDemoImage());
   connect(showCrosshairCheckBox, &QCheckBox::toggled, openGLViewer,
           &OpenGLSliceViewer::setCrosshairVisible);
   connect(openGLViewer,
-          &OpenGLSliceViewer::crosshairPositionChanged,
+          &OpenGLSliceViewer::crosshairPositionValueChanged,
           demoWindow,
-          [crosshairPositionLabel](const QPointF position) {
-            crosshairPositionLabel->setText(
-                QString("Crosshair: x=%1 y=%2").arg(position.x(), 0, 'f', 3).arg(position.y(), 0, 'f', 3));
+          [crosshairPositionLabel](const QPointF position, int value) {
+            crosshairPositionLabel->setText(QString("Crosshair: x=%1 y=%2 value=%3")
+                                                .arg(position.x(), 0, 'f', 3)
+                                                .arg(position.y(), 0, 'f', 3)
+                                                .arg(value));
           });
+  openGLViewer->setImage(createOpenGLDemoImage());
   layout->addWidget(openGLViewer);
   layout->setStretchFactor(openGLViewer, 1);
 

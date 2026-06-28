@@ -1,5 +1,6 @@
 #include "qtviewerpro/render/OpenGLSliceViewer.h"
 
+#include <QColor>
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
@@ -33,6 +34,20 @@ QPointF widgetPositionToImageLocalPosition(const QPointF& widgetPosition,
 
   return QPointF(std::clamp(localX, -1.0, 1.0), std::clamp(localY, -1.0, 1.0));
 }
+
+QPoint imageLocalPositionToPixelPosition(const QPointF& imageLocalPosition, const QSize& imageSize)
+{
+  if (imageSize.width() <= 0 || imageSize.height() <= 0)
+  {
+    return QPoint(0, 0);
+  }
+
+  const double x = ((imageLocalPosition.x() + 1.0) * 0.5) * static_cast<double>(imageSize.width() - 1);
+  const double y = ((1.0 - imageLocalPosition.y()) * 0.5) * static_cast<double>(imageSize.height() - 1);
+
+  return QPoint(static_cast<int>(std::clamp(x, 0.0, static_cast<double>(imageSize.width() - 1))),
+                static_cast<int>(std::clamp(y, 0.0, static_cast<double>(imageSize.height() - 1))));
+}
 }
 
 namespace qvp
@@ -64,6 +79,8 @@ void OpenGLSliceViewer::setImage(const QImage& image)
   crosshairPosition_ = QPointF(0.0, 0.0);
   textureDirty_ = true;
   updateQuadGeometryWithCurrentContext();
+  emit crosshairPositionChanged(crosshairPosition_);
+  emit crosshairPositionValueChanged(crosshairPosition_, sampleImageValueAt(crosshairPosition_));
   update();
 }
 
@@ -198,6 +215,7 @@ void OpenGLSliceViewer::mouseMoveEvent(QMouseEvent* event)
     {
       crosshairPosition_ = newCrosshairPosition;
       emit crosshairPositionChanged(crosshairPosition_);
+      emit crosshairPositionValueChanged(crosshairPosition_, sampleImageValueAt(crosshairPosition_));
     }
     update();
     event->accept();
@@ -555,6 +573,18 @@ void OpenGLSliceViewer::drawCrosshair()
   extraFunctions->glBindVertexArray(0);
   glLineWidth(1.0F);
   glUseProgram(0);
+}
+
+int OpenGLSliceViewer::sampleImageValueAt(const QPointF& position) const
+{
+  if (image_.isNull())
+  {
+    return 0;
+  }
+
+  const QPoint pixelPosition = imageLocalPositionToPixelPosition(position, image_.size());
+  const QColor color = image_.pixelColor(pixelPosition);
+  return qGray(color.rgb());
 }
 
 void OpenGLSliceViewer::drawImageBorder()
