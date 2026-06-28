@@ -45,6 +45,7 @@ private:
   void initializeRenderingResources();
   void destroyRenderingResources();
   GLuint compileShader(GLenum shaderType, const char* source);
+  void drawImageBorder();
   void drawCrosshair();
   void computeQuadExtents(float& halfWidth, float& halfHeight) const;
   void updateQuadGeometry();
@@ -65,6 +66,7 @@ private:
   QPointF crosshairPosition_ = QPointF(0.0, 0.0);
   bool isPanning_ = false;
   bool textureDirty_ = false;
+  bool showImageBorder_ = true;
   bool showCrosshair_ = true;
 };
 
