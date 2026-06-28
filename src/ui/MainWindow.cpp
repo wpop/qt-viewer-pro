@@ -601,6 +601,8 @@ void MainWindow::openOpenGLViewerDemo()
   auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
   auto* loadRawSliceButton = new QPushButton("Load RAW Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
+  auto* showCrosshairCheckBox = new QCheckBox("Show Crosshair", demoWindow);
+  showCrosshairCheckBox->setChecked(true);
   auto* orientationComboBox = new QComboBox(demoWindow);
   orientationComboBox->addItems({"Axial", "Coronal", "Sagittal"});
   auto* windowSpinBox = new QSpinBox(demoWindow);
@@ -631,11 +633,14 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(levelSpinBox);
   buttonLayout->addWidget(resetWindowLevelButton);
   buttonLayout->addWidget(resetViewButton);
+  buttonLayout->addWidget(showCrosshairCheckBox);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
   openGLViewer->setImage(createOpenGLDemoImage());
+  connect(showCrosshairCheckBox, &QCheckBox::toggled, openGLViewer,
+          &OpenGLSliceViewer::setCrosshairVisible);
   layout->addWidget(openGLViewer);
 
   auto currentVolume = std::make_shared<std::optional<VolumeData>>();

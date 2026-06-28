@@ -77,6 +77,17 @@ bool OpenGLSliceViewer::hasImage() const
   return !image_.isNull();
 }
 
+void OpenGLSliceViewer::setCrosshairVisible(bool visible)
+{
+  showCrosshair_ = visible;
+  update();
+}
+
+bool OpenGLSliceViewer::isCrosshairVisible() const
+{
+  return showCrosshair_;
+}
+
 void OpenGLSliceViewer::resetView()
 {
   zoomFactor_ = 1.0F;
