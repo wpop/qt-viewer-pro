@@ -140,6 +140,11 @@ void OpenGLSliceViewer::paintGL()
   glDrawArrays(GL_TRIANGLES, 0, 6);
   extraFunctions->glBindVertexArray(0);
 
+  if (showImageBorder_)
+  {
+    drawImageBorder();
+  }
+
   if (showCrosshair_)
   {
     drawCrosshair();
@@ -546,6 +551,52 @@ void OpenGLSliceViewer::drawCrosshair()
   glLineWidth(1.0F);
   glUniform4f(colorLocation, 1.0F, 1.0F, 1.0F, 0.90F);
   glDrawArrays(GL_LINES, 0, 4);
+
+  extraFunctions->glBindVertexArray(0);
+  glLineWidth(1.0F);
+  glUseProgram(0);
+}
+
+void OpenGLSliceViewer::drawImageBorder()
+{
+  if (crosshairShaderProgram_ == 0 || crosshairVao_ == 0 || crosshairVbo_ == 0)
+  {
+    return;
+  }
+
+  float halfWidth = 1.0F;
+  float halfHeight = 1.0F;
+  computeQuadExtents(halfWidth, halfHeight);
+
+  const float centerX = static_cast<float>(panOffset_.x());
+  const float centerY = static_cast<float>(panOffset_.y());
+  const float borderVertices[] = {
+      centerX - halfWidth, centerY - halfHeight,
+      centerX + halfWidth, centerY - halfHeight,
+      centerX + halfWidth, centerY + halfHeight,
+      centerX - halfWidth, centerY + halfHeight,
+  };
+
+  glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);
+  glBufferSubData(GL_ARRAY_BUFFER,
+                  0,
+                  static_cast<qopengl_GLsizeiptr>(sizeof(borderVertices)),
+                  borderVertices);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glUseProgram(crosshairShaderProgram_);
+  const GLint colorLocation = glGetUniformLocation(crosshairShaderProgram_, "crosshairColor");
+
+  auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
+  extraFunctions->glBindVertexArray(crosshairVao_);
+
+  glLineWidth(2.0F);
+  glUniform4f(colorLocation, 0.0F, 0.0F, 0.0F, 0.45F);
+  glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+  glLineWidth(1.0F);
+  glUniform4f(colorLocation, 1.0F, 1.0F, 1.0F, 0.55F);
+  glDrawArrays(GL_LINE_LOOP, 0, 4);
 
   extraFunctions->glBindVertexArray(0);
   glLineWidth(1.0F);
