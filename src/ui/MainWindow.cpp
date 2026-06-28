@@ -615,6 +615,8 @@ void MainWindow::openOpenGLViewerDemo()
   levelSpinBox->setRange(-2048, 4096);
   levelSpinBox->setValue(127);
   auto* resetWindowLevelButton = new QPushButton("Reset W/L", demoWindow);
+  auto* windowLevelPresetComboBox = new QComboBox(demoWindow);
+  windowLevelPresetComboBox->addItems({"Preset", "Soft Tissue", "Lung", "Bone", "Reset"});
   auto* previousSliceButton = new QPushButton("Z-", demoWindow);
   auto* sliceSlider = new QSlider(Qt::Horizontal, demoWindow);
   sliceSlider->setRange(0, 0);
@@ -635,6 +637,7 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(new QLabel("Level", demoWindow));
   buttonLayout->addWidget(levelSpinBox);
   buttonLayout->addWidget(resetWindowLevelButton);
+  buttonLayout->addWidget(windowLevelPresetComboBox);
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addWidget(showCrosshairCheckBox);
   buttonLayout->addStretch();
@@ -948,6 +951,41 @@ void MainWindow::openOpenGLViewerDemo()
   });
   connect(windowSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
   connect(levelSpinBox, &QSpinBox::valueChanged, demoWindow, updateOpenGLVolumeSlice);
+  connect(windowLevelPresetComboBox,
+          &QComboBox::activated,
+          demoWindow,
+          [windowSpinBox, levelSpinBox, updateOpenGLVolumeSlice](int presetIndex) {
+            int window = windowSpinBox->value();
+            int level = levelSpinBox->value();
+
+            switch (presetIndex)
+            {
+            case 1:
+              window = 400;
+              level = 40;
+              break;
+            case 2:
+              window = 1500;
+              level = -600;
+              break;
+            case 3:
+              window = 2000;
+              level = 300;
+              break;
+            case 4:
+              window = 255;
+              level = 127;
+              break;
+            default:
+              return;
+            }
+
+            const QSignalBlocker windowBlocker(windowSpinBox);
+            const QSignalBlocker levelBlocker(levelSpinBox);
+            windowSpinBox->setValue(window);
+            levelSpinBox->setValue(level);
+            updateOpenGLVolumeSlice();
+          });
   connect(resetWindowLevelButton, &QPushButton::clicked, demoWindow, [windowSpinBox,
                                                                       levelSpinBox,
                                                                       updateOpenGLVolumeSlice]() {
