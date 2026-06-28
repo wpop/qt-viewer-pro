@@ -14,6 +14,8 @@ namespace qvp
 
 class OpenGLSliceViewer : public QOpenGLWidget, protected QOpenGLFunctions
 {
+  Q_OBJECT
+
 public:
   explicit OpenGLSliceViewer(QWidget* parent = nullptr);
   ~OpenGLSliceViewer() override;
@@ -35,6 +37,9 @@ protected:
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
+
+signals:
+  void crosshairPositionChanged(QPointF position);
 
 private:
   void initializeRenderingResources();
