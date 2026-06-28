@@ -458,11 +458,17 @@ void OpenGLSliceViewer::drawCrosshair()
     return;
   }
 
+  float halfWidth = 1.0F;
+  float halfHeight = 1.0F;
+  computeQuadExtents(halfWidth, halfHeight);
+
+  const float centerX = static_cast<float>(panOffset_.x());
+  const float centerY = static_cast<float>(panOffset_.y());
   const float crosshairVertices[] = {
-      -1.0F, 0.0F,
-      1.0F,  0.0F,
-      0.0F,  -1.0F,
-      0.0F,  1.0F,
+      centerX - halfWidth, centerY,
+      centerX + halfWidth, centerY,
+      centerX, centerY - halfHeight,
+      centerX, centerY + halfHeight,
   };
 
   glBindBuffer(GL_ARRAY_BUFFER, crosshairVbo_);
