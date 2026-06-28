@@ -40,11 +40,13 @@ protected:
 
 signals:
   void crosshairPositionChanged(QPointF position);
+  void crosshairPositionValueChanged(QPointF position, int value);
 
 private:
   void initializeRenderingResources();
   void destroyRenderingResources();
   GLuint compileShader(GLenum shaderType, const char* source);
+  int sampleImageValueAt(const QPointF& position) const;
   void drawImageBorder();
   void drawCrosshair();
   void computeQuadExtents(float& halfWidth, float& halfHeight) const;
