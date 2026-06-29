@@ -604,6 +604,7 @@ void MainWindow::openOpenGLViewerDemo()
   auto* loadSyntheticSliceButton = new QPushButton("Load Synthetic Slice", demoWindow);
   auto* loadRawSliceButton = new QPushButton("Load RAW Slice", demoWindow);
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
+  auto* resetCrosshairButton = new QPushButton("Reset Crosshair", demoWindow);
   auto* showCrosshairCheckBox = new QCheckBox("Show Crosshair", demoWindow);
   showCrosshairCheckBox->setChecked(true);
   auto* orientationComboBox = new QComboBox(demoWindow);
@@ -639,6 +640,7 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(resetWindowLevelButton);
   buttonLayout->addWidget(windowLevelPresetComboBox);
   buttonLayout->addWidget(resetViewButton);
+  buttonLayout->addWidget(resetCrosshairButton);
   buttonLayout->addWidget(showCrosshairCheckBox);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
@@ -1138,6 +1140,7 @@ void MainWindow::openOpenGLViewerDemo()
           });
   *currentDisplaySize = openGLDemoImage.size();
   openGLViewer->setImage(openGLDemoImage);
+  connect(resetCrosshairButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetCrosshair);
   connect(resetViewButton, &QPushButton::clicked, openGLViewer, &OpenGLSliceViewer::resetView);
 
   demoWindow->show();
