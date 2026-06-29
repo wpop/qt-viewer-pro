@@ -74,11 +74,23 @@ target_link_libraries(qt-viewer-pro-processing
 
 # IO library
 set(QTVIEWERPRO_IO_SOURCES
+    src/io/DicomVolumeLoader.cpp
+    src/io/MedicalVolumeLoaderRegistry.cpp
+    src/io/MetaImageVolumeLoader.cpp
+    src/io/NiftiVolumeLoader.cpp
+    src/io/NrrdVolumeLoader.cpp
     src/io/RawVolumeLoader.cpp
 )
 
 set(QTVIEWERPRO_IO_HEADERS
+    include/qtviewerpro/io/DicomVolumeLoader.h
+    include/qtviewerpro/io/MedicalVolumeLoader.h
+    include/qtviewerpro/io/MedicalVolumeLoaderRegistry.h
+    include/qtviewerpro/io/MetaImageVolumeLoader.h
+    include/qtviewerpro/io/NiftiVolumeLoader.h
+    include/qtviewerpro/io/NrrdVolumeLoader.h
     include/qtviewerpro/io/RawVolumeLoader.h
+    include/qtviewerpro/io/VolumeLoadResult.h
 )
 
 add_library(qt-viewer-pro-io
