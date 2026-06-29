@@ -1,5 +1,7 @@
 #include "qtviewerpro/core/VolumeData.h"
 
+#include <limits>
+#include <stdexcept>
 #include <utility>
 
 namespace qvp
@@ -45,6 +47,49 @@ float VolumeData::spacingZ() const
 const std::vector<float>& VolumeData::voxels() const
 {
   return voxels_;
+}
+
+bool VolumeData::isEmpty() const
+{
+  return width_ == 0 || height_ == 0 || depth_ == 0 || voxels_.empty();
+}
+
+bool VolumeData::isValid() const
+{
+  if (isEmpty())
+  {
+    return false;
+  }
+
+  try
+  {
+    return voxelCount() == voxels_.size();
+  }
+  catch (const std::overflow_error&)
+  {
+    return false;
+  }
+}
+
+std::size_t VolumeData::voxelCount() const
+{
+  if (width_ == 0 || height_ == 0 || depth_ == 0)
+  {
+    return 0;
+  }
+
+  if (height_ > std::numeric_limits<std::size_t>::max() / width_)
+  {
+    throw std::overflow_error("Volume width and height exceed size limits");
+  }
+
+  const std::size_t planeVoxelCount = width_ * height_;
+  if (depth_ > std::numeric_limits<std::size_t>::max() / planeVoxelCount)
+  {
+    throw std::overflow_error("Volume voxel count exceeds size limits");
+  }
+
+  return planeVoxelCount * depth_;
 }
 
 } // namespace qvp

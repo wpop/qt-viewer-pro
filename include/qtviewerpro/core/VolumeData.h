@@ -68,6 +68,21 @@ public:
    */
   const std::vector<float>& voxels() const;
 
+  /**
+   * @brief Returns true when the volume has no usable voxel data.
+   */
+  bool isEmpty() const;
+
+  /**
+   * @brief Returns true when dimensions and voxel storage are internally consistent.
+   */
+  bool isValid() const;
+
+  /**
+   * @brief Returns the number of voxels implied by the dimensions.
+   */
+  std::size_t voxelCount() const;
+
 private:
   std::size_t width_ = 0;
   std::size_t height_ = 0;

@@ -15,6 +15,11 @@ SliceData SliceExtractor::extract(const VolumeData& volume,
                                   SliceOrientation orientation,
                                   std::size_t sliceIndex)
 {
+  if (!volume.isValid())
+  {
+    throw std::invalid_argument("Volume data is invalid");
+  }
+
   const auto& voxels = volume.voxels();
 
   switch (orientation)
