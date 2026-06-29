@@ -5,6 +5,7 @@
 
 #include <QPointF>
 #include <QSize>
+#include <QString>
 #include <QWidget>
 
 #include <cstddef>
@@ -54,9 +55,11 @@ private:
   void updateVolumeSlice();
   void configureSliceSlider();
   void updateSliceLabel();
+  void updateVolumeMetadataLabel();
   void resetToAxialMiddleSlice();
   bool looksLikeCtVolume(const VolumeData& volume) const;
   void applyCtWindowLevelPresetIfNeeded(const VolumeData& volume);
+  QString formatVolumeMetadata() const;
   std::size_t currentSliceCount() const;
   std::pair<std::size_t, std::size_t> sliceDimensions() const;
 
@@ -81,9 +84,11 @@ private:
   QSlider* sliceSlider_ = nullptr;
   QLabel* sliceIndexLabel_ = nullptr;
   QLabel* crosshairPositionLabel_ = nullptr;
+  QLabel* volumeMetadataLabel_ = nullptr;
   QPushButton* nextSliceButton_ = nullptr;
 
   std::optional<VolumeData> currentVolume_;
+  std::optional<std::pair<float, float>> currentVolumeRange_;
   std::size_t currentSliceIndex_ = 0;
   SliceOrientation currentOrientation_ = SliceOrientation::Axial;
   bool hasCurrentVolumeSlice_ = false;
