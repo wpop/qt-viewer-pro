@@ -606,7 +606,9 @@ void MainWindow::openOpenGLViewerDemo()
   auto* resetViewButton = new QPushButton("Reset View", demoWindow);
   auto* resetCrosshairButton = new QPushButton("Reset Crosshair", demoWindow);
   auto* showCrosshairCheckBox = new QCheckBox("Show Crosshair", demoWindow);
+  auto* showImageBorderCheckBox = new QCheckBox("Show Image Border", demoWindow);
   showCrosshairCheckBox->setChecked(true);
+  showImageBorderCheckBox->setChecked(true);
   auto* orientationComboBox = new QComboBox(demoWindow);
   orientationComboBox->addItems({"Axial", "Coronal", "Sagittal"});
   auto* windowSpinBox = new QSpinBox(demoWindow);
@@ -642,12 +644,15 @@ void MainWindow::openOpenGLViewerDemo()
   buttonLayout->addWidget(resetViewButton);
   buttonLayout->addWidget(resetCrosshairButton);
   buttonLayout->addWidget(showCrosshairCheckBox);
+  buttonLayout->addWidget(showImageBorderCheckBox);
   buttonLayout->addStretch();
   layout->addLayout(buttonLayout);
 
   auto* openGLViewer = new OpenGLSliceViewer(demoWindow);
   connect(showCrosshairCheckBox, &QCheckBox::toggled, openGLViewer,
           &OpenGLSliceViewer::setCrosshairVisible);
+  connect(showImageBorderCheckBox, &QCheckBox::toggled, openGLViewer,
+          &OpenGLSliceViewer::setImageBorderVisible);
   layout->addWidget(openGLViewer);
   layout->setStretchFactor(openGLViewer, 1);
 
