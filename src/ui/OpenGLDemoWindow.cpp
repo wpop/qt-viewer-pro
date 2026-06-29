@@ -42,8 +42,16 @@ void OpenGLDemoWindow::createUi()
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(4, 4, 4, 4);
 
-  auto* buttonLayout = new QHBoxLayout();
-  buttonLayout->setSpacing(4);
+  auto* fileLayout = new QHBoxLayout();
+  fileLayout->setSpacing(4);
+  auto* sliceLayout = new QHBoxLayout();
+  sliceLayout->setSpacing(4);
+  auto* windowLevelLayout = new QHBoxLayout();
+  windowLevelLayout->setSpacing(4);
+  auto* viewLayout = new QHBoxLayout();
+  viewLayout->setSpacing(4);
+  auto* overlayLayout = new QHBoxLayout();
+  overlayLayout->setSpacing(4);
   auto* statusLayout = new QHBoxLayout();
   statusLayout->setSpacing(8);
 
@@ -78,26 +86,38 @@ void OpenGLDemoWindow::createUi()
   crosshairPositionLabel_ = new QLabel("Crosshair: x=0.000 y=0.000", this);
   nextSliceButton_ = new QPushButton("Z+", this);
 
-  buttonLayout->addWidget(openImageButton_);
-  buttonLayout->addWidget(loadSyntheticSliceButton_);
-  buttonLayout->addWidget(loadRawSliceButton_);
-  buttonLayout->addWidget(new QLabel("Orientation", this));
-  buttonLayout->addWidget(orientationComboBox_);
-  buttonLayout->addWidget(previousSliceButton_);
-  buttonLayout->addWidget(sliceSlider_);
-  buttonLayout->addWidget(nextSliceButton_);
-  buttonLayout->addWidget(new QLabel("Window", this));
-  buttonLayout->addWidget(windowSpinBox_);
-  buttonLayout->addWidget(new QLabel("Level", this));
-  buttonLayout->addWidget(levelSpinBox_);
-  buttonLayout->addWidget(resetWindowLevelButton_);
-  buttonLayout->addWidget(windowLevelPresetComboBox_);
-  buttonLayout->addWidget(resetViewButton_);
-  buttonLayout->addWidget(resetCrosshairButton_);
-  buttonLayout->addWidget(showCrosshairCheckBox_);
-  buttonLayout->addWidget(showImageBorderCheckBox_);
-  buttonLayout->addStretch();
-  layout->addLayout(buttonLayout);
+  fileLayout->addWidget(openImageButton_);
+  fileLayout->addWidget(loadSyntheticSliceButton_);
+  fileLayout->addWidget(loadRawSliceButton_);
+  fileLayout->addStretch();
+  layout->addLayout(fileLayout);
+
+  sliceLayout->addWidget(new QLabel("Orientation", this));
+  sliceLayout->addWidget(orientationComboBox_);
+  sliceLayout->addWidget(previousSliceButton_);
+  sliceLayout->addWidget(sliceSlider_);
+  sliceLayout->addWidget(nextSliceButton_);
+  sliceLayout->addStretch();
+  layout->addLayout(sliceLayout);
+
+  windowLevelLayout->addWidget(new QLabel("Window", this));
+  windowLevelLayout->addWidget(windowSpinBox_);
+  windowLevelLayout->addWidget(new QLabel("Level", this));
+  windowLevelLayout->addWidget(levelSpinBox_);
+  windowLevelLayout->addWidget(resetWindowLevelButton_);
+  windowLevelLayout->addWidget(windowLevelPresetComboBox_);
+  windowLevelLayout->addStretch();
+  layout->addLayout(windowLevelLayout);
+
+  viewLayout->addWidget(resetViewButton_);
+  viewLayout->addWidget(resetCrosshairButton_);
+  viewLayout->addStretch();
+  layout->addLayout(viewLayout);
+
+  overlayLayout->addWidget(showCrosshairCheckBox_);
+  overlayLayout->addWidget(showImageBorderCheckBox_);
+  overlayLayout->addStretch();
+  layout->addLayout(overlayLayout);
 
   openGLViewer_ = new OpenGLSliceViewer(this);
   layout->addWidget(openGLViewer_);
