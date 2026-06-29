@@ -27,6 +27,26 @@
 namespace qvp
 {
 
+namespace
+{
+
+QString orientationName(SliceOrientation orientation)
+{
+  switch (orientation)
+  {
+  case SliceOrientation::Coronal:
+    return QStringLiteral("Coronal");
+  case SliceOrientation::Sagittal:
+    return QStringLiteral("Sagittal");
+  case SliceOrientation::Axial:
+    return QStringLiteral("Axial");
+  }
+
+  return QStringLiteral("Axial");
+}
+
+} // namespace
+
 OpenGLDemoWindow::OpenGLDemoWindow(QWidget* parent) : QWidget(parent)
 {
   setWindowTitle("OpenGL Slice Viewer Demo");
@@ -46,6 +66,9 @@ void OpenGLDemoWindow::setVolume(VolumeData volume)
   }
 
   currentVolume_ = std::move(volume);
+  const auto [minIt, maxIt] =
+      std::minmax_element(currentVolume_->voxels().begin(), currentVolume_->voxels().end());
+  currentVolumeRange_ = std::make_pair(*minIt, *maxIt);
   applyCtWindowLevelPresetIfNeeded(currentVolume_.value());
   resetToAxialMiddleSlice();
   updateVolumeSlice();
@@ -99,6 +122,10 @@ void OpenGLDemoWindow::createUi()
   sliceSlider_->setValue(0);
   sliceIndexLabel_ = new QLabel("Slice: - / -", this);
   crosshairPositionLabel_ = new QLabel("Crosshair: x=0.000 y=0.000", this);
+  volumeMetadataLabel_ = new QLabel("No volume loaded", this);
+  volumeMetadataLabel_->setTextFormat(Qt::PlainText);
+  volumeMetadataLabel_->setWordWrap(true);
+  volumeMetadataLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
   nextSliceButton_ = new QPushButton("Z+", this);
 
   fileLayout->addWidget(openImageButton_);
@@ -133,6 +160,8 @@ void OpenGLDemoWindow::createUi()
   overlayLayout->addWidget(showImageBorderCheckBox_);
   overlayLayout->addStretch();
   layout->addLayout(overlayLayout);
+
+  layout->addWidget(volumeMetadataLabel_);
 
   openGLViewer_ = new OpenGLSliceViewer(this);
   layout->addWidget(openGLViewer_);
@@ -182,6 +211,7 @@ void OpenGLDemoWindow::loadInitialDemoImage()
   currentDisplaySize_ = openGLDemoImage.size();
   openGLViewer_->setOrientation(SliceOrientation::Axial);
   openGLViewer_->setImage(openGLDemoImage);
+  updateVolumeMetadataLabel();
 }
 
 void OpenGLDemoWindow::openImage()
@@ -202,6 +232,8 @@ void OpenGLDemoWindow::openImage()
   }
 
   hasCurrentVolumeSlice_ = false;
+  currentVolume_.reset();
+  currentVolumeRange_.reset();
   currentDisplaySize_ = image.size();
   openGLViewer_->setOrientation(SliceOrientation::Axial);
   openGLViewer_->setImage(image);
@@ -336,6 +368,7 @@ void OpenGLDemoWindow::nextSlice()
 void OpenGLDemoWindow::updateWindowLevel()
 {
   updateVolumeSlice();
+  updateVolumeMetadataLabel();
 }
 
 void OpenGLDemoWindow::resetWindowLevel()
@@ -345,6 +378,7 @@ void OpenGLDemoWindow::resetWindowLevel()
   windowSpinBox_->setValue(255);
   levelSpinBox_->setValue(127);
   updateVolumeSlice();
+  updateVolumeMetadataLabel();
 }
 
 void OpenGLDemoWindow::applyWindowLevelPreset(int presetIndex)
@@ -379,6 +413,7 @@ void OpenGLDemoWindow::applyWindowLevelPreset(int presetIndex)
   windowSpinBox_->setValue(window);
   levelSpinBox_->setValue(level);
   updateVolumeSlice();
+  updateVolumeMetadataLabel();
 }
 
 void OpenGLDemoWindow::updateCrosshairPosition(QPointF position, int value)
@@ -502,10 +537,17 @@ void OpenGLDemoWindow::updateSliceLabel()
   if (sliceCount == 0)
   {
     sliceIndexLabel_->setText("Slice: - / -");
+    updateVolumeMetadataLabel();
     return;
   }
 
   sliceIndexLabel_->setText(QString("Slice: %1 / %2").arg(currentSliceIndex_ + 1).arg(sliceCount));
+  updateVolumeMetadataLabel();
+}
+
+void OpenGLDemoWindow::updateVolumeMetadataLabel()
+{
+  volumeMetadataLabel_->setText(formatVolumeMetadata());
 }
 
 void OpenGLDemoWindow::resetToAxialMiddleSlice()
@@ -551,6 +593,38 @@ void OpenGLDemoWindow::applyCtWindowLevelPresetIfNeeded(const VolumeData& volume
 
   windowSpinBox_->setValue(1500);
   levelSpinBox_->setValue(-600);
+}
+
+QString OpenGLDemoWindow::formatVolumeMetadata() const
+{
+  if (!currentVolume_.has_value() || !currentVolume_->isValid() || !currentVolumeRange_.has_value())
+  {
+    return QStringLiteral("No volume loaded\nWindow / Level: %1 / %2")
+        .arg(windowSpinBox_->value())
+        .arg(levelSpinBox_->value());
+  }
+
+  const auto [minValue, maxValue] = currentVolumeRange_.value();
+  return QStringLiteral(
+             "Volume size: %1 x %2 x %3\n"
+             "Voxel spacing: %4 x %5 x %6\n"
+             "Voxel range: %7 .. %8\n"
+             "Current orientation: %9\n"
+             "Current slice: %10 / %11\n"
+             "Window / Level: %12 / %13")
+      .arg(currentVolume_->width())
+      .arg(currentVolume_->height())
+      .arg(currentVolume_->depth())
+      .arg(currentVolume_->spacingX(), 0, 'f', 3)
+      .arg(currentVolume_->spacingY(), 0, 'f', 3)
+      .arg(currentVolume_->spacingZ(), 0, 'f', 3)
+      .arg(minValue, 0, 'f', 1)
+      .arg(maxValue, 0, 'f', 1)
+      .arg(orientationName(currentOrientation_))
+      .arg(currentSliceCount() == 0 ? 0 : static_cast<int>(currentSliceIndex_ + 1))
+      .arg(currentSliceCount())
+      .arg(windowSpinBox_->value())
+      .arg(levelSpinBox_->value());
 }
 
 std::size_t OpenGLDemoWindow::currentSliceCount() const
