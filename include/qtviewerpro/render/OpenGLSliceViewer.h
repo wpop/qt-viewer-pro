@@ -25,6 +25,8 @@ public:
   bool hasImage() const;
   void setCrosshairVisible(bool visible);
   bool isCrosshairVisible() const;
+  void setImageBorderVisible(bool visible);
+  bool isImageBorderVisible() const;
   void resetCrosshair();
   void resetView();
   QPointF panOffset() const;
@@ -63,6 +65,8 @@ private:
   GLuint crosshairShaderProgram_ = 0;
   GLuint crosshairVao_ = 0;
   GLuint crosshairVbo_ = 0;
+  GLuint imageBorderVao_ = 0;
+  GLuint imageBorderVbo_ = 0;
   float zoomFactor_ = 1.0F;
   QPoint lastMousePosition_;
   QPointF panOffset_ = QPointF(0.0, 0.0);
