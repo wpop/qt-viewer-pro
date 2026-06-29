@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Project setup
-project(QtViewerPro VERSION 0.1.0 LANGUAGES CXX)
+project(QtViewerPro VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,6 +9,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Dependencies
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test)
 find_package(OpenCV REQUIRED)
+
+# The Ubuntu ITK package may try to load ITKVtkGlue, which pulls VTK/MPI.
+# qt-viewer-pro does not use ITK-VTK glue, so mark it as already loaded.
+set(ITKVtkGlue_LOADED TRUE)
+find_package(ITK REQUIRED COMPONENTS
+    ITKCommon
+    ITKIOImageBase
+    ITKIONIFTI
+)
+include(${ITK_USE_FILE})
 
 qt_standard_project_setup()
 enable_testing()
@@ -108,6 +118,7 @@ target_link_libraries(qt-viewer-pro-io
         qt-viewer-pro-core
     PRIVATE
         Qt6::Core
+        ${ITK_LIBRARIES}
 )
 
 # Render library
