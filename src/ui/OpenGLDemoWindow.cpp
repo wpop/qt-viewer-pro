@@ -451,7 +451,7 @@ void OpenGLDemoWindow::updateCrosshairLabel(int value)
 
 void OpenGLDemoWindow::updateVolumeSlice()
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
   {
     return;
   }
@@ -510,7 +510,7 @@ void OpenGLDemoWindow::resetToAxialMiddleSlice()
 
 std::size_t OpenGLDemoWindow::currentSliceCount() const
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
   {
     return 0;
   }
@@ -530,7 +530,7 @@ std::size_t OpenGLDemoWindow::currentSliceCount() const
 
 std::pair<std::size_t, std::size_t> OpenGLDemoWindow::sliceDimensions() const
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
   {
     return {0, 0};
   }
