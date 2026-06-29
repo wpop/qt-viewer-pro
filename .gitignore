@@ -51,3 +51,6 @@ qrc_*.cpp
 
 # Windows
 Thumbs.db
+
+# Local sample datasets and medical volumes
+data/
