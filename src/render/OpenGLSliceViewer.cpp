@@ -1,9 +1,12 @@
 #include "qtviewerpro/render/OpenGLSliceViewer.h"
 
 #include <QColor>
+#include <QFont>
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
+#include <QPainter>
+#include <QRect>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -87,6 +90,12 @@ void OpenGLSliceViewer::setImage(const QImage& image)
 void OpenGLSliceViewer::setSliceImage(const QImage& image)
 {
   setImage(image);
+}
+
+void OpenGLSliceViewer::setOrientation(SliceOrientation orientation)
+{
+  orientation_ = orientation;
+  update();
 }
 
 bool OpenGLSliceViewer::hasImage() const
@@ -188,6 +197,8 @@ void OpenGLSliceViewer::paintGL()
 
   glBindTexture(GL_TEXTURE_2D, 0);
   glUseProgram(0);
+
+  drawOrientationLabels();
 }
 
 void OpenGLSliceViewer::mousePressEvent(QMouseEvent* event)
@@ -739,6 +750,54 @@ void OpenGLSliceViewer::uploadTextureIfNeeded()
 
   glBindTexture(GL_TEXTURE_2D, 0);
   textureDirty_ = false;
+}
+
+void OpenGLSliceViewer::drawOrientationLabels()
+{
+  QString topLabel;
+  QString bottomLabel;
+
+  switch (orientation_)
+  {
+  case SliceOrientation::Axial:
+    topLabel = QStringLiteral("A");
+    bottomLabel = QStringLiteral("P");
+    break;
+  case SliceOrientation::Coronal:
+  case SliceOrientation::Sagittal:
+    topLabel = QStringLiteral("S");
+    bottomLabel = QStringLiteral("I");
+    break;
+  }
+
+  QPainter painter(this);
+  painter.setRenderHint(QPainter::TextAntialiasing, true);
+
+  QFont font = painter.font();
+  font.setBold(true);
+  font.setPointSize(12);
+  painter.setFont(font);
+
+  constexpr int kLabelHeight = 24;
+  constexpr int kHorizontalMargin = 8;
+  constexpr int kVerticalMargin = 8;
+
+  const QRect topRect(kHorizontalMargin,
+                      kVerticalMargin,
+                      width() - (2 * kHorizontalMargin),
+                      kLabelHeight);
+  const QRect bottomRect(kHorizontalMargin,
+                         height() - kVerticalMargin - kLabelHeight,
+                         width() - (2 * kHorizontalMargin),
+                         kLabelHeight);
+
+  painter.setPen(QColor(0, 0, 0, 180));
+  painter.drawText(topRect.translated(1, 1), Qt::AlignHCenter | Qt::AlignTop, topLabel);
+  painter.drawText(bottomRect.translated(1, 1), Qt::AlignHCenter | Qt::AlignBottom, bottomLabel);
+
+  painter.setPen(QColor(255, 255, 255, 230));
+  painter.drawText(topRect, Qt::AlignHCenter | Qt::AlignTop, topLabel);
+  painter.drawText(bottomRect, Qt::AlignHCenter | Qt::AlignBottom, bottomLabel);
 }
 
 } // namespace qvp

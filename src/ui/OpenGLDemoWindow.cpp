@@ -179,6 +179,7 @@ void OpenGLDemoWindow::loadInitialDemoImage()
 {
   const QImage openGLDemoImage = createDemoImage();
   currentDisplaySize_ = openGLDemoImage.size();
+  openGLViewer_->setOrientation(SliceOrientation::Axial);
   openGLViewer_->setImage(openGLDemoImage);
 }
 
@@ -201,6 +202,7 @@ void OpenGLDemoWindow::openImage()
 
   hasCurrentVolumeSlice_ = false;
   currentDisplaySize_ = image.size();
+  openGLViewer_->setOrientation(SliceOrientation::Axial);
   openGLViewer_->setImage(image);
   updateSliceLabel();
 }
@@ -268,6 +270,8 @@ void OpenGLDemoWindow::setSliceOrientation(int orientationIndex)
     currentOrientation_ = SliceOrientation::Axial;
     break;
   }
+
+  openGLViewer_->setOrientation(currentOrientation_);
 
   const std::size_t sliceCount = currentSliceCount();
   if (sliceCount == 0)
@@ -512,6 +516,7 @@ void OpenGLDemoWindow::resetToAxialMiddleSlice()
   currentDisplaySize_ = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
   const QSignalBlocker blocker(orientationComboBox_);
   orientationComboBox_->setCurrentIndex(0);
+  openGLViewer_->setOrientation(currentOrientation_);
   configureSliceSlider();
   updateSliceLabel();
 }
