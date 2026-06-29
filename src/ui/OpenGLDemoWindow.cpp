@@ -46,6 +46,7 @@ void OpenGLDemoWindow::setVolume(VolumeData volume)
   }
 
   currentVolume_ = std::move(volume);
+  applyCtWindowLevelPresetIfNeeded(currentVolume_.value());
   resetToAxialMiddleSlice();
   updateVolumeSlice();
   openGLViewer_->resetView();
@@ -519,6 +520,37 @@ void OpenGLDemoWindow::resetToAxialMiddleSlice()
   openGLViewer_->setOrientation(currentOrientation_);
   configureSliceSlider();
   updateSliceLabel();
+}
+
+bool OpenGLDemoWindow::looksLikeCtVolume(const VolumeData& volume) const
+{
+  if (!volume.isValid())
+  {
+    return false;
+  }
+
+  const auto& voxels = volume.voxels();
+  if (voxels.empty())
+  {
+    return false;
+  }
+
+  const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
+  return *minIt < -500.0F && *maxIt > 500.0F;
+}
+
+void OpenGLDemoWindow::applyCtWindowLevelPresetIfNeeded(const VolumeData& volume)
+{
+  if (!looksLikeCtVolume(volume))
+  {
+    return;
+  }
+
+  const QSignalBlocker windowBlocker(windowSpinBox_);
+  const QSignalBlocker levelBlocker(levelSpinBox_);
+
+  windowSpinBox_->setValue(1500);
+  levelSpinBox_->setValue(-600);
 }
 
 std::size_t OpenGLDemoWindow::currentSliceCount() const

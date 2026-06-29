@@ -55,6 +55,8 @@ private:
   void configureSliceSlider();
   void updateSliceLabel();
   void resetToAxialMiddleSlice();
+  bool looksLikeCtVolume(const VolumeData& volume) const;
+  void applyCtWindowLevelPresetIfNeeded(const VolumeData& volume);
   std::size_t currentSliceCount() const;
   std::pair<std::size_t, std::size_t> sliceDimensions() const;
 
