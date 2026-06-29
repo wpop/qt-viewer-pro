@@ -25,6 +25,7 @@ public:
   bool hasImage() const;
   void setCrosshairVisible(bool visible);
   bool isCrosshairVisible() const;
+  void resetCrosshair();
   void resetView();
   QPointF panOffset() const;
   float zoomFactor() const;

@@ -105,6 +105,14 @@ bool OpenGLSliceViewer::isCrosshairVisible() const
   return showCrosshair_;
 }
 
+void OpenGLSliceViewer::resetCrosshair()
+{
+  crosshairPosition_ = QPointF(0.0, 0.0);
+  emit crosshairPositionChanged(crosshairPosition_);
+  emit crosshairPositionValueChanged(crosshairPosition_, sampleImageValueAt(crosshairPosition_));
+  update();
+}
+
 void OpenGLSliceViewer::resetView()
 {
   zoomFactor_ = 1.0F;
