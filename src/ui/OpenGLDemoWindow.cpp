@@ -37,6 +37,20 @@ OpenGLDemoWindow::OpenGLDemoWindow(QWidget* parent) : QWidget(parent)
   loadInitialDemoImage();
 }
 
+void OpenGLDemoWindow::setVolume(VolumeData volume)
+{
+  if (!volume.isValid())
+  {
+    QMessageBox::warning(this, "Volume Load Error", "Loaded volume data is invalid.");
+    return;
+  }
+
+  currentVolume_ = std::move(volume);
+  resetToAxialMiddleSlice();
+  updateVolumeSlice();
+  openGLViewer_->resetView();
+}
+
 void OpenGLDemoWindow::createUi()
 {
   auto* layout = new QVBoxLayout(this);
@@ -193,10 +207,7 @@ void OpenGLDemoWindow::openImage()
 
 void OpenGLDemoWindow::loadSyntheticSlice()
 {
-  currentVolume_ = createSyntheticVolume();
-  resetToAxialMiddleSlice();
-  updateVolumeSlice();
-  openGLViewer_->resetView();
+  setVolume(createSyntheticVolume());
 }
 
 void OpenGLDemoWindow::loadRawSlice()
@@ -217,10 +228,7 @@ void OpenGLDemoWindow::loadRawSlice()
 
   try
   {
-    currentVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
-    resetToAxialMiddleSlice();
-    updateVolumeSlice();
-    openGLViewer_->resetView();
+    setVolume(RawVolumeLoader::load(metadataPath, rawPath));
   }
   catch (const std::exception& error)
   {
