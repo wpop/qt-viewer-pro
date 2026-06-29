@@ -3,6 +3,7 @@
 #include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 #include "qtviewerpro/io/ImageLoader.h"
+#include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
@@ -41,6 +42,7 @@
 
 #include <cmath>
 #include <exception>
+#include <utility>
 #include <vector>
 
 namespace
@@ -401,6 +403,10 @@ void MainWindow::createDemoMenu()
   connect(openOpenGLViewerDemoAction_, &QAction::triggered, this,
           &MainWindow::openOpenGLViewerDemo);
 
+  openMedicalVolumeAction_ = demoMenu->addAction("Open Medical Volume...");
+  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the OpenGL slice viewer");
+  connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
+
   demoMenu->addSeparator();
 
   openSyntheticVolumeSliceAction_ = demoMenu->addAction("Open Synthetic Volume Slice");
@@ -557,9 +563,56 @@ void MainWindow::clearRecentFiles()
 
 void MainWindow::openOpenGLViewerDemo()
 {
-  auto* demoWindow = new OpenGLDemoWindow(nullptr);
-  demoWindow->setAttribute(Qt::WA_DeleteOnClose);
+  OpenGLDemoWindow* demoWindow = ensureOpenGLDemoWindow();
   demoWindow->show();
+  demoWindow->raise();
+  demoWindow->activateWindow();
+}
+
+void MainWindow::openMedicalVolume()
+{
+  const QString fileName = QFileDialog::getOpenFileName(
+      this, "Open Medical Volume", QString(),
+      "Medical Volumes ("
+      "*.nii *.nii.gz "
+      "*.mhd *.mha "
+      "*.dcm "
+      "*.nrrd *.nhdr"
+      ");;"
+      "NIfTI (*.nii *.nii.gz);;"
+      "MetaImage (*.mhd *.mha);;"
+      "DICOM (*.dcm);;"
+      "NRRD (*.nrrd *.nhdr);;"
+      "All Files (*)");
+
+  if (fileName.isEmpty())
+  {
+    return;
+  }
+
+  VolumeLoadResult result = loadMedicalVolume(fileName);
+  if (!result.success)
+  {
+    QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
+    return;
+  }
+
+  OpenGLDemoWindow* demoWindow = ensureOpenGLDemoWindow();
+  demoWindow->setVolume(std::move(result.volume));
+  demoWindow->show();
+  demoWindow->raise();
+  demoWindow->activateWindow();
+}
+
+OpenGLDemoWindow* MainWindow::ensureOpenGLDemoWindow()
+{
+  if (!openGLDemoWindow_)
+  {
+    openGLDemoWindow_ = new OpenGLDemoWindow(nullptr);
+    openGLDemoWindow_->setAttribute(Qt::WA_DeleteOnClose);
+  }
+
+  return openGLDemoWindow_;
 }
 
 void MainWindow::createToolBar()

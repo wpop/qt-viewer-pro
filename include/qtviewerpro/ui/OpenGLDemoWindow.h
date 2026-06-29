@@ -32,6 +32,8 @@ public:
   explicit OpenGLDemoWindow(QWidget* parent = nullptr);
   ~OpenGLDemoWindow() override = default;
 
+  void setVolume(VolumeData volume);
+
 private:
   void createUi();
   void connectSignals();

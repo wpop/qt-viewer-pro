@@ -5,6 +5,7 @@
 
 #include <QImage>
 #include <QMainWindow>
+#include <QPointer>
 #include <QStringList>
 
 #include <cstddef>
@@ -23,6 +24,7 @@ namespace qvp
 {
 
 class ImageViewer2D;
+class OpenGLDemoWindow;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -65,6 +67,7 @@ private slots:
   void convertToGrayscale();
   void resetImage();
   void openOpenGLViewerDemo();
+  void openMedicalVolume();
   void openSyntheticVolumeSlice();
   void openRawVolume();
   void previousSlice();
@@ -94,6 +97,7 @@ private:
   void updateActions();
   void createToolBar();
   void createVolumeControlsDock();
+  OpenGLDemoWindow* ensureOpenGLDemoWindow();
   VolumeData createSyntheticVolume() const;
   void displayCurrentSlice();
   std::size_t activeSliceCount() const;
@@ -146,6 +150,7 @@ private:
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
   QAction* openOpenGLViewerDemoAction_ = nullptr;
+  QAction* openMedicalVolumeAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
   QAction* previousSliceAction_ = nullptr;
@@ -163,6 +168,7 @@ private:
   QSpinBox* levelSpinBox_ = nullptr;
   QPushButton* resetWindowLevelButton_ = nullptr;
   QCheckBox* invertGrayscaleCheckBox_ = nullptr;
+  QPointer<OpenGLDemoWindow> openGLDemoWindow_;
 };
 
 } // namespace qvp
