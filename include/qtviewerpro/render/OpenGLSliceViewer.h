@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qtviewerpro/core/SliceOrientation.h"
+
 #include <QImage>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
@@ -22,6 +24,7 @@ public:
 
   void setImage(const QImage& image);
   void setSliceImage(const QImage& image);
+  void setOrientation(SliceOrientation orientation);
   bool hasImage() const;
   void setCrosshairVisible(bool visible);
   bool isCrosshairVisible() const;
@@ -56,8 +59,10 @@ private:
   void updateQuadGeometry();
   void updateQuadGeometryWithCurrentContext();
   void uploadTextureIfNeeded();
+  void drawOrientationLabels();
 
   QImage image_;
+  SliceOrientation orientation_ = SliceOrientation::Axial;
   GLuint textureId_ = 0;
   GLuint shaderProgram_ = 0;
   GLuint vao_ = 0;
