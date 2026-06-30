@@ -427,10 +427,10 @@ void MainWindow::createImageMenu()
 
 void MainWindow::createDemoMenu()
 {
-  QMenu* demoMenu = menuBar()->addMenu("&Demo");
+  QMenu* demoMenu = menuBar()->addMenu("&Tools");
 
-  openOpenGLViewerDemoAction_ = demoMenu->addAction("Open OpenGL Viewer");
-  openOpenGLViewerDemoAction_->setStatusTip("Open the OpenGL slice viewer demo");
+  openOpenGLViewerDemoAction_ = demoMenu->addAction("Open Separate OpenGL Viewer");
+  openOpenGLViewerDemoAction_->setStatusTip("Open the separate OpenGL slice viewer window");
   connect(openOpenGLViewerDemoAction_, &QAction::triggered, this,
           &MainWindow::openOpenGLViewerDemo);
 
