@@ -35,13 +35,13 @@ public:
   ~OpenGLDemoWindow() override = default;
 
   void setVolume(VolumeData volume);
+  void openMaskOverlay();
 
 private:
   void createUi();
   void connectSignals();
   void loadInitialDemoImage();
   void openImage();
-  void openMaskOverlay();
   void loadSyntheticSlice();
   void loadRawSlice();
   void setSliceIndex(int sliceIndex);
