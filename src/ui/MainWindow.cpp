@@ -375,6 +375,17 @@ void MainWindow::createViewMenu()
   actualSizeAction_->setShortcut(QKeySequence("Ctrl+0"));
   actualSizeAction_->setStatusTip("Show image at actual size");
   connect(actualSizeAction_, &QAction::triggered, this, &MainWindow::actualSize);
+
+  viewMenu->addSeparator();
+
+  QAction* showImageViewerAction = viewMenu->addAction("Image Viewer");
+  showImageViewerAction->setStatusTip("Switch to the main image viewer page");
+  connect(showImageViewerAction, &QAction::triggered, this, &MainWindow::showImagePage);
+
+  QAction* showMedicalVolumeViewerAction = viewMenu->addAction("Medical Volume Viewer");
+  showMedicalVolumeViewerAction->setStatusTip("Switch to the medical volume viewer page");
+  connect(showMedicalVolumeViewerAction, &QAction::triggered, this,
+          &MainWindow::showMedicalVolumePage);
 }
 
 void MainWindow::createImageMenu()
