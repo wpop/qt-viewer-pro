@@ -9,11 +9,13 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFileDialog>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSpinBox>
@@ -83,21 +85,9 @@ void OpenGLDemoWindow::setVolume(VolumeData volume)
 
 void OpenGLDemoWindow::createUi()
 {
-  auto* layout = new QVBoxLayout(this);
-  layout->setContentsMargins(4, 4, 4, 4);
-
-  auto* fileLayout = new QHBoxLayout();
-  fileLayout->setSpacing(4);
-  auto* sliceLayout = new QHBoxLayout();
-  sliceLayout->setSpacing(4);
-  auto* windowLevelLayout = new QHBoxLayout();
-  windowLevelLayout->setSpacing(4);
-  auto* viewLayout = new QHBoxLayout();
-  viewLayout->setSpacing(4);
-  auto* overlayLayout = new QHBoxLayout();
-  overlayLayout->setSpacing(4);
-  auto* statusLayout = new QHBoxLayout();
-  statusLayout->setSpacing(8);
+  auto* layout = new QHBoxLayout(this);
+  layout->setContentsMargins(8, 8, 8, 8);
+  layout->setSpacing(12);
 
   openImageButton_ = new QPushButton("Open Image...", this);
   openMaskOverlayButton_ = new QPushButton("Open Mask Overlay...", this);
@@ -137,51 +127,92 @@ void OpenGLDemoWindow::createUi()
   volumeMetadataLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
   nextSliceButton_ = new QPushButton("Z+", this);
 
-  fileLayout->addWidget(openImageButton_);
-  fileLayout->addWidget(openMaskOverlayButton_);
-  fileLayout->addWidget(loadSyntheticSliceButton_);
-  fileLayout->addWidget(loadRawSliceButton_);
-  fileLayout->addStretch();
-  layout->addLayout(fileLayout);
-
-  sliceLayout->addWidget(new QLabel("Orientation", this));
-  sliceLayout->addWidget(orientationComboBox_);
-  sliceLayout->addWidget(previousSliceButton_);
-  sliceLayout->addWidget(sliceSlider_);
-  sliceLayout->addWidget(nextSliceButton_);
-  sliceLayout->addStretch();
-  layout->addLayout(sliceLayout);
-
-  windowLevelLayout->addWidget(new QLabel("Window", this));
-  windowLevelLayout->addWidget(windowSpinBox_);
-  windowLevelLayout->addWidget(new QLabel("Level", this));
-  windowLevelLayout->addWidget(levelSpinBox_);
-  windowLevelLayout->addWidget(resetWindowLevelButton_);
-  windowLevelLayout->addWidget(windowLevelPresetComboBox_);
-  windowLevelLayout->addStretch();
-  layout->addLayout(windowLevelLayout);
-
-  viewLayout->addWidget(resetViewButton_);
-  viewLayout->addWidget(resetCrosshairButton_);
-  viewLayout->addStretch();
-  layout->addLayout(viewLayout);
-
-  overlayLayout->addWidget(showCrosshairCheckBox_);
-  overlayLayout->addWidget(showImageBorderCheckBox_);
-  overlayLayout->addWidget(showMaskOverlayCheckBox_);
-  overlayLayout->addStretch();
-  layout->addLayout(overlayLayout);
-
-  layout->addWidget(volumeMetadataLabel_);
-
   openGLViewer_ = new OpenGLSliceViewer(this);
-  layout->addWidget(openGLViewer_);
-  layout->setStretchFactor(openGLViewer_, 1);
+  openGLViewer_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-  statusLayout->addWidget(sliceIndexLabel_);
-  statusLayout->addStretch();
-  statusLayout->addWidget(crosshairPositionLabel_);
-  layout->addLayout(statusLayout);
+  auto* viewerLayout = new QVBoxLayout();
+  viewerLayout->setContentsMargins(0, 0, 0, 0);
+  viewerLayout->setSpacing(8);
+  viewerLayout->addWidget(openGLViewer_, 1);
+
+  auto* viewerStatusLayout = new QHBoxLayout();
+  viewerStatusLayout->setSpacing(8);
+  viewerStatusLayout->addStretch();
+  viewerStatusLayout->addWidget(crosshairPositionLabel_);
+  viewerLayout->addLayout(viewerStatusLayout);
+
+  auto* controlsLayout = new QVBoxLayout();
+  controlsLayout->setContentsMargins(0, 0, 0, 0);
+  controlsLayout->setSpacing(10);
+
+  auto* filesGroup = new QGroupBox("Files", this);
+  auto* filesLayout = new QVBoxLayout(filesGroup);
+  filesLayout->setSpacing(6);
+  filesLayout->addWidget(openImageButton_);
+  filesLayout->addWidget(openMaskOverlayButton_);
+  filesLayout->addWidget(loadSyntheticSliceButton_);
+  filesLayout->addWidget(loadRawSliceButton_);
+  filesLayout->addWidget(resetViewButton_);
+  filesLayout->addWidget(resetCrosshairButton_);
+
+  auto* sliceGroup = new QGroupBox("Slice / Orientation", this);
+  auto* sliceGroupLayout = new QVBoxLayout(sliceGroup);
+  sliceGroupLayout->setSpacing(6);
+  auto* orientationLayout = new QHBoxLayout();
+  orientationLayout->setSpacing(6);
+  orientationLayout->addWidget(new QLabel("Orientation", this));
+  orientationLayout->addWidget(orientationComboBox_, 1);
+  sliceGroupLayout->addLayout(orientationLayout);
+  auto* sliceNavigationLayout = new QHBoxLayout();
+  sliceNavigationLayout->setSpacing(6);
+  sliceNavigationLayout->addWidget(previousSliceButton_);
+  sliceNavigationLayout->addWidget(sliceSlider_, 1);
+  sliceNavigationLayout->addWidget(nextSliceButton_);
+  sliceGroupLayout->addLayout(sliceNavigationLayout);
+  sliceGroupLayout->addWidget(sliceIndexLabel_);
+
+  auto* windowLevelGroup = new QGroupBox("Window / Level", this);
+  auto* windowLevelGroupLayout = new QVBoxLayout(windowLevelGroup);
+  windowLevelGroupLayout->setSpacing(6);
+  auto* windowLayout = new QHBoxLayout();
+  windowLayout->setSpacing(6);
+  windowLayout->addWidget(new QLabel("Window", this));
+  windowLayout->addWidget(windowSpinBox_, 1);
+  windowLevelGroupLayout->addLayout(windowLayout);
+  auto* levelLayout = new QHBoxLayout();
+  levelLayout->setSpacing(6);
+  levelLayout->addWidget(new QLabel("Level", this));
+  levelLayout->addWidget(levelSpinBox_, 1);
+  windowLevelGroupLayout->addLayout(levelLayout);
+  windowLevelGroupLayout->addWidget(windowLevelPresetComboBox_);
+  windowLevelGroupLayout->addWidget(resetWindowLevelButton_);
+
+  auto* overlaysGroup = new QGroupBox("Overlays", this);
+  auto* overlaysLayout = new QVBoxLayout(overlaysGroup);
+  overlaysLayout->setSpacing(6);
+  overlaysLayout->addWidget(showCrosshairCheckBox_);
+  overlaysLayout->addWidget(showImageBorderCheckBox_);
+  overlaysLayout->addWidget(showMaskOverlayCheckBox_);
+
+  auto* metadataGroup = new QGroupBox("Metadata", this);
+  auto* metadataLayout = new QVBoxLayout(metadataGroup);
+  metadataLayout->setSpacing(6);
+  metadataLayout->addWidget(volumeMetadataLabel_);
+
+  auto* controlsPanel = new QWidget(this);
+  controlsPanel->setMinimumWidth(280);
+  controlsPanel->setMaximumWidth(360);
+  controlsPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+  controlsPanel->setLayout(controlsLayout);
+
+  controlsLayout->addWidget(filesGroup);
+  controlsLayout->addWidget(sliceGroup);
+  controlsLayout->addWidget(windowLevelGroup);
+  controlsLayout->addWidget(overlaysGroup);
+  controlsLayout->addWidget(metadataGroup, 1);
+
+  layout->addLayout(viewerLayout, 1);
+  layout->addWidget(controlsPanel);
 }
 
 void OpenGLDemoWindow::connectSignals()
