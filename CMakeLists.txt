@@ -16,6 +16,7 @@ set(ITKVtkGlue_LOADED TRUE)
 find_package(ITK REQUIRED COMPONENTS
     ITKCommon
     ITKIOImageBase
+    ITKIOMeta
     ITKIONIFTI
 )
 include(${ITK_USE_FILE})
