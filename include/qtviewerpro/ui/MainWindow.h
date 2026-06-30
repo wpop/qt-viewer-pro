@@ -19,12 +19,14 @@ class QLabel;
 class QPushButton;
 class QSlider;
 class QSpinBox;
+class QStackedWidget;
 
 namespace qvp
 {
 
 class ImageViewer2D;
 class OpenGLDemoWindow;
+class OpenGLVolumeViewerWidget;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -99,6 +101,8 @@ private:
   void createToolBar();
   void createVolumeControlsDock();
   OpenGLDemoWindow* ensureOpenGLDemoWindow();
+  void showImagePage();
+  void showMedicalVolumePage();
   VolumeData createSyntheticVolume() const;
   void displayCurrentSlice();
   std::size_t activeSliceCount() const;
@@ -127,7 +131,9 @@ private:
   void saveSettings();
 
 private:
+  QStackedWidget* pageStack_ = nullptr;
   ImageViewer2D* viewer_ = nullptr;
+  OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   QImage originalImage_;
   VolumeData activeVolume_;
   std::size_t activeSliceIndex_ = 0;

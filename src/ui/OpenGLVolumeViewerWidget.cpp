@@ -294,7 +294,14 @@ void OpenGLVolumeViewerWidget::openMaskOverlay()
   }
 
   const QString fileName =
-      QFileDialog::getOpenFileName(this, "Open Mask Overlay", QString(), "NIfTI Volumes (*.nii *.nii.gz)");
+      QFileDialog::getOpenFileName(
+          this, "Open Mask Overlay", QString(),
+          "Medical Volumes (*.nii *.nii.gz *.mhd *.mha *.dcm *.nrrd *.nhdr);;"
+          "NIfTI Volumes (*.nii *.nii.gz);;"
+          "MetaImage Volumes (*.mhd *.mha);;"
+          "DICOM Files (*.dcm);;"
+          "NRRD Volumes (*.nrrd *.nhdr);;"
+          "All Files (*)");
   if (fileName.isEmpty())
   {
     return;

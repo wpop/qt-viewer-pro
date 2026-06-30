@@ -9,6 +9,7 @@
 #include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/ui/OpenGLDemoWindow.h"
+#include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 
 #include <QAction>
 #include <QCheckBox>
@@ -30,6 +31,7 @@
 #include <QSlider>
 #include <QSpinBox>
 #include <QStatusBar>
+#include <QStackedWidget>
 #include <QToolBar>
 #include <QWidget>
 
@@ -264,6 +266,7 @@ void MainWindow::openImage(const QString& fileName)
   originalImage_ = image;
   volumeActive_ = false;
   rawVolumeActive_ = false;
+  showImagePage();
   if (cursorValueLabel_)
   {
     cursorValueLabel_->setText("-");
@@ -290,8 +293,13 @@ void MainWindow::actualSize()
 
 void MainWindow::createViewer()
 {
-  viewer_ = new ImageViewer2D(this);
-  setCentralWidget(viewer_);
+  pageStack_ = new QStackedWidget(this);
+  viewer_ = new ImageViewer2D(pageStack_);
+  medicalVolumeViewerWidget_ = new OpenGLVolumeViewerWidget(pageStack_);
+  pageStack_->addWidget(viewer_);
+  pageStack_->addWidget(medicalVolumeViewerWidget_);
+  setCentralWidget(pageStack_);
+  showImagePage();
 
   // Explicitly select openImage(const QString&) because openImage() is overloaded.
   connect(viewer_, &ImageViewer2D::imageDropped, this,
@@ -605,20 +613,14 @@ void MainWindow::openMedicalVolume()
     return;
   }
 
-  OpenGLDemoWindow* demoWindow = ensureOpenGLDemoWindow();
-  demoWindow->setVolume(std::move(result.volume));
-  demoWindow->show();
-  demoWindow->raise();
-  demoWindow->activateWindow();
+  showMedicalVolumePage();
+  medicalVolumeViewerWidget_->setVolume(std::move(result.volume));
 }
 
 void MainWindow::openMaskOverlay()
 {
-  OpenGLDemoWindow* demoWindow = ensureOpenGLDemoWindow();
-  demoWindow->show();
-  demoWindow->raise();
-  demoWindow->activateWindow();
-  demoWindow->openMaskOverlay();
+  showMedicalVolumePage();
+  medicalVolumeViewerWidget_->openMaskOverlay();
 }
 
 OpenGLDemoWindow* MainWindow::ensureOpenGLDemoWindow()
@@ -630,6 +632,16 @@ OpenGLDemoWindow* MainWindow::ensureOpenGLDemoWindow()
   }
 
   return openGLDemoWindow_;
+}
+
+void MainWindow::showImagePage()
+{
+  pageStack_->setCurrentWidget(viewer_);
+}
+
+void MainWindow::showMedicalVolumePage()
+{
+  pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
 }
 
 void MainWindow::createToolBar()
