@@ -15,6 +15,7 @@ find_package(OpenCV REQUIRED)
 set(ITKVtkGlue_LOADED TRUE)
 find_package(ITK REQUIRED COMPONENTS
     ITKCommon
+    ITKIOGDCM
     ITKIOImageBase
     ITKIOMeta
     ITKIONIFTI
