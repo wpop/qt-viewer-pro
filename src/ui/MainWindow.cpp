@@ -322,6 +322,18 @@ void MainWindow::createFileMenu()
   saveAsAction_->setStatusTip("Save the current image as a file");
   connect(saveAsAction_, &QAction::triggered, this, &MainWindow::saveImageAs);
 
+  fileMenu->addSeparator();
+
+  openMedicalVolumeAction_ = fileMenu->addAction("Open Medical Volume...");
+  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the OpenGL slice viewer");
+  connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
+
+  openMaskOverlayAction_ = fileMenu->addAction("Open Mask Overlay...");
+  openMaskOverlayAction_->setStatusTip("Open a mask overlay for the current medical volume");
+  connect(openMaskOverlayAction_, &QAction::triggered, this, &MainWindow::openMaskOverlay);
+
+  fileMenu->addSeparator();
+
   recentMenu_ = fileMenu->addMenu("Open &Recent");
   fileMenu->addSeparator();
 
@@ -402,10 +414,6 @@ void MainWindow::createDemoMenu()
   openOpenGLViewerDemoAction_->setStatusTip("Open the OpenGL slice viewer demo");
   connect(openOpenGLViewerDemoAction_, &QAction::triggered, this,
           &MainWindow::openOpenGLViewerDemo);
-
-  openMedicalVolumeAction_ = demoMenu->addAction("Open Medical Volume...");
-  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the OpenGL slice viewer");
-  connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
 
   demoMenu->addSeparator();
 
@@ -602,6 +610,15 @@ void MainWindow::openMedicalVolume()
   demoWindow->show();
   demoWindow->raise();
   demoWindow->activateWindow();
+}
+
+void MainWindow::openMaskOverlay()
+{
+  OpenGLDemoWindow* demoWindow = ensureOpenGLDemoWindow();
+  demoWindow->show();
+  demoWindow->raise();
+  demoWindow->activateWindow();
+  demoWindow->openMaskOverlay();
 }
 
 OpenGLDemoWindow* MainWindow::ensureOpenGLDemoWindow()

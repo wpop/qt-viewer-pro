@@ -68,6 +68,7 @@ private slots:
   void resetImage();
   void openOpenGLViewerDemo();
   void openMedicalVolume();
+  void openMaskOverlay();
   void openSyntheticVolumeSlice();
   void openRawVolume();
   void previousSlice();
@@ -151,6 +152,7 @@ private:
   QAction* resetImageAction_ = nullptr;
   QAction* openOpenGLViewerDemoAction_ = nullptr;
   QAction* openMedicalVolumeAction_ = nullptr;
+  QAction* openMaskOverlayAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
   QAction* previousSliceAction_ = nullptr;
