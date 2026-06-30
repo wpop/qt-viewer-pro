@@ -268,3 +268,29 @@ target_link_libraries(test-raw-volume-loader
 )
 
 add_test(NAME test-raw-volume-loader COMMAND test-raw-volume-loader)
+
+qt_add_executable(test-nifti-volume-loader
+    tests/TestNiftiVolumeLoader.cpp
+)
+
+target_link_libraries(test-nifti-volume-loader
+    PRIVATE
+        qt-viewer-pro-io
+        Qt6::Test
+        ${ITK_LIBRARIES}
+)
+
+add_test(NAME test-nifti-volume-loader COMMAND test-nifti-volume-loader)
+
+qt_add_executable(test-metaimage-volume-loader
+    tests/TestMetaImageVolumeLoader.cpp
+)
+
+target_link_libraries(test-metaimage-volume-loader
+    PRIVATE
+        qt-viewer-pro-io
+        Qt6::Test
+        ${ITK_LIBRARIES}
+)
+
+add_test(NAME test-metaimage-volume-loader COMMAND test-metaimage-volume-loader)
