@@ -151,7 +151,6 @@ target_link_libraries(qt-viewer-pro-render
 set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
-    src/ui/OpenGLDemoWindow.cpp
     src/ui/OpenGLVolumeViewerWidget.cpp
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
@@ -159,7 +158,6 @@ set(QTVIEWERPRO_APP_SOURCES
 
 set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MainWindow.h
-    include/qtviewerpro/ui/OpenGLDemoWindow.h
     include/qtviewerpro/ui/OpenGLVolumeViewerWidget.h
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
