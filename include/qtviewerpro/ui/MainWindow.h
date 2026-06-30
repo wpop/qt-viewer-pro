@@ -5,7 +5,6 @@
 
 #include <QImage>
 #include <QMainWindow>
-#include <QPointer>
 #include <QStringList>
 
 #include <cstddef>
@@ -25,7 +24,6 @@ namespace qvp
 {
 
 class ImageViewer2D;
-class OpenGLDemoWindow;
 class OpenGLVolumeViewerWidget;
 
 /**
@@ -68,7 +66,6 @@ private slots:
   void flipVertical();
   void convertToGrayscale();
   void resetImage();
-  void openOpenGLViewerDemo();
   void openMedicalVolume();
   void openDicomSeriesFolder();
   void openMaskOverlay();
@@ -101,7 +98,6 @@ private:
   void updateActions();
   void createToolBar();
   void createVolumeControlsDock();
-  OpenGLDemoWindow* ensureOpenGLDemoWindow();
   void showImagePage();
   void showMedicalVolumePage();
   VolumeData createSyntheticVolume() const;
@@ -157,7 +153,6 @@ private:
 
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
-  QAction* openOpenGLViewerDemoAction_ = nullptr;
   QAction* openMedicalVolumeAction_ = nullptr;
   QAction* openMaskOverlayAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
@@ -177,7 +172,6 @@ private:
   QSpinBox* levelSpinBox_ = nullptr;
   QPushButton* resetWindowLevelButton_ = nullptr;
   QCheckBox* invertGrayscaleCheckBox_ = nullptr;
-  QPointer<OpenGLDemoWindow> openGLDemoWindow_;
 };
 
 } // namespace qvp
