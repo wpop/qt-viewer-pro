@@ -24,6 +24,7 @@ namespace qvp
 {
 
 class OpenGLSliceViewer;
+class SliceData;
 
 class OpenGLDemoWindow : public QWidget
 {
@@ -40,6 +41,7 @@ private:
   void connectSignals();
   void loadInitialDemoImage();
   void openImage();
+  void openMaskOverlay();
   void loadSyntheticSlice();
   void loadRawSlice();
   void setSliceIndex(int sliceIndex);
@@ -59,6 +61,8 @@ private:
   void resetToAxialMiddleSlice();
   bool looksLikeCtVolume(const VolumeData& volume) const;
   void applyCtWindowLevelPresetIfNeeded(const VolumeData& volume);
+  bool maskMatchesCurrentVolume(const VolumeData& mask) const;
+  QImage applyMaskOverlay(const QImage& baseImage, const SliceData& maskSlice) const;
   QString formatVolumeMetadata() const;
   std::size_t currentSliceCount() const;
   std::pair<std::size_t, std::size_t> sliceDimensions() const;
@@ -69,12 +73,14 @@ private:
 
   OpenGLSliceViewer* openGLViewer_ = nullptr;
   QPushButton* openImageButton_ = nullptr;
+  QPushButton* openMaskOverlayButton_ = nullptr;
   QPushButton* loadSyntheticSliceButton_ = nullptr;
   QPushButton* loadRawSliceButton_ = nullptr;
   QPushButton* resetViewButton_ = nullptr;
   QPushButton* resetCrosshairButton_ = nullptr;
   QCheckBox* showCrosshairCheckBox_ = nullptr;
   QCheckBox* showImageBorderCheckBox_ = nullptr;
+  QCheckBox* showMaskOverlayCheckBox_ = nullptr;
   QComboBox* orientationComboBox_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
@@ -88,6 +94,7 @@ private:
   QPushButton* nextSliceButton_ = nullptr;
 
   std::optional<VolumeData> currentVolume_;
+  std::optional<VolumeData> maskVolume_;
   std::optional<std::pair<float, float>> currentVolumeRange_;
   std::size_t currentSliceIndex_ = 0;
   SliceOrientation currentOrientation_ = SliceOrientation::Axial;
