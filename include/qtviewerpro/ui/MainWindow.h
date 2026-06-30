@@ -70,6 +70,7 @@ private slots:
   void resetImage();
   void openOpenGLViewerDemo();
   void openMedicalVolume();
+  void openDicomSeriesFolder();
   void openMaskOverlay();
   void openSyntheticVolumeSlice();
   void openRawVolume();
