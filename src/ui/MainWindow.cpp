@@ -16,6 +16,7 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDockWidget>
+#include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QImage>
@@ -336,6 +337,10 @@ void MainWindow::createFileMenu()
   openMedicalVolumeAction_->setStatusTip("Open a medical volume in the OpenGL slice viewer");
   connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
 
+  QAction* openDicomSeriesFolderAction = fileMenu->addAction("Open DICOM Series Folder...");
+  openDicomSeriesFolderAction->setStatusTip("Open a DICOM series by selecting its folder");
+  connect(openDicomSeriesFolderAction, &QAction::triggered, this, &MainWindow::openDicomSeriesFolder);
+
   openMaskOverlayAction_ = fileMenu->addAction("Open Mask Overlay...");
   openMaskOverlayAction_->setStatusTip("Open a mask overlay for the current medical volume");
   connect(openMaskOverlayAction_, &QAction::triggered, this, &MainWindow::openMaskOverlay);
@@ -618,6 +623,36 @@ void MainWindow::openMedicalVolume()
   }
 
   VolumeLoadResult result = loadMedicalVolume(fileName);
+  if (!result.success)
+  {
+    QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
+    return;
+  }
+
+  showMedicalVolumePage();
+  medicalVolumeViewerWidget_->setVolume(std::move(result.volume));
+}
+
+void MainWindow::openDicomSeriesFolder()
+{
+  const QString directoryPath =
+      QFileDialog::getExistingDirectory(this, "Open DICOM Series Folder", QString());
+  if (directoryPath.isEmpty())
+  {
+    return;
+  }
+
+  const QDir directory(directoryPath);
+  const QStringList dicomFiles =
+      directory.entryList({"*.dcm", "*.DCM"}, QDir::Files, QDir::Name | QDir::IgnoreCase);
+  if (dicomFiles.isEmpty())
+  {
+    QMessageBox::warning(this, "Medical Volume Load Error", "No DICOM files found in the selected folder.");
+    return;
+  }
+
+  const QString filePath = directory.filePath(dicomFiles.first());
+  VolumeLoadResult result = loadMedicalVolume(filePath);
   if (!result.success)
   {
     QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
