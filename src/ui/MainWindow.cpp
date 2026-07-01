@@ -1,36 +1,23 @@
 #include "qtviewerpro/ui/MainWindow.h"
-#include "qtviewerpro/core/SliceExtractor.h"
-#include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
-#include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 
 #include <QAction>
-#include <QCheckBox>
 #include <QCloseEvent>
-#include <QComboBox>
-#include <QDockWidget>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
-#include <QFormLayout>
 #include <QImage>
-#include <QLabel>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QPushButton>
 #include <QSettings>
-#include <QSignalBlocker>
-#include <QSizePolicy>
-#include <QSlider>
-#include <QSpinBox>
 #include <QStatusBar>
 #include <QStackedWidget>
 #include <QToolBar>
@@ -73,21 +60,6 @@ QIcon createTextIcon(const QString& text)
   painter.drawText(pixmap.rect(), Qt::AlignCenter, text);
 
   return QIcon(pixmap);
-}
-
-QString sliceOrientationName(qvp::SliceOrientation orientation)
-{
-  switch (orientation)
-  {
-  case qvp::SliceOrientation::Coronal:
-    return "Coronal";
-  case qvp::SliceOrientation::Sagittal:
-    return "Sagittal";
-  case qvp::SliceOrientation::Axial:
-    return "Axial";
-  }
-
-  return "Axial";
 }
 
 QString darkMedicalStyleSheet()
@@ -329,7 +301,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   createViewer();
   createMenus();
   createToolBar();
-  createVolumeControlsDock();
   createStatusBar();
   loadSettings();
 
@@ -391,17 +362,10 @@ void MainWindow::openImage(const QString& fileName)
   }
 
   originalImage_ = image;
-  volumeActive_ = false;
-  rawVolumeActive_ = false;
   showImagePage();
-  if (cursorValueLabel_)
-  {
-    cursorValueLabel_->setText("-");
-  }
   viewer_->setImage(image);
   updateStatusBar();
   updateActions();
-  updateVolumeInfoLabels();
 
   addRecentFile(fileName);
 }
@@ -431,8 +395,6 @@ void MainWindow::createViewer()
   // Explicitly select openImage(const QString&) because openImage() is overloaded.
   connect(viewer_, &ImageViewer2D::imageDropped, this,
           static_cast<void (MainWindow::*)(const QString&)>(&MainWindow::openImage));
-  connect(viewer_, &ImageViewer2D::imageMousePositionChanged, this,
-          &MainWindow::updateMouseImagePosition);
 }
 
 void MainWindow::createMenus()
@@ -568,20 +530,6 @@ void MainWindow::createDemoMenu()
   openRawVolumeAction_ = demoMenu->addAction("Load Custom RAW Test Volume...");
   openRawVolumeAction_->setStatusTip("Load a custom float32 RAW test volume using JSON metadata");
   connect(openRawVolumeAction_, &QAction::triggered, this, &MainWindow::openRawVolume);
-
-  demoMenu->addSeparator();
-
-  previousSliceAction_ = demoMenu->addAction("Previous Slice");
-  previousSliceAction_->setStatusTip("Display the previous slice");
-  previousSliceAction_->setShortcut(QKeySequence(Qt::Key_PageUp));
-  connect(previousSliceAction_, &QAction::triggered, this, &MainWindow::previousSlice);
-
-  nextSliceAction_ = demoMenu->addAction("Next Slice");
-  nextSliceAction_->setStatusTip("Display the next slice");
-  nextSliceAction_->setShortcut(QKeySequence(Qt::Key_PageDown));
-  connect(nextSliceAction_, &QAction::triggered, this, &MainWindow::nextSlice);
-
-  updateSliceActions();
 }
 
 void MainWindow::createHelpMenu()
@@ -626,8 +574,6 @@ void MainWindow::updateActions()
   flipVerticalAction_->setEnabled(hasImage);
   grayscaleAction_->setEnabled(hasImage);
   resetImageAction_->setEnabled(hasImage);
-
-  updateSliceActions();
 }
 
 void MainWindow::zoomIn()
@@ -814,9 +760,6 @@ void MainWindow::createToolBar()
   grayscaleAction_->setIcon(createTextIcon("G"));
   resetImageAction_->setIcon(createTextIcon("R"));
 
-  previousSliceAction_->setIcon(createTextIcon("Z-"));
-  nextSliceAction_->setIcon(createTextIcon("Z+"));
-
   openAction_->setToolTip("Open Image");
   openAction_->setStatusTip("Open Image");
   saveAsAction_->setToolTip("Save Image As");
@@ -847,11 +790,6 @@ void MainWindow::createToolBar()
   resetImageAction_->setToolTip("Reset Image");
   resetImageAction_->setStatusTip("Reset Image");
 
-  previousSliceAction_->setToolTip("Previous Slice");
-  previousSliceAction_->setStatusTip("Previous Slice");
-  nextSliceAction_->setToolTip("Next Slice");
-  nextSliceAction_->setStatusTip("Next Slice");
-
   toolBar->addAction(openAction_);
   toolBar->addAction(saveAsAction_);
   toolBar->addSeparator();
@@ -874,115 +812,6 @@ void MainWindow::createToolBar()
 
   toolBar->addAction(grayscaleAction_);
   toolBar->addAction(resetImageAction_);
-  toolBar->addSeparator();
-
-  toolBar->addAction(previousSliceAction_);
-  toolBar->addAction(nextSliceAction_);
-}
-
-void MainWindow::createVolumeControlsDock()
-{
-  auto* dock = new QDockWidget("Volume Controls", this);
-  dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-
-  auto* panel = new QWidget(dock);
-  panel->setMinimumWidth(220);
-  auto* layout = new QFormLayout(panel);
-
-  sliceOrientationComboBox_ = new QComboBox(panel);
-  sliceOrientationComboBox_->addItem("Axial");
-  sliceOrientationComboBox_->addItem("Coronal");
-  sliceOrientationComboBox_->addItem("Sagittal");
-  sliceOrientationComboBox_->setCurrentIndex(0);
-  sliceOrientationComboBox_->setEnabled(false);
-  sliceOrientationComboBox_->setToolTip("Slice Orientation");
-  sliceOrientationComboBox_->setStatusTip("Slice Orientation");
-  connect(sliceOrientationComboBox_,
-          static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-          this,
-          &MainWindow::setSliceOrientation);
-
-  sliceSlider_ = new QSlider(Qt::Horizontal, panel);
-  sliceSlider_->setEnabled(false);
-  sliceSlider_->setToolTip("Slice");
-  sliceSlider_->setStatusTip("Slice");
-  connect(sliceSlider_, &QSlider::valueChanged, this, &MainWindow::setSliceFromSlider);
-
-  sliceSpinBox_ = new QSpinBox(panel);
-  sliceSpinBox_->setRange(1, 1);
-  sliceSpinBox_->setEnabled(false);
-  sliceSpinBox_->setToolTip("Slice Index");
-  sliceSpinBox_->setStatusTip("Slice Index");
-  connect(sliceSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::setSliceFromSpinBox);
-
-  modeValueLabel_ = new QLabel("-", panel);
-  sizeValueLabel_ = new QLabel("-", panel);
-  spacingValueLabel_ = new QLabel("-", panel);
-  currentSliceValueLabel_ = new QLabel("-", panel);
-  cursorValueLabel_ = new QLabel("-", panel);
-  cursorValueLabel_->setMinimumWidth(140);
-  cursorValueLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-
-  windowSpinBox_ = new QSpinBox(panel);
-  windowSpinBox_->setRange(1, 4096);
-  windowSpinBox_->setValue(255);
-  windowSpinBox_->setEnabled(false);
-  windowSpinBox_->setToolTip("Window");
-  windowSpinBox_->setStatusTip("Window");
-  connect(windowSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
-
-  levelSpinBox_ = new QSpinBox(panel);
-  levelSpinBox_->setRange(-2048, 4096);
-  levelSpinBox_->setValue(127);
-  levelSpinBox_->setEnabled(false);
-  levelSpinBox_->setToolTip("Level");
-  levelSpinBox_->setStatusTip("Level");
-  connect(levelSpinBox_, &QSpinBox::valueChanged, this, &MainWindow::updateWindowLevel);
-
-  resetWindowLevelButton_ = new QPushButton("Reset W/L", panel);
-  resetWindowLevelButton_->setEnabled(false);
-  connect(resetWindowLevelButton_, &QPushButton::clicked, this, &MainWindow::resetWindowLevel);
-
-  invertGrayscaleCheckBox_ = new QCheckBox("Invert grayscale", panel);
-  invertGrayscaleCheckBox_->setEnabled(false);
-  connect(invertGrayscaleCheckBox_, &QCheckBox::toggled, this,
-          &MainWindow::updateInvertGrayscale);
-
-  auto* navigationHeader = new QLabel("Navigation", panel);
-  QFont navigationHeaderFont = navigationHeader->font();
-  navigationHeaderFont.setBold(true);
-  navigationHeader->setFont(navigationHeaderFont);
-
-  auto* infoHeader = new QLabel("Info", panel);
-  QFont infoHeaderFont = infoHeader->font();
-  infoHeaderFont.setBold(true);
-  infoHeader->setFont(infoHeaderFont);
-
-  auto* displayHeader = new QLabel("Display", panel);
-  QFont displayHeaderFont = displayHeader->font();
-  displayHeaderFont.setBold(true);
-  displayHeader->setFont(displayHeaderFont);
-
-  layout->addRow(navigationHeader);
-  layout->addRow("Orientation:", sliceOrientationComboBox_);
-  layout->addRow("Slice:", sliceSlider_);
-  layout->addRow("Slice Index:", sliceSpinBox_);
-  layout->addRow(infoHeader);
-  layout->addRow("Mode:", modeValueLabel_);
-  layout->addRow("Size:", sizeValueLabel_);
-  layout->addRow("Spacing:", spacingValueLabel_);
-  layout->addRow("Current:", currentSliceValueLabel_);
-  layout->addRow("Cursor:", cursorValueLabel_);
-  layout->addRow(displayHeader);
-  layout->addRow("Window:", windowSpinBox_);
-  layout->addRow("Level:", levelSpinBox_);
-  layout->addRow(resetWindowLevelButton_);
-  layout->addRow(invertGrayscaleCheckBox_);
-
-  dock->setWidget(panel);
-  dock->setMinimumWidth(230);
-  addDockWidget(Qt::RightDockWidgetArea, dock);
-  updateVolumeInfoLabels();
 }
 
 void MainWindow::rotateLeft()
@@ -1072,17 +901,8 @@ VolumeData MainWindow::createSyntheticVolume() const
 
 void MainWindow::openSyntheticVolumeSlice()
 {
-  activeVolume_ = createSyntheticVolume();
-  activeSliceIndex_ = activeSliceCount() / 2;
-  volumeActive_ = true;
-  rawVolumeActive_ = false;
-  if (cursorValueLabel_)
-  {
-    cursorValueLabel_->setText("-");
-  }
-
-  updateVolumeInfoLabels();
-  displayCurrentSlice();
+  showMedicalVolumePage();
+  medicalVolumeViewerWidget_->setVolume(createSyntheticVolume());
 }
 
 void MainWindow::openRawVolume()
@@ -1119,355 +939,6 @@ void MainWindow::openRawVolume()
   {
     showRawVolumeLoadError(this, QString::fromUtf8(error.what()));
   }
-}
-
-void MainWindow::previousSlice()
-{
-  if (!volumeActive_ || activeSliceIndex_ == 0)
-  {
-    return;
-  }
-
-  --activeSliceIndex_;
-  displayCurrentSlice();
-}
-
-void MainWindow::nextSlice()
-{
-  if (!volumeActive_ || activeSliceIndex_ + 1 >= activeSliceCount())
-  {
-    return;
-  }
-
-  ++activeSliceIndex_;
-  displayCurrentSlice();
-}
-
-void MainWindow::setSliceFromSlider(int sliceIndex)
-{
-  if (!volumeActive_ || sliceIndex < 0 ||
-      static_cast<std::size_t>(sliceIndex) >= activeSliceCount())
-  {
-    return;
-  }
-
-  activeSliceIndex_ = static_cast<std::size_t>(sliceIndex);
-  displayCurrentSlice();
-}
-
-void MainWindow::setSliceFromSpinBox(int sliceNumber)
-{
-  if (!volumeActive_ || sliceNumber <= 0 ||
-      static_cast<std::size_t>(sliceNumber) > activeSliceCount())
-  {
-    return;
-  }
-
-  activeSliceIndex_ = static_cast<std::size_t>(sliceNumber - 1);
-  displayCurrentSlice();
-}
-
-void MainWindow::setSliceOrientation(int orientationIndex)
-{
-  switch (orientationIndex)
-  {
-  case 1:
-    activeSliceOrientation_ = SliceOrientation::Coronal;
-    break;
-  case 2:
-    activeSliceOrientation_ = SliceOrientation::Sagittal;
-    break;
-  default:
-    activeSliceOrientation_ = SliceOrientation::Axial;
-    break;
-  }
-
-  if (!volumeActive_)
-  {
-    updateVolumeInfoLabels();
-    return;
-  }
-
-  activeSliceIndex_ = activeSliceCount() / 2;
-  updateVolumeInfoLabels();
-  displayCurrentSlice();
-}
-
-void MainWindow::updateWindowLevel()
-{
-  if (!volumeActive_)
-  {
-    return;
-  }
-
-  displayCurrentSlice();
-}
-
-void MainWindow::resetWindowLevel()
-{
-  if (windowSpinBox_)
-  {
-    const QSignalBlocker blocker(windowSpinBox_);
-    windowSpinBox_->setValue(255);
-  }
-  if (levelSpinBox_)
-  {
-    const QSignalBlocker blocker(levelSpinBox_);
-    levelSpinBox_->setValue(127);
-  }
-
-  if (volumeActive_)
-  {
-    displayCurrentSlice();
-  }
-}
-
-void MainWindow::updateInvertGrayscale()
-{
-  if (!volumeActive_)
-  {
-    return;
-  }
-
-  displayCurrentSlice();
-}
-
-void MainWindow::updateMouseImagePosition(int x, int y)
-{
-  int voxelX = 0;
-  int voxelY = 0;
-  int voxelZ = 0;
-  if (!voxelCoordinatesFromImagePosition(x, y, voxelX, voxelY, voxelZ))
-  {
-    if (cursorValueLabel_)
-    {
-      cursorValueLabel_->setText(volumeActive_ ? "-" : QString("x=%1 y=%2").arg(x).arg(y));
-    }
-    statusBar()->showMessage(QString("Mouse x=%1 y=%2").arg(x).arg(y));
-    return;
-  }
-
-  if (cursorValueLabel_)
-  {
-    cursorValueLabel_->setText(QString("x=%1 y=%2 v=%3")
-                                   .arg(x)
-                                   .arg(y)
-                                   .arg(voxelValueAt(voxelX, voxelY, voxelZ)));
-  }
-  statusBar()->showMessage(QString("%1 %2 slice %3/%4 | Mouse x=%5 y=%6 | Voxel value=%7")
-                               .arg(currentModeText())
-                               .arg(sliceOrientationName(activeSliceOrientation_))
-                               .arg(activeSliceIndex_ + 1)
-                               .arg(activeSliceCount())
-                               .arg(x)
-                               .arg(y)
-                               .arg(voxelValueAt(voxelX, voxelY, voxelZ)));
-}
-
-bool MainWindow::voxelCoordinatesFromImagePosition(int imageX,
-                                                   int imageY,
-                                                   int& voxelX,
-                                                   int& voxelY,
-                                                   int& voxelZ) const
-{
-  if (!volumeActive_ || imageX < 0 || imageY < 0)
-  {
-    return false;
-  }
-
-  switch (activeSliceOrientation_)
-  {
-  case SliceOrientation::Coronal:
-    voxelX = imageX;
-    voxelY = static_cast<int>(activeSliceIndex_);
-    voxelZ = imageY;
-    break;
-  case SliceOrientation::Sagittal:
-    voxelX = static_cast<int>(activeSliceIndex_);
-    voxelY = imageX;
-    voxelZ = imageY;
-    break;
-  case SliceOrientation::Axial:
-    voxelX = imageX;
-    voxelY = imageY;
-    voxelZ = static_cast<int>(activeSliceIndex_);
-    break;
-  }
-
-  return voxelX >= 0 && voxelY >= 0 && voxelZ >= 0 &&
-         static_cast<std::size_t>(voxelX) < activeVolume_.width() &&
-         static_cast<std::size_t>(voxelY) < activeVolume_.height() &&
-         static_cast<std::size_t>(voxelZ) < activeVolume_.depth();
-}
-
-float MainWindow::voxelValueAt(int voxelX, int voxelY, int voxelZ) const
-{
-  const std::size_t x = static_cast<std::size_t>(voxelX);
-  const std::size_t y = static_cast<std::size_t>(voxelY);
-  const std::size_t z = static_cast<std::size_t>(voxelZ);
-  const std::size_t index =
-      (z * activeVolume_.height() * activeVolume_.width()) + (y * activeVolume_.width()) + x;
-
-  return activeVolume_.voxels().at(index);
-}
-
-void MainWindow::displayCurrentSlice()
-{
-  const auto slice =
-      SliceExtractor::extract(activeVolume_, activeSliceOrientation_, activeSliceIndex_);
-  const float window = windowSpinBox_ ? static_cast<float>(windowSpinBox_->value()) : 255.0F;
-  const float level = levelSpinBox_ ? static_cast<float>(levelSpinBox_->value()) : 127.0F;
-  QImage image = SliceImageConverter::toGrayscaleImage(slice, window, level);
-  if (invertGrayscaleCheckBox_ && invertGrayscaleCheckBox_->isChecked())
-  {
-    image.invertPixels();
-  }
-
-  originalImage_ = image;
-  viewer_->setImage(image);
-  if (sliceSlider_)
-  {
-    const QSignalBlocker blocker(sliceSlider_);
-    sliceSlider_->setRange(0, static_cast<int>(activeSliceCount() - 1));
-    sliceSlider_->setValue(static_cast<int>(activeSliceIndex_));
-  }
-  if (sliceSpinBox_)
-  {
-    const QSignalBlocker blocker(sliceSpinBox_);
-    sliceSpinBox_->setRange(1, static_cast<int>(activeSliceCount()));
-    sliceSpinBox_->setValue(static_cast<int>(activeSliceIndex_ + 1));
-  }
-  updateVolumeInfoLabels();
-  updateActions();
-  const QString sliceLabel = rawVolumeActive_ ? "RAW volume" : "Synthetic";
-  statusBar()->showMessage(QString("%1 %2 slice %3/%4")
-                               .arg(sliceLabel)
-                               .arg(sliceOrientationName(activeSliceOrientation_))
-                               .arg(activeSliceIndex_ + 1)
-                               .arg(activeSliceCount()));
-}
-
-std::size_t MainWindow::activeSliceCount() const
-{
-  switch (activeSliceOrientation_)
-  {
-  case SliceOrientation::Coronal:
-    return activeVolume_.height();
-  case SliceOrientation::Sagittal:
-    return activeVolume_.width();
-  case SliceOrientation::Axial:
-    return activeVolume_.depth();
-  }
-
-  return activeVolume_.depth();
-}
-
-void MainWindow::updateSliceActions()
-{
-  if (!previousSliceAction_ || !nextSliceAction_)
-  {
-    return;
-  }
-
-  const bool hasVolume = volumeActive_ && activeSliceCount() > 0;
-
-  previousSliceAction_->setEnabled(hasVolume && activeSliceIndex_ > 0);
-  nextSliceAction_->setEnabled(hasVolume && activeSliceIndex_ + 1 < activeSliceCount());
-  if (sliceOrientationComboBox_)
-  {
-    sliceOrientationComboBox_->setEnabled(hasVolume);
-  }
-  if (sliceSlider_)
-  {
-    sliceSlider_->setEnabled(hasVolume);
-  }
-  if (sliceSpinBox_)
-  {
-    sliceSpinBox_->setEnabled(hasVolume);
-  }
-  if (windowSpinBox_)
-  {
-    windowSpinBox_->setEnabled(hasVolume);
-  }
-  if (levelSpinBox_)
-  {
-    levelSpinBox_->setEnabled(hasVolume);
-  }
-  if (resetWindowLevelButton_)
-  {
-    resetWindowLevelButton_->setEnabled(hasVolume);
-  }
-  if (invertGrayscaleCheckBox_)
-  {
-    invertGrayscaleCheckBox_->setEnabled(hasVolume);
-  }
-}
-
-void MainWindow::updateVolumeInfoLabels()
-{
-  if (!modeValueLabel_ || !sizeValueLabel_ || !spacingValueLabel_ || !currentSliceValueLabel_)
-  {
-    return;
-  }
-
-  modeValueLabel_->setText(currentModeText());
-  sizeValueLabel_->setText(currentSizeText());
-  spacingValueLabel_->setText(currentSpacingText());
-  currentSliceValueLabel_->setText(currentSliceText());
-}
-
-QString MainWindow::currentModeText() const
-{
-  if (!volumeActive_)
-  {
-    return originalImage_.isNull() ? "None" : "Image";
-  }
-
-  return rawVolumeActive_ ? "RAW" : "Synthetic";
-}
-
-QString MainWindow::currentSizeText() const
-{
-  if (volumeActive_)
-  {
-    return QString("%1 × %2 × %3")
-        .arg(activeVolume_.width())
-        .arg(activeVolume_.height())
-        .arg(activeVolume_.depth());
-  }
-
-  if (!originalImage_.isNull())
-  {
-    return QString("%1 × %2").arg(originalImage_.width()).arg(originalImage_.height());
-  }
-
-  return "-";
-}
-
-QString MainWindow::currentSpacingText() const
-{
-  if (!volumeActive_)
-  {
-    return "-";
-  }
-
-  return QString("%1 × %2 × %3")
-      .arg(activeVolume_.spacingX())
-      .arg(activeVolume_.spacingY())
-      .arg(activeVolume_.spacingZ());
-}
-
-QString MainWindow::currentSliceText() const
-{
-  if (!volumeActive_)
-  {
-    return "-";
-  }
-
-  return QString("%1 slice %2/%3")
-      .arg(sliceOrientationName(activeSliceOrientation_))
-      .arg(activeSliceIndex_ + 1)
-      .arg(activeSliceCount());
 }
 
 void MainWindow::showAboutDialog()
