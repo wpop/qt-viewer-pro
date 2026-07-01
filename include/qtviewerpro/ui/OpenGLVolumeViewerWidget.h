@@ -54,6 +54,8 @@ private:
   void updateCrosshairPosition(QPointF position, int value);
   void updateCurrentCrosshairPosition(QPointF position);
   void updateCrosshairLabel(int value);
+  void updateMaskOpacity(int opacityPercent);
+  void updateMaskOpacityControls();
   void updateVolumeSlice();
   void configureSliceSlider();
   void updateSliceLabel();
@@ -81,6 +83,8 @@ private:
   QCheckBox* showCrosshairCheckBox_ = nullptr;
   QCheckBox* showImageBorderCheckBox_ = nullptr;
   QCheckBox* showMaskOverlayCheckBox_ = nullptr;
+  QLabel* maskOpacityValueLabel_ = nullptr;
+  QSlider* maskOpacitySlider_ = nullptr;
   QComboBox* orientationComboBox_ = nullptr;
   QSpinBox* windowSpinBox_ = nullptr;
   QSpinBox* levelSpinBox_ = nullptr;
@@ -101,6 +105,7 @@ private:
   bool hasCurrentVolumeSlice_ = false;
   QPointF currentCrosshairPosition_{0.0, 0.0};
   QSize currentDisplaySize_{0, 0};
+  int maskOpacityPercent_ = 30;
 };
 
 } // namespace qvp

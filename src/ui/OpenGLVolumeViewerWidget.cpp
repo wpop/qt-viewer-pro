@@ -198,6 +198,7 @@ void OpenGLVolumeViewerWidget::setVolume(VolumeData volume)
     const QSignalBlocker blocker(showMaskOverlayCheckBox_);
     showMaskOverlayCheckBox_->setChecked(false);
   }
+  updateMaskOpacityControls();
   const auto [minIt, maxIt] =
       std::minmax_element(currentVolume_->voxels().begin(), currentVolume_->voxels().end());
   currentVolumeRange_ = std::make_pair(*minIt, *maxIt);
@@ -225,6 +226,12 @@ void OpenGLVolumeViewerWidget::createUi()
   showCrosshairCheckBox_->setChecked(true);
   showImageBorderCheckBox_->setChecked(true);
   showMaskOverlayCheckBox_->setChecked(false);
+
+  maskOpacityValueLabel_ = new QLabel(QStringLiteral("%1%").arg(maskOpacityPercent_), this);
+  maskOpacitySlider_ = new QSlider(Qt::Horizontal, this);
+  maskOpacitySlider_->setRange(0, 100);
+  maskOpacitySlider_->setValue(maskOpacityPercent_);
+  maskOpacitySlider_->setEnabled(false);
 
   orientationComboBox_ = new QComboBox(this);
   orientationComboBox_->addItems({"Axial", "Coronal", "Sagittal"});
@@ -317,6 +324,12 @@ void OpenGLVolumeViewerWidget::createUi()
   overlaysLayout->addWidget(showCrosshairCheckBox_);
   overlaysLayout->addWidget(showImageBorderCheckBox_);
   overlaysLayout->addWidget(showMaskOverlayCheckBox_);
+  auto* maskOpacityLayout = new QHBoxLayout();
+  maskOpacityLayout->setSpacing(6);
+  maskOpacityLayout->addWidget(new QLabel("Mask Opacity", this));
+  maskOpacityLayout->addWidget(maskOpacitySlider_, 1);
+  maskOpacityLayout->addWidget(maskOpacityValueLabel_);
+  overlaysLayout->addLayout(maskOpacityLayout);
 
   auto* metadataGroup = new QGroupBox("Metadata", this);
   auto* metadataLayout = new QVBoxLayout(metadataGroup);
@@ -363,6 +376,8 @@ void OpenGLVolumeViewerWidget::connectSignals()
           &OpenGLVolumeViewerWidget::applyWindowLevelPreset);
   connect(resetWindowLevelButton_, &QPushButton::clicked, this,
           &OpenGLVolumeViewerWidget::resetWindowLevel);
+  connect(maskOpacitySlider_, &QSlider::valueChanged, this,
+          [this](int value) { updateMaskOpacity(value); });
   connect(openGLViewer_, &OpenGLSliceViewer::crosshairPositionValueChanged, this,
           &OpenGLVolumeViewerWidget::updateCrosshairPosition);
   connect(openGLViewer_, &OpenGLSliceViewer::crosshairPositionChanged, this,
@@ -405,6 +420,7 @@ void OpenGLVolumeViewerWidget::openImage()
   maskVolume_.reset();
   currentVolumeRange_.reset();
   showMaskOverlayCheckBox_->setChecked(false);
+  updateMaskOpacityControls();
   currentDisplaySize_ = image.size();
   openGLViewer_->setOrientation(SliceOrientation::Axial);
   openGLViewer_->setImage(image);
@@ -456,6 +472,7 @@ void OpenGLVolumeViewerWidget::openMaskOverlay()
   }
 
   maskVolume_ = std::move(result.volume);
+  updateMaskOpacityControls();
   showMaskOverlayCheckBox_->setChecked(true);
   updateVolumeSlice();
 }
@@ -724,6 +741,42 @@ void OpenGLVolumeViewerWidget::updateCrosshairLabel(int value)
                                        .arg(voxelZ));
 }
 
+void OpenGLVolumeViewerWidget::updateMaskOpacity(int opacityPercent)
+{
+  const int clampedOpacity = std::clamp(opacityPercent, 0, 100);
+  if (maskOpacityPercent_ == clampedOpacity)
+  {
+    if (maskOpacityValueLabel_)
+    {
+      maskOpacityValueLabel_->setText(QStringLiteral("%1%").arg(maskOpacityPercent_));
+    }
+    updateVolumeSlice();
+    return;
+  }
+
+  maskOpacityPercent_ = clampedOpacity;
+  if (maskOpacityValueLabel_)
+  {
+    maskOpacityValueLabel_->setText(QStringLiteral("%1%").arg(maskOpacityPercent_));
+  }
+  updateVolumeSlice();
+}
+
+void OpenGLVolumeViewerWidget::updateMaskOpacityControls()
+{
+  if (maskOpacityValueLabel_)
+  {
+    maskOpacityValueLabel_->setText(QStringLiteral("%1%").arg(maskOpacityPercent_));
+  }
+
+  if (maskOpacitySlider_)
+  {
+    const QSignalBlocker blocker(maskOpacitySlider_);
+    maskOpacitySlider_->setValue(maskOpacityPercent_);
+    maskOpacitySlider_->setEnabled(maskVolume_.has_value());
+  }
+}
+
 void OpenGLVolumeViewerWidget::updateVolumeSlice()
 {
   if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
@@ -850,6 +903,8 @@ QImage OpenGLVolumeViewerWidget::applyMaskOverlay(const QImage& baseImage,
   const auto& maskPixels = maskSlice.pixels();
   const int imageWidth = overlayImage.width();
   const int imageHeight = overlayImage.height();
+  const int opacity = std::clamp(maskOpacityPercent_, 0, 100);
+  const int basePercent = 100 - opacity;
 
   for (int y = 0; y < imageHeight; ++y)
   {
@@ -865,11 +920,13 @@ QImage OpenGLVolumeViewerWidget::applyMaskOverlay(const QImage& baseImage,
 
       const int channelOffset = x * 4;
       scanLine[channelOffset + 0] =
-          static_cast<uchar>(((static_cast<int>(scanLine[channelOffset + 0]) * 70) + (255 * 30)) / 100);
+          static_cast<uchar>(((static_cast<int>(scanLine[channelOffset + 0]) * basePercent) +
+                              (255 * opacity)) /
+                             100);
       scanLine[channelOffset + 1] =
-          static_cast<uchar>((static_cast<int>(scanLine[channelOffset + 1]) * 70) / 100);
+          static_cast<uchar>((static_cast<int>(scanLine[channelOffset + 1]) * basePercent) / 100);
       scanLine[channelOffset + 2] =
-          static_cast<uchar>((static_cast<int>(scanLine[channelOffset + 2]) * 70) / 100);
+          static_cast<uchar>((static_cast<int>(scanLine[channelOffset + 2]) * basePercent) / 100);
     }
   }
 
