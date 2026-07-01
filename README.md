@@ -2,41 +2,43 @@
 
 [![CI](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml)
 
-Qt Viewer Pro is a lightweight C++20 image viewer built with Qt Widgets, CMake, and OpenCV.
+Qt Viewer Pro is a C++20 / Qt 6 desktop image and medical volume viewer built with Qt Widgets, OpenCV, OpenGL, ITK, and CMake.
 
-This project is a professional extension of the original Qt Viewer project. The current version focuses on a clean desktop image viewer architecture. Future versions will add OpenGL rendering, medical volume visualization, overlays, and optional medical imaging preprocessing support.
+This project extends the original Qt Viewer into a unified desktop application for 2D image viewing and medical volume exploration.
 
 ## Screenshot
 
-![Qt Viewer grayscale demo](docs/images/qt_viewer_grayscale.png)
+![Qt Viewer Pro demo](docs/images/qt_viewer_grayscale.png)
 
 ## Current Features
 
-- Load and display images
-- Zoom in and out
-- Pan images
-- Fit image to window
-- Actual size view
-- Basic image preprocessing support
-- Clean C++/Qt project structure
-
-## Planned Features
-
-- OpenGL-based image rendering
-- Slice viewer for volume data
-- Window/level controls
-- Segmentation mask overlays
-- Medical image preprocessing bridge
-- Optional CUDA experiments later
+- 2D image loading for PNG, JPG, JPEG, and BMP
+- Zoom, pan, fit to window, and actual size controls
+- 2D image processing actions, including rotate, flip, and OpenCV-backed grayscale conversion
+- Embedded Medical Volume Viewer page
+- OpenGL slice display
+- NIfTI loading for `.nii` and `.nii.gz`
+- MetaImage loading for `.mhd` and `.mha`
+- DICOM series folder loading
+- NRRD loading for `.nrrd` and `.nhdr`
+- Custom float32 RAW loading with JSON metadata
+- Axial, coronal, and sagittal slice navigation
+- Window and level controls with CT presets
+- Mask overlay loading
+- Mask opacity control
+- Crosshair voxel readout with base voxel value and optional mask value
+- Medical volume metadata panel
 
 ## Technologies
 
 - C++20
-- Qt 6
+- Qt 6 Widgets for the GUI
+- OpenCV for standard 2D image loading and image processing/color conversion
+- OpenGL for medical slice rendering
+- ITK for medical volume loading
 - CMake
-- OpenCV
-- OpenGL planned
-- SimpleITK preprocessing planned
+- Ninja
+- CTest
 
 ## Project Structure
 
@@ -54,12 +56,19 @@ qt-viewer-pro/
 
 ## Project Architecture
 
-- `core` contains reusable data and slice logic, including `VolumeData`, `SliceOrientation`, and `SliceExtractor`. It is built as the separate `qt-viewer-pro-core` CMake library target.
-- `io` handles image loading.
+- `core` contains reusable data and slice logic, including `VolumeData`, `SliceData`, `SliceExtractor`, and `SliceOrientation`.
+- `io` contains `ImageLoader`, `MedicalVolumeLoaderRegistry`, and the NIfTI, MetaImage, DICOM, NRRD, and RAW loaders.
 - `processing` contains image processing utilities.
-- `ui` contains the desktop interface, including `MainWindow` and `ImageViewer2D`.
+- `render` contains `OpenGLSliceViewer`.
+- `ui` contains the desktop interface, including `MainWindow`, `ImageViewer2D`, and `OpenGLVolumeViewerWidget`.
 
-Unit tests currently cover core data structures and slice extraction.
+Unit tests currently cover the core data structures, slice extraction, and the volume loader stack.
+
+## Local Data Policy
+
+- `data/` is ignored by Git.
+- Medical datasets and generated samples are kept local only.
+- Screenshots can be committed under `docs/images/`.
 
 ## Build
 
@@ -69,31 +78,40 @@ cmake --build build
 ./build/qt-viewer-pro
 ```
 
-## RAW Volume Demo
+## Workflows
 
-Generate local sample RAW volume files:
+### Open Medical Volume
 
-```bash
-python3 scripts/create_raw_volume_sample.py
-```
-
-Build and run the app:
-
-```bash
-cmake -S . -B build -G Ninja
-cmake --build build
-./build/qt-viewer-pro
-```
-
-In the app, choose `Demo -> Open RAW Volume...`, then select:
+Use `File -> Open Medical Volume...` and choose any supported medical volume file:
 
 ```text
-data/samples/raw_volume/volume.json
-data/samples/raw_volume/volume.raw
+.nii
+.nii.gz
+.mhd
+.mha
+.dcm
+.nrrd
+.nhdr
 ```
 
-Use `Z-` / `Z+` toolbar buttons or `PageUp` / `PageDown` to navigate slices.
-The generated data files are local test files and are not committed.
+### Open DICOM Series
+
+Use `File -> Open DICOM Series Folder...` to load a directory of DICOM slices.
+
+### Open Mask Overlay
+
+Use `File -> Open Mask Overlay...` to load a mask volume for the active medical volume.
+
+### Load Custom RAW Test Volume
+
+Use `Tools -> Load Custom RAW Test Volume...`, then select:
+
+```text
+data/samples/raw/custom_test_volume/metadata.json
+data/samples/raw/custom_test_volume/volume.raw
+```
+
+This workflow expects a JSON metadata object plus a separate float32 RAW file. MetaImage / LUNA16 `.raw` files should be opened via their `.mhd` file using `File -> Open Medical Volume...`.
 
 ## Testing
 
