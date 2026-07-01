@@ -80,6 +80,8 @@ void OpenGLSliceViewer::setImage(const QImage& image)
 {
   image_ = image;
   crosshairPosition_ = QPointF(0.0, 0.0);
+  displaySpacingX_ = 1.0F;
+  displaySpacingY_ = 1.0F;
   textureDirty_ = true;
   updateQuadGeometryWithCurrentContext();
   emit crosshairPositionChanged(crosshairPosition_);
@@ -90,6 +92,19 @@ void OpenGLSliceViewer::setImage(const QImage& image)
 void OpenGLSliceViewer::setSliceImage(const QImage& image)
 {
   setImage(image);
+}
+
+void OpenGLSliceViewer::setSliceImage(const QImage& image, float spacingX, float spacingY)
+{
+  image_ = image;
+  crosshairPosition_ = QPointF(0.0, 0.0);
+  displaySpacingX_ = spacingX > 0.0F ? spacingX : 1.0F;
+  displaySpacingY_ = spacingY > 0.0F ? spacingY : 1.0F;
+  textureDirty_ = true;
+  updateQuadGeometryWithCurrentContext();
+  emit crosshairPositionChanged(crosshairPosition_);
+  emit crosshairPositionValueChanged(crosshairPosition_, sampleImageValueAt(crosshairPosition_));
+  update();
 }
 
 void OpenGLSliceViewer::setOrientation(SliceOrientation orientation)
@@ -531,8 +546,11 @@ void OpenGLSliceViewer::computeQuadExtents(float& halfWidth, float& halfHeight) 
   if (!image_.isNull() && width() > 0 && height() > 0 && image_.width() > 0 && image_.height() > 0)
   {
     const float widgetAspect = static_cast<float>(width()) / static_cast<float>(height());
-    const float imageAspect =
-        static_cast<float>(image_.width()) / static_cast<float>(image_.height());
+    const float safeSpacingX = displaySpacingX_ > 0.0F ? displaySpacingX_ : 1.0F;
+    const float safeSpacingY = displaySpacingY_ > 0.0F ? displaySpacingY_ : 1.0F;
+    const float physicalWidth = static_cast<float>(image_.width()) * safeSpacingX;
+    const float physicalHeight = static_cast<float>(image_.height()) * safeSpacingY;
+    const float imageAspect = physicalWidth / physicalHeight;
 
     if (imageAspect > widgetAspect)
     {

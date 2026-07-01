@@ -830,7 +830,8 @@ void OpenGLVolumeViewerWidget::updateVolumeSlice()
       image = applyMaskOverlay(image, maskSlice);
     }
 
-    openGLViewer_->setSliceImage(image);
+    openGLViewer_->setSliceImage(image, static_cast<float>(slice.spacingX()),
+                                 static_cast<float>(slice.spacingY()));
   }
   catch (const std::exception& error)
   {
