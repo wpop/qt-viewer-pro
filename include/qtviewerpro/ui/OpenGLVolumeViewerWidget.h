@@ -54,6 +54,8 @@ private:
   void updateCrosshairPosition(QPointF position, int value);
   void updateCurrentCrosshairPosition(QPointF position);
   void updateCrosshairLabel(int value);
+  bool voxelCoordinatesInBounds(const VolumeData& volume, std::size_t x, std::size_t y, std::size_t z) const;
+  float voxelValueAt(const VolumeData& volume, std::size_t x, std::size_t y, std::size_t z) const;
   void updateMaskOpacity(int opacityPercent);
   void updateMaskOpacityControls();
   void updateVolumeSlice();

@@ -687,23 +687,23 @@ void OpenGLVolumeViewerWidget::updateCrosshairLabel(int value)
   const std::size_t pixelX = normalizeToPixelIndex(currentCrosshairPosition_.x(), pixelWidth);
   const std::size_t pixelY = normalizeToPixelIndex(-currentCrosshairPosition_.y(), pixelHeight);
 
-  const QString labelText = QString("x=%1 y=%2 | px=(%3,%4) | val=%5")
+  const QString imageReadout = QString("x=%1 y=%2 | px=(%3,%4) | val=%5")
                                 .arg(currentCrosshairPosition_.x(), 0, 'f', 3)
                                 .arg(currentCrosshairPosition_.y(), 0, 'f', 3)
                                 .arg(pixelX)
                                 .arg(pixelY)
                                 .arg(value);
 
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
   {
-    crosshairPositionLabel_->setText(labelText);
+    crosshairPositionLabel_->setText(imageReadout);
     return;
   }
 
   const auto [sliceWidth, sliceHeight] = sliceDimensions();
   if (sliceWidth == 0 || sliceHeight == 0)
   {
-    crosshairPositionLabel_->setText(labelText);
+    crosshairPositionLabel_->setText(imageReadout);
     return;
   }
 
@@ -730,15 +730,47 @@ void OpenGLVolumeViewerWidget::updateCrosshairLabel(int value)
   }
 
   const VolumeData& volume = currentVolume_.value();
-  voxelX = std::min(voxelX, volume.width() == 0 ? std::size_t{0} : volume.width() - 1);
-  voxelY = std::min(voxelY, volume.height() == 0 ? std::size_t{0} : volume.height() - 1);
-  voxelZ = std::min(voxelZ, volume.depth() == 0 ? std::size_t{0} : volume.depth() - 1);
+  if (!voxelCoordinatesInBounds(volume, voxelX, voxelY, voxelZ))
+  {
+    crosshairPositionLabel_->setText(imageReadout);
+    return;
+  }
 
-  crosshairPositionLabel_->setText(QString("%1 | voxel=(%2,%3,%4)")
-                                       .arg(labelText)
-                                       .arg(voxelX)
-                                       .arg(voxelY)
-                                       .arg(voxelZ));
+  QString volumeReadout = QString("x=%1 y=%2 | px=(%3,%4) | voxel=(%5,%6,%7) | value=%8")
+                              .arg(currentCrosshairPosition_.x(), 0, 'f', 3)
+                              .arg(currentCrosshairPosition_.y(), 0, 'f', 3)
+                              .arg(pixelX)
+                              .arg(pixelY)
+                              .arg(voxelX)
+                              .arg(voxelY)
+                              .arg(voxelZ)
+                              .arg(voxelValueAt(volume, voxelX, voxelY, voxelZ), 0, 'f', 1);
+
+  if (maskVolume_.has_value() && maskVolume_->isValid() && maskMatchesCurrentVolume(*maskVolume_))
+  {
+    volumeReadout += QString(" | mask=%1")
+                   .arg(voxelValueAt(maskVolume_.value(), voxelX, voxelY, voxelZ), 0, 'f', 1);
+  }
+
+  crosshairPositionLabel_->setText(volumeReadout);
+}
+
+bool OpenGLVolumeViewerWidget::voxelCoordinatesInBounds(const VolumeData& volume,
+                                                        std::size_t x,
+                                                        std::size_t y,
+                                                        std::size_t z) const
+{
+  return volume.isValid() && x < volume.width() && y < volume.height() && z < volume.depth();
+}
+
+float OpenGLVolumeViewerWidget::voxelValueAt(const VolumeData& volume,
+                                             std::size_t x,
+                                             std::size_t y,
+                                             std::size_t z) const
+{
+  const std::size_t index =
+      (z * volume.height() * volume.width()) + (y * volume.width()) + x;
+  return volume.voxels().at(index);
 }
 
 void OpenGLVolumeViewerWidget::updateMaskOpacity(int opacityPercent)
