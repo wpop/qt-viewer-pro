@@ -88,8 +88,8 @@ void OpenGLVolumeViewerWidget::createUi()
 
   openImageButton_ = new QPushButton("Open Image...", this);
   openMaskOverlayButton_ = new QPushButton("Open Mask Overlay...", this);
-  loadSyntheticSliceButton_ = new QPushButton("Load Synthetic Slice", this);
-  loadRawSliceButton_ = new QPushButton("Load RAW Slice", this);
+  loadSyntheticSliceButton_ = new QPushButton("Load Synthetic Test Volume", this);
+  loadRawSliceButton_ = new QPushButton("Load Custom RAW Test Volume...", this);
   resetViewButton_ = new QPushButton("Reset View", this);
   resetCrosshairButton_ = new QPushButton("Reset Crosshair", this);
   showCrosshairCheckBox_ = new QCheckBox("Show Crosshair", this);
@@ -341,14 +341,14 @@ void OpenGLVolumeViewerWidget::loadSyntheticSlice()
 void OpenGLVolumeViewerWidget::loadRawSlice()
 {
   const QString metadataPath = QFileDialog::getOpenFileName(
-      this, "Open RAW Volume Metadata", QString(), "JSON Metadata (*.json);;All Files (*)");
+      this, "Open RAW JSON Metadata", QString(), "JSON Metadata (*.json);;All Files (*)");
   if (metadataPath.isEmpty())
   {
     return;
   }
 
   const QString rawPath = QFileDialog::getOpenFileName(
-      this, "Open RAW Volume Data", QString(), "RAW Volume Data (*.raw);;All Files (*)");
+      this, "Open RAW Volume Data", QString(), "RAW Float32 Volume (*.raw);;All Files (*)");
   if (rawPath.isEmpty())
   {
     return;
@@ -360,7 +360,19 @@ void OpenGLVolumeViewerWidget::loadRawSlice()
   }
   catch (const std::exception& error)
   {
-    QMessageBox::warning(this, "RAW Volume Load Error", error.what());
+    QMessageBox messageBox(this);
+    messageBox.setIcon(QMessageBox::Warning);
+    messageBox.setWindowTitle("RAW Volume Load Error");
+    messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
+    messageBox.setInformativeText(
+        QStringLiteral(
+            "MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
+            "File -> Open Medical Volume...\n\n"
+            "Details: %1")
+            .arg(QString::fromUtf8(error.what())));
+    messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
+                             "QLabel { color: palette(text); }");
+    messageBox.exec();
   }
 }
 
