@@ -24,6 +24,7 @@ public:
 
   void setImage(const QImage& image);
   void setSliceImage(const QImage& image);
+  void setSliceImage(const QImage& image, float spacingX, float spacingY);
   void setOrientation(SliceOrientation orientation);
   bool hasImage() const;
   void setCrosshairVisible(bool visible);
@@ -76,6 +77,8 @@ private:
   QPoint lastMousePosition_;
   QPointF panOffset_ = QPointF(0.0, 0.0);
   QPointF crosshairPosition_ = QPointF(0.0, 0.0);
+  float displaySpacingX_ = 1.0F;
+  float displaySpacingY_ = 1.0F;
   bool isPanning_ = false;
   bool textureDirty_ = false;
   bool showImageBorder_ = true;
