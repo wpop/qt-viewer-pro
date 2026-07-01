@@ -433,13 +433,13 @@ void MainWindow::createDemoMenu()
 {
   QMenu* demoMenu = menuBar()->addMenu("&Tools");
 
-  openSyntheticVolumeSliceAction_ = demoMenu->addAction("Open Synthetic Volume Slice");
-  openSyntheticVolumeSliceAction_->setStatusTip("Display a synthetic axial volume slice");
+  openSyntheticVolumeSliceAction_ = demoMenu->addAction("Load Synthetic Test Volume");
+  openSyntheticVolumeSliceAction_->setStatusTip("Load a synthetic test volume into the medical viewer");
   connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
           &MainWindow::openSyntheticVolumeSlice);
 
-  openRawVolumeAction_ = demoMenu->addAction("Open RAW Volume...");
-  openRawVolumeAction_->setStatusTip("Open a RAW float32 volume from metadata and voxel files");
+  openRawVolumeAction_ = demoMenu->addAction("Load Custom RAW Test Volume...");
+  openRawVolumeAction_->setStatusTip("Load a custom float32 RAW test volume using JSON metadata");
   connect(openRawVolumeAction_, &QAction::triggered, this, &MainWindow::openRawVolume);
 
   demoMenu->addSeparator();
@@ -969,7 +969,7 @@ void MainWindow::openRawVolume()
   }
 
   const QString rawPath = QFileDialog::getOpenFileName(this, "Open RAW Volume Data", QString(),
-                                                       "RAW Volume Data (*.raw);;All Files (*)");
+                                                       "RAW Float32 Volume (*.raw);;All Files (*)");
   if (rawPath.isEmpty())
   {
     return;
@@ -977,21 +977,25 @@ void MainWindow::openRawVolume()
 
   try
   {
-    activeVolume_ = RawVolumeLoader::load(metadataPath, rawPath);
-    activeSliceIndex_ = activeSliceCount() / 2;
-    volumeActive_ = true;
-    rawVolumeActive_ = true;
-    if (cursorValueLabel_)
-    {
-      cursorValueLabel_->setText("-");
-    }
-
-    updateVolumeInfoLabels();
-    displayCurrentSlice();
+    VolumeData volume = RawVolumeLoader::load(metadataPath, rawPath);
+    showMedicalVolumePage();
+    medicalVolumeViewerWidget_->setVolume(std::move(volume));
   }
   catch (const std::exception& error)
   {
-    QMessageBox::critical(this, "RAW Volume Load Error", error.what());
+    QMessageBox messageBox(this);
+    messageBox.setIcon(QMessageBox::Warning);
+    messageBox.setWindowTitle("RAW Volume Load Error");
+    messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
+    messageBox.setInformativeText(
+        QStringLiteral(
+            "MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
+            "File -> Open Medical Volume...\n\n"
+            "Details: %1")
+            .arg(QString::fromUtf8(error.what())));
+    messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
+                             "QLabel { color: palette(text); }");
+    messageBox.exec();
   }
 }
 
