@@ -1,5 +1,6 @@
 #include "qtviewerpro/ui/MainWindow.h"
 #include "qtviewerpro/core/VolumeData.h"
+#include "qtviewerpro/io/DicomVolumeLoader.h"
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
@@ -9,7 +10,6 @@
 
 #include <QAction>
 #include <QCloseEvent>
-#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QImage>
@@ -699,17 +699,8 @@ void MainWindow::openDicomSeriesFolder()
     return;
   }
 
-  const QDir directory(directoryPath);
-  const QStringList dicomFiles =
-      directory.entryList({"*.dcm", "*.DCM"}, QDir::Files, QDir::Name | QDir::IgnoreCase);
-  if (dicomFiles.isEmpty())
-  {
-    QMessageBox::warning(this, "Medical Volume Load Error", "No DICOM files found in the selected folder.");
-    return;
-  }
-
-  const QString filePath = directory.filePath(dicomFiles.first());
-  VolumeLoadResult result = loadMedicalVolume(filePath);
+  const DicomVolumeLoader loader;
+  VolumeLoadResult result = loader.loadSeriesDirectory(directoryPath);
   if (!result.success)
   {
     QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
