@@ -8,11 +8,16 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFile>
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -24,6 +29,7 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -46,6 +52,127 @@ QString orientationName(SliceOrientation orientation)
   }
 
   return QStringLiteral("Axial");
+}
+
+QString validateRawMetadataFile(const QString& metadataPath)
+{
+  QFile metadataFile(metadataPath);
+  if (!metadataFile.open(QIODevice::ReadOnly))
+  {
+    return QStringLiteral("Unable to open metadata file");
+  }
+
+  QJsonParseError parseError;
+  const QJsonDocument metadataDocument =
+      QJsonDocument::fromJson(metadataFile.readAll(), &parseError);
+  if (parseError.error != QJsonParseError::NoError)
+  {
+    return QStringLiteral("Metadata JSON could not be parsed: %1").arg(parseError.errorString());
+  }
+
+  if (!metadataDocument.isObject())
+  {
+    return QStringLiteral("Metadata JSON must be a valid object");
+  }
+
+  const QJsonObject metadata = metadataDocument.object();
+
+  auto requiredValueError = [](const QJsonObject& object, const QString& fieldName) -> QString {
+    if (!object.contains(fieldName))
+    {
+      return QStringLiteral("Missing metadata field: %1").arg(fieldName);
+    }
+
+    return QString();
+  };
+
+  auto positiveDimensionError = [&](const QString& fieldName) -> QString {
+    const QString requiredError = requiredValueError(metadata, fieldName);
+    if (!requiredError.isEmpty())
+    {
+      return requiredError;
+    }
+
+    const QJsonValue value = metadata.value(fieldName);
+    if (!value.isDouble())
+    {
+      return QStringLiteral("Metadata field must be numeric: %1").arg(fieldName);
+    }
+
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || number <= 0.0 || std::floor(number) != number)
+    {
+      return QStringLiteral("Metadata dimension must be a positive integer: %1").arg(fieldName);
+    }
+
+    if (number > static_cast<double>(std::numeric_limits<std::size_t>::max()))
+    {
+      return QStringLiteral("Metadata dimension is too large: %1").arg(fieldName);
+    }
+
+    return QString();
+  };
+
+  auto positiveSpacingError = [&](const QString& fieldName) -> QString {
+    const QString requiredError = requiredValueError(metadata, fieldName);
+    if (!requiredError.isEmpty())
+    {
+      return requiredError;
+    }
+
+    const QJsonValue value = metadata.value(fieldName);
+    if (!value.isDouble())
+    {
+      return QStringLiteral("Metadata field must be numeric: %1").arg(fieldName);
+    }
+
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || number <= 0.0 ||
+        number > static_cast<double>(std::numeric_limits<float>::max()))
+    {
+      return QStringLiteral("Metadata spacing must be positive: %1").arg(fieldName);
+    }
+
+    return QString();
+  };
+
+  for (const QString& fieldName :
+       {QStringLiteral("width"), QStringLiteral("height"), QStringLiteral("depth")})
+  {
+    const QString error = positiveDimensionError(fieldName);
+    if (!error.isEmpty())
+    {
+      return error;
+    }
+  }
+
+  for (const QString& fieldName :
+       {QStringLiteral("spacingX"), QStringLiteral("spacingY"), QStringLiteral("spacingZ")})
+  {
+    const QString error = positiveSpacingError(fieldName);
+    if (!error.isEmpty())
+    {
+      return error;
+    }
+  }
+
+  return QString();
+}
+
+void showRawVolumeLoadError(QWidget* parent, const QString& details)
+{
+  QMessageBox messageBox(parent);
+  messageBox.setIcon(QMessageBox::Warning);
+  messageBox.setWindowTitle("RAW Volume Load Error");
+  messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
+  messageBox.setInformativeText(
+      QStringLiteral("MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
+                     "File -> Open Medical Volume...\n\n"
+                     "Details: %1")
+          .arg(details));
+  messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
+                           "QLabel { color: palette(text); }");
+  messageBox.exec();
 }
 
 } // namespace
@@ -347,6 +474,13 @@ void OpenGLVolumeViewerWidget::loadRawSlice()
     return;
   }
 
+  const QString metadataError = validateRawMetadataFile(metadataPath);
+  if (!metadataError.isEmpty())
+  {
+    showRawVolumeLoadError(this, metadataError);
+    return;
+  }
+
   const QString rawPath = QFileDialog::getOpenFileName(
       this, "Open RAW Volume Data", QString(), "RAW Float32 Volume (*.raw);;All Files (*)");
   if (rawPath.isEmpty())
@@ -360,19 +494,7 @@ void OpenGLVolumeViewerWidget::loadRawSlice()
   }
   catch (const std::exception& error)
   {
-    QMessageBox messageBox(this);
-    messageBox.setIcon(QMessageBox::Warning);
-    messageBox.setWindowTitle("RAW Volume Load Error");
-    messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
-    messageBox.setInformativeText(
-        QStringLiteral(
-            "MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
-            "File -> Open Medical Volume...\n\n"
-            "Details: %1")
-            .arg(QString::fromUtf8(error.what())));
-    messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
-                             "QLabel { color: palette(text); }");
-    messageBox.exec();
+    showRawVolumeLoadError(this, QString::fromUtf8(error.what()));
   }
 }
 
