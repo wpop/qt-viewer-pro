@@ -8,7 +8,13 @@ This project extends the original Qt Viewer into a unified desktop application f
 
 ## Screenshot
 
-![Qt Viewer Pro demo](docs/images/qt_viewer_grayscale.png)
+| 2D image viewer / grayscale demo | Medical volume viewer with NRRD sample |
+| --- | --- |
+| ![2D image viewer / grayscale demo](docs/images/qt_viewer_grayscale.png) | ![Medical volume viewer with NRRD sample](docs/images/medical_volume_viewer_nrrd.png) |
+
+| DICOM series viewer | Mask overlay with opacity control |
+| --- | --- |
+| ![DICOM series viewer](docs/images/dicom_series_viewer.png) | ![Mask overlay with opacity control](docs/images/mask_overlay_opacity.png) |
 
 ## Current Features
 
