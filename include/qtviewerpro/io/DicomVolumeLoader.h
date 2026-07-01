@@ -10,6 +10,7 @@ class DicomVolumeLoader final : public MedicalVolumeLoader
 public:
   bool canLoad(const QString& path) const override;
   VolumeLoadResult load(const QString& path) const override;
+  VolumeLoadResult loadSeriesDirectory(const QString& directoryPath) const;
 };
 
 } // namespace qvp

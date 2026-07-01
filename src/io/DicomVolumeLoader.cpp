@@ -96,60 +96,59 @@ bool seriesContainsFile(const std::vector<std::string>& fileNames, const QString
 namespace qvp
 {
 
-bool DicomVolumeLoader::canLoad(const QString& path) const
+namespace
 {
-  return hasDicomExtension(path);
-}
 
-VolumeLoadResult DicomVolumeLoader::load(const QString& path) const
+VolumeLoadResult loadSeriesFromDirectory(const QString& directoryPath,
+                                         const QString* selectedFilePath)
 {
   using ImageType = itk::Image<float, 3>;
   using ImageIOType = itk::GDCMImageIO;
   using NamesGeneratorType = itk::GDCMSeriesFileNames;
   using ReaderType = itk::ImageSeriesReader<ImageType>;
 
-  try
+  const QFileInfo directoryInfo(directoryPath);
+  if (!directoryInfo.exists() || !directoryInfo.isDir())
   {
-    const QFileInfo selectedFileInfo(path);
-    if (!selectedFileInfo.exists() || !selectedFileInfo.isFile())
-    {
-      return VolumeLoadResult::makeFailure(QStringLiteral("Selected DICOM file does not exist"));
-    }
+    return VolumeLoadResult::makeFailure(QStringLiteral("Selected DICOM directory does not exist"));
+  }
 
-    const QString selectedFilePath = normalizedPath(path);
-    const QString directoryPath = selectedFileInfo.absoluteDir().absolutePath();
+  const auto namesGenerator = NamesGeneratorType::New();
+  namesGenerator->SetUseSeriesDetails(true);
+  namesGenerator->SetDirectory(directoryPath.toStdString());
 
-    const auto namesGenerator = NamesGeneratorType::New();
-    namesGenerator->SetUseSeriesDetails(true);
-    namesGenerator->SetDirectory(directoryPath.toStdString());
+  const auto& seriesIds = namesGenerator->GetSeriesUIDs();
+  if (seriesIds.empty())
+  {
+    return VolumeLoadResult::makeFailure(QStringLiteral("No DICOM series found in directory"));
+  }
 
-    const auto& seriesIds = namesGenerator->GetSeriesUIDs();
-    if (seriesIds.empty())
-    {
-      return VolumeLoadResult::makeFailure(QStringLiteral("No DICOM series found in directory"));
-    }
-
-    std::vector<std::string> fileNames;
+  std::vector<std::string> fileNames;
+  if (selectedFilePath != nullptr)
+  {
     for (const auto& seriesId : seriesIds)
     {
       const auto seriesFileNames = namesGenerator->GetFileNames(seriesId);
-      if (seriesContainsFile(seriesFileNames, selectedFilePath))
+      if (seriesContainsFile(seriesFileNames, *selectedFilePath))
       {
         fileNames = seriesFileNames;
         break;
       }
     }
+  }
 
-    if (fileNames.empty())
-    {
-      fileNames = namesGenerator->GetFileNames(seriesIds.front());
-    }
+  if (fileNames.empty())
+  {
+    fileNames = namesGenerator->GetFileNames(seriesIds.front());
+  }
 
-    if (fileNames.empty())
-    {
-      return VolumeLoadResult::makeFailure(QStringLiteral("No DICOM series found in directory"));
-    }
+  if (fileNames.empty())
+  {
+    return VolumeLoadResult::makeFailure(QStringLiteral("No DICOM series found in directory"));
+  }
 
+  try
+  {
     const auto imageIO = ImageIOType::New();
     const auto reader = ReaderType::New();
     reader->SetImageIO(imageIO);
@@ -174,6 +173,30 @@ VolumeLoadResult DicomVolumeLoader::load(const QString& path) const
     return VolumeLoadResult::makeFailure(
         QStringLiteral("Failed to load DICOM series: ") + QString::fromUtf8(exception.what()));
   }
+}
+
+} // namespace
+
+bool DicomVolumeLoader::canLoad(const QString& path) const
+{
+  return hasDicomExtension(path);
+}
+
+VolumeLoadResult DicomVolumeLoader::load(const QString& path) const
+{
+  const QFileInfo selectedFileInfo(path);
+  if (!selectedFileInfo.exists() || !selectedFileInfo.isFile())
+  {
+    return VolumeLoadResult::makeFailure(QStringLiteral("Selected DICOM file does not exist"));
+  }
+
+  const QString selectedFilePath = normalizedPath(path);
+  return loadSeriesFromDirectory(selectedFileInfo.absoluteDir().absolutePath(), &selectedFilePath);
+}
+
+VolumeLoadResult DicomVolumeLoader::loadSeriesDirectory(const QString& directoryPath) const
+{
+  return loadSeriesFromDirectory(directoryPath, nullptr);
 }
 
 } // namespace qvp
