@@ -1,6 +1,5 @@
 #pragma once
 
-#include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 
 #include <QImage>
@@ -12,12 +11,6 @@
 class QMenu;
 class QCloseEvent;
 class QAction;
-class QCheckBox;
-class QComboBox;
-class QLabel;
-class QPushButton;
-class QSlider;
-class QSpinBox;
 class QStackedWidget;
 
 namespace qvp
@@ -71,15 +64,6 @@ private slots:
   void openMaskOverlay();
   void openSyntheticVolumeSlice();
   void openRawVolume();
-  void previousSlice();
-  void nextSlice();
-  void setSliceFromSlider(int sliceIndex);
-  void setSliceFromSpinBox(int sliceNumber);
-  void setSliceOrientation(int orientationIndex);
-  void updateWindowLevel();
-  void resetWindowLevel();
-  void updateInvertGrayscale();
-  void updateMouseImagePosition(int x, int y);
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
@@ -97,24 +81,9 @@ private:
   void updateStatusBar();
   void updateActions();
   void createToolBar();
-  void createVolumeControlsDock();
   void showImagePage();
   void showMedicalVolumePage();
   VolumeData createSyntheticVolume() const;
-  void displayCurrentSlice();
-  std::size_t activeSliceCount() const;
-  void updateSliceActions();
-  void updateVolumeInfoLabels();
-  QString currentModeText() const;
-  QString currentSizeText() const;
-  QString currentSpacingText() const;
-  QString currentSliceText() const;
-  bool voxelCoordinatesFromImagePosition(int imageX,
-                                         int imageY,
-                                         int& voxelX,
-                                         int& voxelY,
-                                         int& voxelZ) const;
-  float voxelValueAt(int voxelX, int voxelY, int voxelZ) const;
 
   QAction* rotateLeftAction_ = nullptr;
   QAction* rotateRightAction_ = nullptr;
@@ -132,11 +101,6 @@ private:
   ImageViewer2D* viewer_ = nullptr;
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   QImage originalImage_;
-  VolumeData activeVolume_;
-  std::size_t activeSliceIndex_ = 0;
-  SliceOrientation activeSliceOrientation_ = SliceOrientation::Axial;
-  bool volumeActive_ = false;
-  bool rawVolumeActive_ = false;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
 
@@ -157,21 +121,7 @@ private:
   QAction* openMaskOverlayAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
-  QAction* previousSliceAction_ = nullptr;
-  QAction* nextSliceAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
-  QComboBox* sliceOrientationComboBox_ = nullptr;
-  QSlider* sliceSlider_ = nullptr;
-  QSpinBox* sliceSpinBox_ = nullptr;
-  QLabel* modeValueLabel_ = nullptr;
-  QLabel* sizeValueLabel_ = nullptr;
-  QLabel* spacingValueLabel_ = nullptr;
-  QLabel* currentSliceValueLabel_ = nullptr;
-  QLabel* cursorValueLabel_ = nullptr;
-  QSpinBox* windowSpinBox_ = nullptr;
-  QSpinBox* levelSpinBox_ = nullptr;
-  QPushButton* resetWindowLevelButton_ = nullptr;
-  QCheckBox* invertGrayscaleCheckBox_ = nullptr;
 };
 
 } // namespace qvp
