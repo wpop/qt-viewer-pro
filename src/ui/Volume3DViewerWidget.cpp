@@ -1,5 +1,7 @@
 #include "qtviewerpro/ui/Volume3DViewerWidget.h"
 
+#include "qtviewerpro/render/OpenGLVolumeRendererWidget.h"
+
 #include <QLabel>
 #include <QVBoxLayout>
 
@@ -10,7 +12,7 @@ Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
 {
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(24, 24, 24, 24);
-  layout->setSpacing(10);
+  layout->setSpacing(12);
 
   auto* titleLabel = new QLabel("3D Volume Viewer", this);
   auto titleFont = titleLabel->font();
@@ -19,18 +21,17 @@ Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
   titleLabel->setFont(titleFont);
   titleLabel->setAlignment(Qt::AlignCenter);
 
-  auto* subtitleLabel =
-      new QLabel("OpenGL volume rendering will be added in the next step.", this);
-  auto subtitleFont = subtitleLabel->font();
-  subtitleFont.setPointSize(subtitleFont.pointSize() + 1);
-  subtitleLabel->setFont(subtitleFont);
-  subtitleLabel->setAlignment(Qt::AlignCenter);
-  subtitleLabel->setWordWrap(true);
-
-  layout->addStretch(1);
   layout->addWidget(titleLabel);
-  layout->addWidget(subtitleLabel);
-  layout->addStretch(2);
+
+  auto* rendererWidget = new OpenGLVolumeRendererWidget(this);
+  layout->addWidget(rendererWidget, 1);
+
+  auto* statusLabel = new QLabel("OpenGL renderer ready", this);
+  auto statusFont = statusLabel->font();
+  statusFont.setPointSize(statusFont.pointSize() - 1);
+  statusLabel->setFont(statusFont);
+  statusLabel->setAlignment(Qt::AlignCenter);
+  layout->addWidget(statusLabel);
 }
 
 } // namespace qvp
