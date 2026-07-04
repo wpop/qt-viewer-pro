@@ -18,6 +18,7 @@ namespace qvp
 
 class ImageViewer2D;
 class OpenGLVolumeViewerWidget;
+class Volume3DViewerWidget;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -83,6 +84,7 @@ private:
   void createToolBar();
   void showImagePage();
   void showMedicalVolumePage();
+  void showVolume3DPage();
   VolumeData createSyntheticVolume() const;
 
   QAction* rotateLeftAction_ = nullptr;
@@ -100,6 +102,7 @@ private:
   QStackedWidget* pageStack_ = nullptr;
   ImageViewer2D* viewer_ = nullptr;
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
+  Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
   QImage originalImage_;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};

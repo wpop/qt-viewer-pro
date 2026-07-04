@@ -7,6 +7,7 @@
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
+#include "qtviewerpro/ui/Volume3DViewerWidget.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -387,8 +388,10 @@ void MainWindow::createViewer()
   pageStack_ = new QStackedWidget(this);
   viewer_ = new ImageViewer2D(pageStack_);
   medicalVolumeViewerWidget_ = new OpenGLVolumeViewerWidget(pageStack_);
+  volume3DViewerWidget_ = new Volume3DViewerWidget(pageStack_);
   pageStack_->addWidget(viewer_);
   pageStack_->addWidget(medicalVolumeViewerWidget_);
+  pageStack_->addWidget(volume3DViewerWidget_);
   setCentralWidget(pageStack_);
   showImagePage();
 
@@ -479,6 +482,10 @@ void MainWindow::createViewMenu()
   showMedicalVolumeViewerAction->setStatusTip("Switch to the medical volume viewer page");
   connect(showMedicalVolumeViewerAction, &QAction::triggered, this,
           &MainWindow::showMedicalVolumePage);
+
+  QAction* showVolume3DViewerAction = viewMenu->addAction("3D Volume Viewer");
+  showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
+  connect(showVolume3DViewerAction, &QAction::triggered, this, &MainWindow::showVolume3DPage);
 }
 
 void MainWindow::createImageMenu()
@@ -725,6 +732,11 @@ void MainWindow::showImagePage()
 void MainWindow::showMedicalVolumePage()
 {
   pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
+}
+
+void MainWindow::showVolume3DPage()
+{
+  pageStack_->setCurrentWidget(volume3DViewerWidget_);
 }
 
 void MainWindow::createToolBar()
