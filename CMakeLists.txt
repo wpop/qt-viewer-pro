@@ -127,10 +127,12 @@ target_link_libraries(qt-viewer-pro-io
 # Render library
 set(QTVIEWERPRO_RENDER_SOURCES
     src/render/OpenGLSliceViewer.cpp
+    src/render/OpenGLVolumeRendererWidget.cpp
 )
 
 set(QTVIEWERPRO_RENDER_HEADERS
     include/qtviewerpro/render/OpenGLSliceViewer.h
+    include/qtviewerpro/render/OpenGLVolumeRendererWidget.h
 )
 
 add_library(qt-viewer-pro-render
