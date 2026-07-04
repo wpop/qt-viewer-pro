@@ -30,6 +30,7 @@
 #include <cmath>
 #include <exception>
 #include <limits>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -186,7 +187,12 @@ OpenGLVolumeViewerWidget::OpenGLVolumeViewerWidget(QWidget* parent) : QWidget(pa
 
 void OpenGLVolumeViewerWidget::setVolume(VolumeData volume)
 {
-  if (!volume.isValid())
+  setVolume(std::make_shared<const VolumeData>(std::move(volume)));
+}
+
+void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
+{
+  if (!volume || !volume->isValid())
   {
     QMessageBox::warning(this, "Volume Load Error", "Loaded volume data is invalid.");
     return;
@@ -202,7 +208,7 @@ void OpenGLVolumeViewerWidget::setVolume(VolumeData volume)
   const auto [minIt, maxIt] =
       std::minmax_element(currentVolume_->voxels().begin(), currentVolume_->voxels().end());
   currentVolumeRange_ = std::make_pair(*minIt, *maxIt);
-  applyCtWindowLevelPresetIfNeeded(currentVolume_.value());
+  applyCtWindowLevelPresetIfNeeded(*currentVolume_);
   resetToAxialMiddleSlice();
   updateVolumeSlice();
   openGLViewer_->resetView();
@@ -430,7 +436,7 @@ void OpenGLVolumeViewerWidget::openImage()
 
 void OpenGLVolumeViewerWidget::openMaskOverlay()
 {
-  if (!currentVolume_.has_value() || !currentVolume_->isValid())
+  if (!currentVolume_ || !currentVolume_->isValid())
   {
     QMessageBox::warning(this, "Mask Overlay Error", "Load a base volume before opening a mask overlay.");
     return;
@@ -558,7 +564,7 @@ void OpenGLVolumeViewerWidget::setSliceOrientation(int orientationIndex)
   }
 
   currentSliceIndex_ = sliceCount / 2;
-  const auto slice = SliceExtractor::extract(currentVolume_.value(), currentOrientation_, currentSliceIndex_);
+  const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
   currentDisplaySize_ = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
   configureSliceSlider();
   updateSliceLabel();
@@ -573,7 +579,7 @@ void OpenGLVolumeViewerWidget::previousSlice()
   }
 
   --currentSliceIndex_;
-  const auto slice = SliceExtractor::extract(currentVolume_.value(), currentOrientation_, currentSliceIndex_);
+  const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
   currentDisplaySize_ = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
   const QSignalBlocker blocker(sliceSlider_);
   sliceSlider_->setValue(static_cast<int>(currentSliceIndex_));
@@ -601,7 +607,7 @@ void OpenGLVolumeViewerWidget::nextSlice()
   }
 
   ++currentSliceIndex_;
-  const auto slice = SliceExtractor::extract(currentVolume_.value(), currentOrientation_, currentSliceIndex_);
+  const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
   currentDisplaySize_ = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
   const QSignalBlocker blocker(sliceSlider_);
   sliceSlider_->setValue(static_cast<int>(currentSliceIndex_));
@@ -694,7 +700,7 @@ void OpenGLVolumeViewerWidget::updateCrosshairLabel(int value)
                                 .arg(pixelY)
                                 .arg(value);
 
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     crosshairPositionLabel_->setText(imageReadout);
     return;
@@ -729,7 +735,7 @@ void OpenGLVolumeViewerWidget::updateCrosshairLabel(int value)
     break;
   }
 
-  const VolumeData& volume = currentVolume_.value();
+  const VolumeData& volume = *currentVolume_;
   if (!voxelCoordinatesInBounds(volume, voxelX, voxelY, voxelZ))
   {
     crosshairPositionLabel_->setText(imageReadout);
@@ -811,15 +817,14 @@ void OpenGLVolumeViewerWidget::updateMaskOpacityControls()
 
 void OpenGLVolumeViewerWidget::updateVolumeSlice()
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     return;
   }
 
   try
   {
-    const auto slice =
-        SliceExtractor::extract(currentVolume_.value(), currentOrientation_, currentSliceIndex_);
+    const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
     QImage image = SliceImageConverter::toGrayscaleImage(
         slice, static_cast<float>(windowSpinBox_->value()), static_cast<float>(levelSpinBox_->value()));
 
@@ -874,9 +879,9 @@ void OpenGLVolumeViewerWidget::updateVolumeMetadataLabel()
 void OpenGLVolumeViewerWidget::resetToAxialMiddleSlice()
 {
   currentOrientation_ = SliceOrientation::Axial;
-  currentSliceIndex_ = currentVolume_.value().depth() / 2;
+  currentSliceIndex_ = currentVolume_->depth() / 2;
   hasCurrentVolumeSlice_ = true;
-  const auto slice = SliceExtractor::extract(currentVolume_.value(), currentOrientation_, currentSliceIndex_);
+  const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
   currentDisplaySize_ = QSize(static_cast<int>(slice.width()), static_cast<int>(slice.height()));
   const QSignalBlocker blocker(orientationComboBox_);
   orientationComboBox_->setCurrentIndex(0);
@@ -918,7 +923,7 @@ void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData
 
 bool OpenGLVolumeViewerWidget::maskMatchesCurrentVolume(const VolumeData& mask) const
 {
-  return currentVolume_.has_value() && currentVolume_->isValid() && mask.isValid() &&
+  return currentVolume_ && currentVolume_->isValid() && mask.isValid() &&
          currentVolume_->width() == mask.width() && currentVolume_->height() == mask.height() &&
          currentVolume_->depth() == mask.depth();
 }
@@ -968,7 +973,7 @@ QImage OpenGLVolumeViewerWidget::applyMaskOverlay(const QImage& baseImage,
 
 QString OpenGLVolumeViewerWidget::formatVolumeMetadata() const
 {
-  if (!currentVolume_.has_value() || !currentVolume_->isValid() || !currentVolumeRange_.has_value())
+  if (!currentVolume_ || !currentVolume_->isValid() || !currentVolumeRange_.has_value())
   {
     return QStringLiteral("No volume loaded\nWindow / Level: %1 / %2")
         .arg(windowSpinBox_->value())
@@ -1000,7 +1005,7 @@ QString OpenGLVolumeViewerWidget::formatVolumeMetadata() const
 
 std::size_t OpenGLVolumeViewerWidget::currentSliceCount() const
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     return 0;
   }
@@ -1020,7 +1025,7 @@ std::size_t OpenGLVolumeViewerWidget::currentSliceCount() const
 
 std::pair<std::size_t, std::size_t> OpenGLVolumeViewerWidget::sliceDimensions() const
 {
-  if (!hasCurrentVolumeSlice_ || !currentVolume_.has_value() || !currentVolume_->isValid())
+  if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     return {0, 0};
   }
