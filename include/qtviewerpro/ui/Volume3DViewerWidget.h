@@ -10,6 +10,8 @@ class QLabel;
 namespace qvp
 {
 
+class OpenGLVolumeRendererWidget;
+
 class Volume3DViewerWidget : public QWidget
 {
   Q_OBJECT
@@ -20,6 +22,7 @@ public:
   void setVolume(std::shared_ptr<const VolumeData> volume);
 
 private:
+  OpenGLVolumeRendererWidget* rendererWidget_ = nullptr;
   std::shared_ptr<const VolumeData> currentVolume_;
   QLabel* statusLabel_ = nullptr;
 };
