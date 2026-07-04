@@ -26,8 +26,27 @@ Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
 
   layout->addWidget(titleLabel);
 
-  auto* rendererWidget = new OpenGLVolumeRendererWidget(this);
-  layout->addWidget(rendererWidget, 1);
+  rendererWidget_ = new OpenGLVolumeRendererWidget(this);
+  layout->addWidget(rendererWidget_, 1);
+
+  connect(rendererWidget_, &OpenGLVolumeRendererWidget::volumeTextureUploaded, this,
+          [this](int width, int height, int depth) {
+            if (statusLabel_)
+            {
+              statusLabel_->setText(QString("GPU texture ready: %1 x %2 x %3")
+                                        .arg(width)
+                                        .arg(height)
+                                        .arg(depth));
+            }
+          });
+
+  connect(rendererWidget_, &OpenGLVolumeRendererWidget::volumeTextureUploadFailed, this,
+          [this](const QString& message) {
+            if (statusLabel_)
+            {
+              statusLabel_->setText(QString("GPU texture upload failed: %1").arg(message));
+            }
+          });
 
   statusLabel_ = new QLabel("OpenGL renderer ready", this);
   auto statusFont = statusLabel_->font();
@@ -42,6 +61,10 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   if (!volume || !volume->isValid())
   {
     currentVolume_.reset();
+    if (rendererWidget_)
+    {
+      rendererWidget_->setVolume(nullptr);
+    }
     if (statusLabel_)
     {
       statusLabel_->setText("OpenGL renderer ready");
@@ -50,6 +73,10 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   }
 
   currentVolume_ = std::move(volume);
+  if (rendererWidget_)
+  {
+    rendererWidget_->setVolume(currentVolume_);
+  }
   if (statusLabel_)
   {
     statusLabel_->setText(QString("Volume ready: %1 x %2 x %3 voxels")
