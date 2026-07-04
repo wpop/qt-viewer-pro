@@ -3,7 +3,10 @@
 #include "qtviewerpro/render/OpenGLVolumeRendererWidget.h"
 
 #include <QLabel>
+#include <QString>
 #include <QVBoxLayout>
+
+#include <utility>
 
 namespace qvp
 {
@@ -26,12 +29,34 @@ Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
   auto* rendererWidget = new OpenGLVolumeRendererWidget(this);
   layout->addWidget(rendererWidget, 1);
 
-  auto* statusLabel = new QLabel("OpenGL renderer ready", this);
-  auto statusFont = statusLabel->font();
+  statusLabel_ = new QLabel("OpenGL renderer ready", this);
+  auto statusFont = statusLabel_->font();
   statusFont.setPointSize(statusFont.pointSize() - 1);
-  statusLabel->setFont(statusFont);
-  statusLabel->setAlignment(Qt::AlignCenter);
-  layout->addWidget(statusLabel);
+  statusLabel_->setFont(statusFont);
+  statusLabel_->setAlignment(Qt::AlignCenter);
+  layout->addWidget(statusLabel_);
+}
+
+void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
+{
+  if (!volume || !volume->isValid())
+  {
+    currentVolume_.reset();
+    if (statusLabel_)
+    {
+      statusLabel_->setText("OpenGL renderer ready");
+    }
+    return;
+  }
+
+  currentVolume_ = std::move(volume);
+  if (statusLabel_)
+  {
+    statusLabel_->setText(QString("Volume ready: %1 x %2 x %3 voxels")
+                              .arg(currentVolume_->width())
+                              .arg(currentVolume_->height())
+                              .arg(currentVolume_->depth()));
+  }
 }
 
 } // namespace qvp

@@ -85,6 +85,7 @@ private:
   void showImagePage();
   void showMedicalVolumePage();
   void showVolume3DPage();
+  void displayLoadedVolume(VolumeData volume);
   VolumeData createSyntheticVolume() const;
 
   QAction* rotateLeftAction_ = nullptr;

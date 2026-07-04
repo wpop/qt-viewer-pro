@@ -9,6 +9,7 @@
 #include <QWidget>
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -35,6 +36,7 @@ public:
   ~OpenGLVolumeViewerWidget() override = default;
 
   void setVolume(VolumeData volume);
+  void setVolume(std::shared_ptr<const VolumeData> volume);
   void openMaskOverlay();
 
 private:
@@ -99,7 +101,7 @@ private:
   QLabel* volumeMetadataLabel_ = nullptr;
   QPushButton* nextSliceButton_ = nullptr;
 
-  std::optional<VolumeData> currentVolume_;
+  std::shared_ptr<const VolumeData> currentVolume_;
   std::optional<VolumeData> maskVolume_;
   std::optional<std::pair<float, float>> currentVolumeRange_;
   std::size_t currentSliceIndex_ = 0;

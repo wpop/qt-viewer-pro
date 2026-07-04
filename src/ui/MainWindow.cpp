@@ -38,6 +38,7 @@
 #include <cmath>
 #include <exception>
 #include <limits>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -693,8 +694,7 @@ void MainWindow::openMedicalVolume()
     return;
   }
 
-  showMedicalVolumePage();
-  medicalVolumeViewerWidget_->setVolume(std::move(result.volume));
+  displayLoadedVolume(std::move(result.volume));
 }
 
 void MainWindow::openDicomSeriesFolder()
@@ -714,14 +714,21 @@ void MainWindow::openDicomSeriesFolder()
     return;
   }
 
-  showMedicalVolumePage();
-  medicalVolumeViewerWidget_->setVolume(std::move(result.volume));
+  displayLoadedVolume(std::move(result.volume));
 }
 
 void MainWindow::openMaskOverlay()
 {
   showMedicalVolumePage();
   medicalVolumeViewerWidget_->openMaskOverlay();
+}
+
+void MainWindow::displayLoadedVolume(VolumeData volume)
+{
+  auto sharedVolume = std::make_shared<const VolumeData>(std::move(volume));
+  medicalVolumeViewerWidget_->setVolume(sharedVolume);
+  volume3DViewerWidget_->setVolume(sharedVolume);
+  showMedicalVolumePage();
 }
 
 void MainWindow::showImagePage()
@@ -904,8 +911,7 @@ VolumeData MainWindow::createSyntheticVolume() const
 
 void MainWindow::openSyntheticVolumeSlice()
 {
-  showMedicalVolumePage();
-  medicalVolumeViewerWidget_->setVolume(createSyntheticVolume());
+  displayLoadedVolume(createSyntheticVolume());
 }
 
 void MainWindow::openRawVolume()
@@ -935,8 +941,7 @@ void MainWindow::openRawVolume()
   try
   {
     VolumeData volume = RawVolumeLoader::load(metadataPath, rawPath);
-    showMedicalVolumePage();
-    medicalVolumeViewerWidget_->setVolume(std::move(volume));
+    displayLoadedVolume(std::move(volume));
   }
   catch (const std::exception& error)
   {
