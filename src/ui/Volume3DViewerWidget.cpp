@@ -86,4 +86,12 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   }
 }
 
+void Volume3DViewerWidget::resetView()
+{
+  if (rendererWidget_)
+  {
+    rendererWidget_->resetView();
+  }
+}
+
 } // namespace qvp

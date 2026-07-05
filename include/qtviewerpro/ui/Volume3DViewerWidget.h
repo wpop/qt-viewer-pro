@@ -20,6 +20,7 @@ public:
   explicit Volume3DViewerWidget(QWidget* parent = nullptr);
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
+  void resetView();
 
 private:
   OpenGLVolumeRendererWidget* rendererWidget_ = nullptr;
