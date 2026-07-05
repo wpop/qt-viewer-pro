@@ -125,8 +125,38 @@ void OpenGLVolumeRendererWidget::paintGL()
   view.translate(0.0F, 0.0F, -2.5F);
 
   QMatrix4x4 model;
+
+  float volumeScaleX = 1.0F;
+  float volumeScaleY = 1.0F;
+  float volumeScaleZ = 1.0F;
+
+  if (currentVolume_ && currentVolume_->isValid())
+  {
+    const float physicalWidth = static_cast<float>(currentVolume_->width()) *
+                                static_cast<float>(currentVolume_->spacingX());
+    const float physicalHeight = static_cast<float>(currentVolume_->height()) *
+                                 static_cast<float>(currentVolume_->spacingY());
+    const float physicalDepth = static_cast<float>(currentVolume_->depth()) *
+                                static_cast<float>(currentVolume_->spacingZ());
+
+    if (physicalWidth > 0.0F && physicalHeight > 0.0F && physicalDepth > 0.0F &&
+        std::isfinite(physicalWidth) && std::isfinite(physicalHeight) &&
+        std::isfinite(physicalDepth))
+    {
+      const float maxPhysicalExtent =
+          std::max({physicalWidth, physicalHeight, physicalDepth});
+      if (maxPhysicalExtent > 0.0F)
+      {
+        volumeScaleX = physicalWidth / maxPhysicalExtent;
+        volumeScaleY = physicalHeight / maxPhysicalExtent;
+        volumeScaleZ = physicalDepth / maxPhysicalExtent;
+      }
+    }
+  }
+
   model.rotate(28.0F, 1.0F, 0.0F, 0.0F);
   model.rotate(38.0F, 0.0F, 1.0F, 0.0F);
+  model.scale(volumeScaleX, volumeScaleY, volumeScaleZ);
 
   const QMatrix4x4 mvpMatrix = projection * view * model;
   const QMatrix4x4 modelView = view * model;
