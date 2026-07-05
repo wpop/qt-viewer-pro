@@ -9,6 +9,7 @@
 #include <QString>
 #include <QMatrix4x4>
 #include <QVector3D>
+#include <QWheelEvent>
 
 #include <cstddef>
 #include <algorithm>
@@ -19,6 +20,11 @@
 
 namespace
 {
+constexpr float kDefaultCameraDistance = 2.5F;
+constexpr float kMinCameraDistance = 1.25F;
+constexpr float kMaxCameraDistance = 8.0F;
+constexpr float kZoomStepFactor = 0.9F;
+
 constexpr float kCubeVertices[] = {
     // Back face
     -0.5F, -0.5F, -0.5F,  0.5F, -0.5F, -0.5F,
@@ -203,6 +209,35 @@ void OpenGLVolumeRendererWidget::mouseReleaseEvent(QMouseEvent* event)
   QOpenGLWidget::mouseReleaseEvent(event);
 }
 
+void OpenGLVolumeRendererWidget::wheelEvent(QWheelEvent* event)
+{
+  float scrollSteps = 0.0F;
+  if (!event->angleDelta().isNull())
+  {
+    scrollSteps = static_cast<float>(event->angleDelta().y()) / 120.0F;
+  }
+  else if (!event->pixelDelta().isNull())
+  {
+    scrollSteps = static_cast<float>(event->pixelDelta().y()) / 120.0F;
+  }
+
+  if (scrollSteps != 0.0F)
+  {
+    const float zoomFactor = std::pow(kZoomStepFactor, scrollSteps);
+    const float nextCameraDistance = cameraDistance_ * zoomFactor;
+    cameraDistance_ = std::clamp(nextCameraDistance, kMinCameraDistance, kMaxCameraDistance);
+    if (!std::isfinite(cameraDistance_))
+    {
+      cameraDistance_ = kDefaultCameraDistance;
+    }
+    update();
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::wheelEvent(event);
+}
+
 void OpenGLVolumeRendererWidget::paintGL()
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -219,7 +254,7 @@ void OpenGLVolumeRendererWidget::paintGL()
   projection.perspective(45.0F, aspectRatio, 0.1F, 100.0F);
 
   QMatrix4x4 view;
-  view.translate(0.0F, 0.0F, -2.5F);
+  view.translate(0.0F, 0.0F, -cameraDistance_);
 
   QMatrix4x4 model;
 

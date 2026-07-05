@@ -9,6 +9,7 @@
 #include <QString>
 
 class QMouseEvent;
+class QWheelEvent;
 
 namespace qvp
 {
@@ -36,6 +37,7 @@ protected:
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
+  void wheelEvent(QWheelEvent* event) override;
 
 private:
   void initializeRenderingResources();
@@ -59,6 +61,7 @@ private:
   QQuaternion volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
   QPoint lastMousePosition_;
   bool isRotating_ = false;
+  float cameraDistance_ = 2.5F;
 };
 
 } // namespace qvp
