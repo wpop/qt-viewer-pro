@@ -4,6 +4,7 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
+#include <QDebug>
 #include <QMouseEvent>
 #include <QSizePolicy>
 #include <QString>
@@ -344,6 +345,10 @@ void OpenGLVolumeRendererWidget::paintGL()
       const GLint cameraPositionLocation =
           glGetUniformLocation(volumeShaderProgram_, "cameraPositionTexture");
       const GLint stepSizeLocation = glGetUniformLocation(volumeShaderProgram_, "stepSize");
+      const GLint volumeIntensityMinimumLocation =
+          glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMinimum");
+      const GLint volumeIntensityMaximumLocation =
+          glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMaximum");
       glUniformMatrix4fv(volumeMvpLocation, 1, GL_FALSE, mvpMatrix.constData());
       glUniform1i(volumeTextureLocation, 0);
       glUniform3f(cameraPositionLocation,
@@ -351,6 +356,8 @@ void OpenGLVolumeRendererWidget::paintGL()
                   cameraPositionTexture.y(),
                   cameraPositionTexture.z());
       glUniform1f(stepSizeLocation, stepSize);
+      glUniform1f(volumeIntensityMinimumLocation, volumeIntensityMinimum_);
+      glUniform1f(volumeIntensityMaximumLocation, volumeIntensityMaximum_);
 
       auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
       extraFunctions->glBindVertexArray(volumeVao_);
@@ -455,19 +462,8 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
   }
 
   const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
-  const float minimum = *minIt;
-  const float maximum = *maxIt;
-
-  std::vector<float> normalizedVoxels(voxels.size(), 0.0F);
-  if (maximum > minimum)
-  {
-    const float range = maximum - minimum;
-    for (std::size_t index = 0; index < voxels.size(); ++index)
-    {
-      const float normalized = (voxels[index] - minimum) / range;
-      normalizedVoxels[index] = std::clamp(normalized, 0.0F, 1.0F);
-    }
-  }
+  volumeIntensityMinimum_ = *minIt;
+  volumeIntensityMaximum_ = *maxIt;
 
   while (glGetError() != GL_NO_ERROR)
   {
@@ -500,7 +496,7 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
                                0,
                                GL_RED,
                                GL_FLOAT,
-                               normalizedVoxels.data());
+                               voxels.data());
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, previousUnpackAlignment);
 
@@ -571,6 +567,8 @@ out vec4 outputColor;
 uniform sampler3D volumeTexture;
 uniform vec3 cameraPositionTexture;
 uniform float stepSize;
+uniform float volumeIntensityMinimum;
+uniform float volumeIntensityMaximum;
 
 bool insideVolume(vec3 position)
 {
@@ -601,8 +599,20 @@ void main()
     float sampleValue =
         texture(volumeTexture, samplePosition).r;
 
+    float intensityRange =
+        volumeIntensityMaximum - volumeIntensityMinimum;
+
+    float normalizedSampleValue = 0.0;
+    if (intensityRange > 0.0)
+    {
+      normalizedSampleValue =
+          clamp((sampleValue - volumeIntensityMinimum) / intensityRange,
+                0.0,
+                1.0);
+    }
+
     float sampleIntensity =
-        smoothstep(0.10, 0.80, sampleValue);
+        smoothstep(0.10, 0.80, normalizedSampleValue);
 
     float sampleAlpha =
         sampleIntensity * 0.08;
@@ -784,6 +794,8 @@ void OpenGLVolumeRendererWidget::destroyVolumeTexture()
   }
 
   volumeTextureReady_ = false;
+  volumeIntensityMinimum_ = 0.0F;
+  volumeIntensityMaximum_ = 0.0F;
 }
 
 GLuint OpenGLVolumeRendererWidget::compileShader(GLenum shaderType, const char* source)
@@ -796,6 +808,19 @@ GLuint OpenGLVolumeRendererWidget::compileShader(GLenum shaderType, const char* 
   glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
   if (compileStatus != GL_TRUE)
   {
+    GLint infoLogLength = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+    if (infoLogLength > 1)
+    {
+      std::vector<char> infoLog(static_cast<std::size_t>(infoLogLength), '\0');
+      glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
+      qWarning().noquote() << "OpenGL shader compilation failed:"
+                           << QString::fromUtf8(infoLog.data());
+    }
+    else
+    {
+      qWarning() << "OpenGL shader compilation failed with no info log.";
+    }
     glDeleteShader(shader);
     return 0;
   }
