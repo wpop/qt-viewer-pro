@@ -41,8 +41,11 @@ private:
   bool volumeTextureDirty_ = false;
   bool volumeTextureReady_ = false;
   GLuint shaderProgram_ = 0;
+  GLuint volumeShaderProgram_ = 0;
   GLuint vao_ = 0;
   GLuint vbo_ = 0;
+  GLuint volumeVao_ = 0;
+  GLuint volumeVbo_ = 0;
 };
 
 } // namespace qvp
