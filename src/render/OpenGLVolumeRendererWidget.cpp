@@ -7,6 +7,7 @@
 #include <QSizePolicy>
 #include <QString>
 #include <QMatrix4x4>
+#include <QVector3D>
 
 #include <cstddef>
 #include <algorithm>
@@ -33,6 +34,27 @@ constexpr float kCubeVertices[] = {
     0.5F,  -0.5F, -0.5F,    0.5F,  -0.5F, 0.5F,
     0.5F,   0.5F,  -0.5F,    0.5F,   0.5F, 0.5F,
     -0.5F,  0.5F,  -0.5F,   -0.5F,  0.5F, 0.5F,
+};
+
+constexpr float kVolumeCubeVertices[] = {
+    // Back face
+    -0.5F, -0.5F, -0.5F,  0.5F, 0.5F,  -0.5F,  0.5F, -0.5F, -0.5F,
+    -0.5F, -0.5F, -0.5F,  -0.5F, 0.5F,  -0.5F,  0.5F, 0.5F,  -0.5F,
+    // Front face
+    -0.5F, -0.5F, 0.5F,   0.5F, -0.5F, 0.5F,   0.5F, 0.5F,   0.5F,
+    -0.5F, -0.5F, 0.5F,   0.5F, 0.5F,   0.5F,   -0.5F, 0.5F,  0.5F,
+    // Left face
+    -0.5F, -0.5F, -0.5F,  -0.5F, 0.5F,   0.5F,   -0.5F, 0.5F,  -0.5F,
+    -0.5F, -0.5F, -0.5F,  -0.5F, -0.5F, 0.5F,    -0.5F, 0.5F,  0.5F,
+    // Right face
+    0.5F, -0.5F, -0.5F,   0.5F, 0.5F,   -0.5F,   0.5F, 0.5F,  0.5F,
+    0.5F, -0.5F, -0.5F,   0.5F, 0.5F,    0.5F,    0.5F, -0.5F, 0.5F,
+    // Top face
+    -0.5F, 0.5F, -0.5F,   0.5F, 0.5F,    0.5F,    0.5F, 0.5F,  -0.5F,
+    -0.5F, 0.5F, -0.5F,   -0.5F, 0.5F,   0.5F,    0.5F, 0.5F,   0.5F,
+    // Bottom face
+    -0.5F, -0.5F, -0.5F,  0.5F, -0.5F,  -0.5F,   0.5F, -0.5F, 0.5F,
+    -0.5F, -0.5F, -0.5F,  0.5F, -0.5F,   0.5F,    -0.5F, -0.5F, 0.5F,
 };
 }
 
@@ -103,10 +125,107 @@ void OpenGLVolumeRendererWidget::paintGL()
   view.translate(0.0F, 0.0F, -2.5F);
 
   QMatrix4x4 model;
+
+  float volumeScaleX = 1.0F;
+  float volumeScaleY = 1.0F;
+  float volumeScaleZ = 1.0F;
+
+  if (currentVolume_ && currentVolume_->isValid())
+  {
+    const float physicalWidth = static_cast<float>(currentVolume_->width()) *
+                                static_cast<float>(currentVolume_->spacingX());
+    const float physicalHeight = static_cast<float>(currentVolume_->height()) *
+                                 static_cast<float>(currentVolume_->spacingY());
+    const float physicalDepth = static_cast<float>(currentVolume_->depth()) *
+                                static_cast<float>(currentVolume_->spacingZ());
+
+    if (physicalWidth > 0.0F && physicalHeight > 0.0F && physicalDepth > 0.0F &&
+        std::isfinite(physicalWidth) && std::isfinite(physicalHeight) &&
+        std::isfinite(physicalDepth))
+    {
+      const float maxPhysicalExtent =
+          std::max({physicalWidth, physicalHeight, physicalDepth});
+      if (maxPhysicalExtent > 0.0F)
+      {
+        volumeScaleX = physicalWidth / maxPhysicalExtent;
+        volumeScaleY = physicalHeight / maxPhysicalExtent;
+        volumeScaleZ = physicalDepth / maxPhysicalExtent;
+      }
+    }
+  }
+
   model.rotate(28.0F, 1.0F, 0.0F, 0.0F);
   model.rotate(38.0F, 0.0F, 1.0F, 0.0F);
+  model.scale(volumeScaleX, volumeScaleY, volumeScaleZ);
 
   const QMatrix4x4 mvpMatrix = projection * view * model;
+  const QMatrix4x4 modelView = view * model;
+  bool invertible = false;
+  const QMatrix4x4 inverseModelView = modelView.inverted(&invertible);
+
+  float stepSize = 0.0F;
+  if (currentVolume_ && currentVolume_->isValid())
+  {
+    const std::size_t width = currentVolume_->width();
+    const std::size_t height = currentVolume_->height();
+    const std::size_t depth = currentVolume_->depth();
+    const std::size_t maxDimension = std::max({width, height, depth});
+    if (maxDimension > 0)
+    {
+      stepSize = 1.0F / static_cast<float>(maxDimension);
+    }
+  }
+
+  if (invertible)
+  {
+    if (volumeTextureReady_ && volumeShaderProgram_ != 0 && volumeVao_ != 0 && volumeVbo_ != 0 &&
+        volumeTextureId_ != 0 && stepSize > 0.0F)
+    {
+      const QVector3D cameraPositionObject =
+          inverseModelView.map(QVector3D(0.0F, 0.0F, 0.0F));
+      const QVector3D cameraPositionTexture =
+          cameraPositionObject + QVector3D(0.5F, 0.5F, 0.5F);
+
+      GLint previousActiveTexture = GL_TEXTURE0;
+      glGetIntegerv(GL_ACTIVE_TEXTURE, &previousActiveTexture);
+
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glFrontFace(GL_CCW);
+
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_3D, volumeTextureId_);
+
+      glUseProgram(volumeShaderProgram_);
+      const GLint volumeMvpLocation = glGetUniformLocation(volumeShaderProgram_, "mvpMatrix");
+      const GLint volumeTextureLocation =
+          glGetUniformLocation(volumeShaderProgram_, "volumeTexture");
+      const GLint cameraPositionLocation =
+          glGetUniformLocation(volumeShaderProgram_, "cameraPositionTexture");
+      const GLint stepSizeLocation = glGetUniformLocation(volumeShaderProgram_, "stepSize");
+      glUniformMatrix4fv(volumeMvpLocation, 1, GL_FALSE, mvpMatrix.constData());
+      glUniform1i(volumeTextureLocation, 0);
+      glUniform3f(cameraPositionLocation,
+                  cameraPositionTexture.x(),
+                  cameraPositionTexture.y(),
+                  cameraPositionTexture.z());
+      glUniform1f(stepSizeLocation, stepSize);
+
+      auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
+      extraFunctions->glBindVertexArray(volumeVao_);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+      extraFunctions->glBindVertexArray(0);
+
+      glUseProgram(0);
+      glBindTexture(GL_TEXTURE_3D, 0);
+      glActiveTexture(static_cast<GLenum>(previousActiveTexture));
+      glDisable(GL_CULL_FACE);
+    }
+  }
+
+  GLint previousDepthFunc = GL_LESS;
+  glGetIntegerv(GL_DEPTH_FUNC, &previousDepthFunc);
+  glDepthFunc(GL_LEQUAL);
 
   glUseProgram(shaderProgram_);
   const GLint mvpLocation = glGetUniformLocation(shaderProgram_, "mvpMatrix");
@@ -118,6 +237,7 @@ void OpenGLVolumeRendererWidget::paintGL()
   extraFunctions->glBindVertexArray(0);
 
   glUseProgram(0);
+  glDepthFunc(static_cast<GLenum>(previousDepthFunc));
 }
 
 void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
@@ -273,6 +393,79 @@ void main()
 }
 )";
 
+  static constexpr char kVolumeVertexShaderSource[] = R"(
+#version 330 core
+
+layout (location = 0) in vec3 position;
+
+uniform mat4 mvpMatrix;
+
+out vec3 texturePosition;
+
+void main()
+{
+  texturePosition = position + vec3(0.5);
+  gl_Position = mvpMatrix * vec4(position, 1.0);
+}
+)";
+
+  static constexpr char kVolumeFragmentShaderSource[] = R"(
+#version 330 core
+
+in vec3 texturePosition;
+
+out vec4 outputColor;
+
+uniform sampler3D volumeTexture;
+uniform vec3 cameraPositionTexture;
+uniform float stepSize;
+
+bool insideVolume(vec3 position)
+{
+  return all(greaterThanEqual(position, vec3(0.0))) &&
+         all(lessThanEqual(position, vec3(1.0)));
+}
+
+void main()
+{
+  vec3 rayDirection =
+      normalize(texturePosition - cameraPositionTexture);
+
+  vec3 samplePosition =
+      texturePosition + rayDirection * stepSize * 0.5;
+
+  float maximumIntensity = 0.0;
+
+  const int kMaxSteps = 2048;
+
+  for (int step = 0; step < kMaxSteps; ++step)
+  {
+    if (!insideVolume(samplePosition))
+    {
+      break;
+    }
+
+    float sampleValue =
+        texture(volumeTexture, samplePosition).r;
+
+    maximumIntensity =
+        max(maximumIntensity, sampleValue);
+
+    samplePosition += rayDirection * stepSize;
+  }
+
+  float intensity =
+      smoothstep(0.10, 0.80, maximumIntensity);
+
+  if (intensity <= 0.01)
+  {
+    discard;
+  }
+
+  outputColor = vec4(vec3(intensity), 1.0);
+}
+)";
+
   const GLuint vertexShader = compileShader(GL_VERTEX_SHADER, kVertexShaderSource);
   const GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, kFragmentShaderSource);
   if (vertexShader == 0 || fragmentShader == 0)
@@ -302,6 +495,43 @@ void main()
     return;
   }
 
+  const GLuint volumeVertexShader = compileShader(GL_VERTEX_SHADER, kVolumeVertexShaderSource);
+  const GLuint volumeFragmentShader = compileShader(GL_FRAGMENT_SHADER, kVolumeFragmentShaderSource);
+  if (volumeVertexShader == 0 || volumeFragmentShader == 0)
+  {
+    glDeleteShader(volumeVertexShader);
+    glDeleteShader(volumeFragmentShader);
+  }
+  else
+  {
+    volumeShaderProgram_ = glCreateProgram();
+    if (volumeShaderProgram_ != 0)
+    {
+      glAttachShader(volumeShaderProgram_, volumeVertexShader);
+      glAttachShader(volumeShaderProgram_, volumeFragmentShader);
+      glLinkProgram(volumeShaderProgram_);
+
+      GLint linkStatus = GL_FALSE;
+      glGetProgramiv(volumeShaderProgram_, GL_LINK_STATUS, &linkStatus);
+
+      glDetachShader(volumeShaderProgram_, volumeVertexShader);
+      glDetachShader(volumeShaderProgram_, volumeFragmentShader);
+
+      if (linkStatus != GL_TRUE)
+      {
+        glDeleteProgram(volumeShaderProgram_);
+        volumeShaderProgram_ = 0;
+      }
+    }
+    else
+    {
+      volumeShaderProgram_ = 0;
+    }
+
+    glDeleteShader(volumeVertexShader);
+    glDeleteShader(volumeFragmentShader);
+  }
+
   auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
   extraFunctions->glGenVertexArrays(1, &vao_);
   glGenBuffers(1, &vbo_);
@@ -311,6 +541,22 @@ void main()
   glBufferData(GL_ARRAY_BUFFER,
                static_cast<qopengl_GLsizeiptr>(sizeof(kCubeVertices)),
                kCubeVertices,
+               GL_STATIC_DRAW);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  extraFunctions->glBindVertexArray(0);
+
+  extraFunctions->glGenVertexArrays(1, &volumeVao_);
+  glGenBuffers(1, &volumeVbo_);
+
+  extraFunctions->glBindVertexArray(volumeVao_);
+  glBindBuffer(GL_ARRAY_BUFFER, volumeVbo_);
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<qopengl_GLsizeiptr>(sizeof(kVolumeCubeVertices)),
+               kVolumeCubeVertices,
                GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(0);
@@ -336,10 +582,28 @@ void OpenGLVolumeRendererWidget::destroyRenderingResources()
     vao_ = 0;
   }
 
+  if (volumeVbo_ != 0)
+  {
+    glDeleteBuffers(1, &volumeVbo_);
+    volumeVbo_ = 0;
+  }
+
+  if (volumeVao_ != 0)
+  {
+    QOpenGLContext::currentContext()->extraFunctions()->glDeleteVertexArrays(1, &volumeVao_);
+    volumeVao_ = 0;
+  }
+
   if (shaderProgram_ != 0)
   {
     glDeleteProgram(shaderProgram_);
     shaderProgram_ = 0;
+  }
+
+  if (volumeShaderProgram_ != 0)
+  {
+    glDeleteProgram(volumeShaderProgram_);
+    volumeShaderProgram_ = 0;
   }
 }
 
