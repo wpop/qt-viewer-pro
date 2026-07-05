@@ -434,7 +434,8 @@ void main()
   vec3 samplePosition =
       texturePosition + rayDirection * stepSize * 0.5;
 
-  float maximumIntensity = 0.0;
+  vec3 accumulatedColor = vec3(0.0);
+  float accumulatedAlpha = 0.0;
 
   const int kMaxSteps = 2048;
 
@@ -448,21 +449,36 @@ void main()
     float sampleValue =
         texture(volumeTexture, samplePosition).r;
 
-    maximumIntensity =
-        max(maximumIntensity, sampleValue);
+    float sampleIntensity =
+        smoothstep(0.10, 0.80, sampleValue);
+
+    float sampleAlpha =
+        sampleIntensity * 0.08;
+
+    accumulatedColor +=
+        (1.0 - accumulatedAlpha) *
+        vec3(sampleIntensity) *
+        sampleAlpha;
+
+    accumulatedAlpha +=
+        (1.0 - accumulatedAlpha) *
+        sampleAlpha;
+
+    if (accumulatedAlpha >= 0.98)
+    {
+      break;
+    }
 
     samplePosition += rayDirection * stepSize;
   }
 
-  float intensity =
-      smoothstep(0.10, 0.80, maximumIntensity);
-
-  if (intensity <= 0.01)
+  if (accumulatedAlpha <= 0.01)
   {
     discard;
   }
 
-  outputColor = vec4(vec3(intensity), 1.0);
+  outputColor =
+      vec4(accumulatedColor, accumulatedAlpha);
 }
 )";
 
