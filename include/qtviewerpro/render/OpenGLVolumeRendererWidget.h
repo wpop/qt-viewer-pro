@@ -61,6 +61,8 @@ private:
   GLuint vbo_ = 0;
   GLuint volumeVao_ = 0;
   GLuint volumeVbo_ = 0;
+  float volumeIntensityMinimum_ = 0.0F;
+  float volumeIntensityMaximum_ = 0.0F;
   QQuaternion volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
   QPoint lastMousePosition_;
   bool isRotating_ = false;
