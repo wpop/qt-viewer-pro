@@ -4,6 +4,7 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
+#include <QMouseEvent>
 #include <QSizePolicy>
 #include <QString>
 #include <QMatrix4x4>
@@ -56,6 +57,58 @@ constexpr float kVolumeCubeVertices[] = {
     -0.5F, -0.5F, -0.5F,  0.5F, -0.5F,  -0.5F,   0.5F, -0.5F, 0.5F,
     -0.5F, -0.5F, -0.5F,  0.5F, -0.5F,   0.5F,    -0.5F, -0.5F, 0.5F,
 };
+
+QQuaternion rotationBetweenVectors(const QVector3D& from, const QVector3D& to)
+{
+  const QVector3D fromNormalized = from.normalized();
+  const QVector3D toNormalized = to.normalized();
+  const float dot = QVector3D::dotProduct(fromNormalized, toNormalized);
+
+  if (dot >= 1.0F - 1e-6F)
+  {
+    return QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
+  }
+
+  if (dot <= -1.0F + 1e-6F)
+  {
+    QVector3D orthogonalAxis = QVector3D::crossProduct(QVector3D(1.0F, 0.0F, 0.0F), fromNormalized);
+    if (orthogonalAxis.lengthSquared() < 1e-6F)
+    {
+      orthogonalAxis =
+          QVector3D::crossProduct(QVector3D(0.0F, 1.0F, 0.0F), fromNormalized);
+    }
+    orthogonalAxis.normalize();
+    return QQuaternion::fromAxisAndAngle(orthogonalAxis, 180.0F);
+  }
+
+  const QVector3D axis = QVector3D::crossProduct(fromNormalized, toNormalized);
+  QQuaternion delta(1.0F + dot, axis.x(), axis.y(), axis.z());
+  delta.normalize();
+  return delta;
+}
+
+QVector3D mapToArcballPoint(const QPoint& position, int width, int height)
+{
+  if (width <= 0 || height <= 0)
+  {
+    return QVector3D(0.0F, 0.0F, 1.0F);
+  }
+
+  const float minDimension = static_cast<float>(std::min(width, height));
+  const float x = (2.0F * static_cast<float>(position.x()) - static_cast<float>(width)) /
+                  minDimension;
+  const float y = (static_cast<float>(height) - 2.0F * static_cast<float>(position.y())) /
+                  minDimension;
+  const float lengthSquared = x * x + y * y;
+
+  if (lengthSquared > 1.0F)
+  {
+    const float invLength = 1.0F / std::sqrt(lengthSquared);
+    return QVector3D(x * invLength, y * invLength, 0.0F);
+  }
+
+  return QVector3D(x, y, std::sqrt(1.0F - lengthSquared));
+}
 }
 
 namespace qvp
@@ -106,6 +159,50 @@ void OpenGLVolumeRendererWidget::resizeGL(int width, int height)
   glViewport(0, 0, width, height);
 }
 
+void OpenGLVolumeRendererWidget::mousePressEvent(QMouseEvent* event)
+{
+  if (event->button() == Qt::LeftButton)
+  {
+    isRotating_ = true;
+    lastMousePosition_ = event->position().toPoint();
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mousePressEvent(event);
+}
+
+void OpenGLVolumeRendererWidget::mouseMoveEvent(QMouseEvent* event)
+{
+  if (isRotating_ && (event->buttons() & Qt::LeftButton))
+  {
+    const QPoint currentMousePosition = event->position().toPoint();
+    const QVector3D previousArcball = mapToArcball(lastMousePosition_);
+    const QVector3D currentArcball = mapToArcball(currentMousePosition);
+    const QQuaternion deltaRotation = rotationBetweenVectors(previousArcball, currentArcball);
+
+    volumeRotation_ = (deltaRotation * volumeRotation_).normalized();
+    lastMousePosition_ = currentMousePosition;
+    update();
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mouseMoveEvent(event);
+}
+
+void OpenGLVolumeRendererWidget::mouseReleaseEvent(QMouseEvent* event)
+{
+  if (event->button() == Qt::LeftButton && isRotating_)
+  {
+    isRotating_ = false;
+    event->accept();
+    return;
+  }
+
+  QOpenGLWidget::mouseReleaseEvent(event);
+}
+
 void OpenGLVolumeRendererWidget::paintGL()
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -154,6 +251,7 @@ void OpenGLVolumeRendererWidget::paintGL()
     }
   }
 
+  model.rotate(volumeRotation_);
   model.rotate(28.0F, 1.0F, 0.0F, 0.0F);
   model.rotate(38.0F, 0.0F, 1.0F, 0.0F);
   model.scale(volumeScaleX, volumeScaleY, volumeScaleZ);
@@ -238,6 +336,17 @@ void OpenGLVolumeRendererWidget::paintGL()
 
   glUseProgram(0);
   glDepthFunc(static_cast<GLenum>(previousDepthFunc));
+}
+
+QVector3D OpenGLVolumeRendererWidget::mapToArcball(const QPoint& position) const
+{
+  return mapToArcballPoint(position, width(), height());
+}
+
+QQuaternion OpenGLVolumeRendererWidget::rotationBetweenVectors(const QVector3D& from,
+                                                               const QVector3D& to) const
+{
+  return ::rotationBetweenVectors(from, to);
 }
 
 void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
