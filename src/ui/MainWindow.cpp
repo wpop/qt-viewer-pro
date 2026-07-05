@@ -487,6 +487,10 @@ void MainWindow::createViewMenu()
   QAction* showVolume3DViewerAction = viewMenu->addAction("3D Volume Viewer");
   showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
   connect(showVolume3DViewerAction, &QAction::triggered, this, &MainWindow::showVolume3DPage);
+
+  QAction* reset3DViewAction = viewMenu->addAction("Reset 3D View");
+  reset3DViewAction->setStatusTip("Reset the interactive 3D volume view");
+  connect(reset3DViewAction, &QAction::triggered, this, &MainWindow::reset3DView);
 }
 
 void MainWindow::createImageMenu()
@@ -695,6 +699,14 @@ void MainWindow::openMedicalVolume()
   }
 
   displayLoadedVolume(std::move(result.volume));
+}
+
+void MainWindow::reset3DView()
+{
+  if (volume3DViewerWidget_)
+  {
+    volume3DViewerWidget_->resetView();
+  }
 }
 
 void MainWindow::openDicomSeriesFolder()

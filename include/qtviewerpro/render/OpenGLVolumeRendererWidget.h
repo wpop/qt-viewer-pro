@@ -25,6 +25,7 @@ public:
   ~OpenGLVolumeRendererWidget() override;
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
+  void resetView();
 
 signals:
   void volumeTextureUploaded(int width, int height, int depth);
@@ -40,6 +41,8 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
 
 private:
+  static constexpr float kDefaultCameraDistance = 2.5F;
+
   void initializeRenderingResources();
   void destroyRenderingResources();
   void uploadVolumeTextureIfNeeded();
@@ -61,7 +64,7 @@ private:
   QQuaternion volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
   QPoint lastMousePosition_;
   bool isRotating_ = false;
-  float cameraDistance_ = 2.5F;
+  float cameraDistance_ = kDefaultCameraDistance;
 };
 
 } // namespace qvp

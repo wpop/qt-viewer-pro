@@ -20,7 +20,6 @@
 
 namespace
 {
-constexpr float kDefaultCameraDistance = 2.5F;
 constexpr float kMinCameraDistance = 1.25F;
 constexpr float kMaxCameraDistance = 8.0F;
 constexpr float kZoomStepFactor = 0.9F;
@@ -152,6 +151,15 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   update();
 }
 
+void OpenGLVolumeRendererWidget::resetView()
+{
+  volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
+  cameraDistance_ = kDefaultCameraDistance;
+  isRotating_ = false;
+  lastMousePosition_ = QPoint();
+  update();
+}
+
 void OpenGLVolumeRendererWidget::initializeGL()
 {
   initializeOpenGLFunctions();
@@ -228,7 +236,7 @@ void OpenGLVolumeRendererWidget::wheelEvent(QWheelEvent* event)
     cameraDistance_ = std::clamp(nextCameraDistance, kMinCameraDistance, kMaxCameraDistance);
     if (!std::isfinite(cameraDistance_))
     {
-      cameraDistance_ = kDefaultCameraDistance;
+      cameraDistance_ = OpenGLVolumeRendererWidget::kDefaultCameraDistance;
     }
     update();
     event->accept();

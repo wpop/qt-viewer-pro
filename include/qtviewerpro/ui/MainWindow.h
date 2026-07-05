@@ -60,6 +60,7 @@ private slots:
   void flipVertical();
   void convertToGrayscale();
   void resetImage();
+  void reset3DView();
   void openMedicalVolume();
   void openDicomSeriesFolder();
   void openMaskOverlay();
