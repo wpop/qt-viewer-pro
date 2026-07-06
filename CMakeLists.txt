@@ -17,9 +17,12 @@ find_package(ITK REQUIRED COMPONENTS
     ITKCommon
     ITKIOGDCM
     ITKIOImageBase
+    ITKImageFunction
+    ITKImageGrid
     ITKIOMeta
     ITKIONIFTI
     ITKIONRRD
+    ITKTransform
 )
 include(${ITK_USE_FILE})
 
@@ -56,12 +59,14 @@ target_include_directories(qt-viewer-pro-core
 set(QTVIEWERPRO_PROCESSING_SOURCES
     src/processing/ImageProcessor.cpp
     src/processing/SliceImageConverter.cpp
+    src/processing/VolumeResampler.cpp
     src/processing/WindowLevelProcessor.cpp
 )
 
 set(QTVIEWERPRO_PROCESSING_HEADERS
     include/qtviewerpro/processing/ImageProcessor.h
     include/qtviewerpro/processing/SliceImageConverter.h
+    include/qtviewerpro/processing/VolumeResampler.h
     include/qtviewerpro/processing/WindowLevelProcessor.h
 )
 
@@ -83,6 +88,7 @@ target_link_libraries(qt-viewer-pro-processing
     PRIVATE
         Qt6::Widgets
         ${OpenCV_LIBS}
+        ${ITK_LIBRARIES}
 )
 
 # IO library
@@ -249,6 +255,19 @@ target_link_libraries(test-window-level-processor
 )
 
 add_test(NAME test-window-level-processor COMMAND test-window-level-processor)
+
+qt_add_executable(test-volume-resampler
+    tests/TestVolumeResampler.cpp
+)
+
+target_link_libraries(test-volume-resampler
+    PRIVATE
+        qt-viewer-pro-processing
+        Qt6::Test
+        ${ITK_LIBRARIES}
+)
+
+add_test(NAME test-volume-resampler COMMAND test-volume-resampler)
 
 qt_add_executable(test-slice-image-converter
     tests/TestSliceImageConverter.cpp
