@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out repository
@@ -21,7 +21,9 @@ jobs:
             build-essential \
             cmake \
             libinsighttoolkit5-dev \
-            libopencv-dev \
+            libopencv-core-dev \
+            libopencv-imgcodecs-dev \
+            libopencv-imgproc-dev \
             ninja-build \
             qt6-base-dev
 

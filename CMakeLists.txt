@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test Concurrent)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS imgcodecs imgproc)
 
 # The Ubuntu ITK package may try to load ITKVtkGlue, which pulls VTK/MPI.
 # qt-viewer-pro does not use ITK-VTK glue, so mark it as already loaded.
