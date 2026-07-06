@@ -3,6 +3,7 @@
 #include <QtTest/QtTest>
 
 #include <vector>
+#include <utility>
 
 class TestVolumeData : public QObject
 {
@@ -13,6 +14,10 @@ private slots:
   void constructorStoresDimensions();
   void constructorStoresSpacing();
   void constructorStoresVoxelData();
+  void constructorCachesIntensityRange();
+  void constantVolumeCachesSingleIntensityRange();
+  void copyPreservesIntensityRange();
+  void movePreservesIntensityRange();
 };
 
 void TestVolumeData::defaultConstructorCreatesEmptyVolume()
@@ -23,6 +28,7 @@ void TestVolumeData::defaultConstructorCreatesEmptyVolume()
   QCOMPARE(volume.height(), std::size_t{0});
   QCOMPARE(volume.depth(), std::size_t{0});
   QVERIFY(volume.voxels().empty());
+  QVERIFY(!volume.hasIntensityRange());
 }
 
 void TestVolumeData::constructorStoresDimensions()
@@ -49,6 +55,50 @@ void TestVolumeData::constructorStoresVoxelData()
   const qvp::VolumeData volume(2, 2, 1, 1.0F, 1.0F, 1.0F, voxels);
 
   QVERIFY(volume.voxels() == voxels);
+}
+
+void TestVolumeData::constructorCachesIntensityRange()
+{
+  const std::vector<float> voxels{3.5F, -7.0F, 11.25F, 0.0F};
+  const qvp::VolumeData volume(2, 2, 1, 1.0F, 1.0F, 1.0F, voxels);
+
+  QVERIFY(volume.hasIntensityRange());
+  QCOMPARE(volume.intensityMinimum(), -7.0F);
+  QCOMPARE(volume.intensityMaximum(), 11.25F);
+}
+
+void TestVolumeData::constantVolumeCachesSingleIntensityRange()
+{
+  const std::vector<float> voxels(8, 42.0F);
+  const qvp::VolumeData volume(2, 2, 2, 1.0F, 1.0F, 1.0F, voxels);
+
+  QVERIFY(volume.hasIntensityRange());
+  QCOMPARE(volume.intensityMinimum(), 42.0F);
+  QCOMPARE(volume.intensityMaximum(), 42.0F);
+}
+
+void TestVolumeData::copyPreservesIntensityRange()
+{
+  const std::vector<float> voxels{-2.0F, 5.0F, 1.0F, 9.0F};
+  const qvp::VolumeData original(2, 2, 1, 1.0F, 1.0F, 1.0F, voxels);
+  const qvp::VolumeData copied = original;
+
+  QVERIFY(copied.hasIntensityRange());
+  QCOMPARE(copied.intensityMinimum(), -2.0F);
+  QCOMPARE(copied.intensityMaximum(), 9.0F);
+  QVERIFY(copied.voxels() == original.voxels());
+}
+
+void TestVolumeData::movePreservesIntensityRange()
+{
+  const std::vector<float> voxels{-9.5F, 4.25F, 2.0F, 13.0F};
+  qvp::VolumeData original(2, 2, 1, 1.0F, 1.0F, 1.0F, voxels);
+  qvp::VolumeData moved = std::move(original);
+
+  QVERIFY(moved.isValid());
+  QVERIFY(moved.hasIntensityRange());
+  QCOMPARE(moved.intensityMinimum(), -9.5F);
+  QCOMPARE(moved.intensityMaximum(), 13.0F);
 }
 
 QTEST_MAIN(TestVolumeData)
