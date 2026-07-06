@@ -5,6 +5,7 @@
 #include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/render/OpenGLVolumeRendererWidget.h"
+#include "qtviewerpro/processing/VolumeResampler.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
@@ -407,6 +408,7 @@ void MainWindow::createMenus()
 {
   createFileMenu();
   createViewMenu();
+  createProcessingMenu();
   createImageMenu();
   createDemoMenu();
   createHelpMenu();
@@ -518,6 +520,16 @@ void MainWindow::createViewMenu()
   connect(reset3DViewAction, &QAction::triggered, this, &MainWindow::reset3DView);
 }
 
+void MainWindow::createProcessingMenu()
+{
+  QMenu* processingMenu = menuBar()->addMenu("&Processing");
+
+  resampleVolumeAction_ = processingMenu->addAction("Resample Volume to 1 mm Isotropic");
+  resampleVolumeAction_->setStatusTip("Resample the loaded medical volume to 1.0 mm spacing");
+  connect(resampleVolumeAction_, &QAction::triggered, this,
+          &MainWindow::resampleVolumeToIsotropicSpacing);
+}
+
 void MainWindow::createImageMenu()
 {
   QMenu* imageMenu = menuBar()->addMenu("&Image");
@@ -597,6 +609,7 @@ void MainWindow::updateStatusBar()
 void MainWindow::updateActions()
 {
   const bool hasImage = !viewer_->image().isNull();
+  const bool hasMedicalVolume = currentMedicalVolume_ && currentMedicalVolume_->isValid();
 
   saveAsAction_->setEnabled(hasImage);
 
@@ -611,6 +624,7 @@ void MainWindow::updateActions()
   flipVerticalAction_->setEnabled(hasImage);
   grayscaleAction_->setEnabled(hasImage);
   resetImageAction_->setEnabled(hasImage);
+  resampleVolumeAction_->setEnabled(hasMedicalVolume);
 }
 
 void MainWindow::zoomIn()
@@ -743,6 +757,31 @@ void MainWindow::setVolumeRenderPreset(VolumeRenderPreset preset)
   }
 }
 
+void MainWindow::resampleVolumeToIsotropicSpacing()
+{
+  if (!currentMedicalVolume_ || !currentMedicalVolume_->isValid())
+  {
+    QMessageBox::information(this,
+                             "No Medical Volume",
+                             "Load a medical volume before resampling it to 1 mm isotropic.");
+    return;
+  }
+
+  try
+  {
+    const VolumeData resampledVolume =
+        VolumeResampler::resampleToIsotropicSpacing(*currentMedicalVolume_);
+    displayLoadedVolume(std::move(resampledVolume));
+  }
+  catch (const std::exception& exception)
+  {
+    QMessageBox::warning(this,
+                         "Resample Failed",
+                         QStringLiteral("Failed to resample the medical volume: %1")
+                             .arg(QString::fromUtf8(exception.what())));
+  }
+}
+
 void MainWindow::openDicomSeriesFolder()
 {
   const QString directoryPath =
@@ -772,9 +811,11 @@ void MainWindow::openMaskOverlay()
 void MainWindow::displayLoadedVolume(VolumeData volume)
 {
   auto sharedVolume = std::make_shared<const VolumeData>(std::move(volume));
+  currentMedicalVolume_ = sharedVolume;
   medicalVolumeViewerWidget_->setVolume(sharedVolume);
   volume3DViewerWidget_->setVolume(sharedVolume);
   showMedicalVolumePage();
+  updateActions();
 }
 
 void MainWindow::showImagePage()

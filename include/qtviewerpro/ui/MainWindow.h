@@ -7,6 +7,7 @@
 #include <QStringList>
 
 #include <cstddef>
+#include <memory>
 
 class QMenu;
 class QCloseEvent;
@@ -63,6 +64,7 @@ private slots:
   void resetImage();
   void reset3DView();
   void setVolumeRenderPreset(VolumeRenderPreset preset);
+  void resampleVolumeToIsotropicSpacing();
   void openMedicalVolume();
   void openDicomSeriesFolder();
   void openMaskOverlay();
@@ -78,6 +80,7 @@ private:
   void createMenus();
   void createFileMenu();
   void createViewMenu();
+  void createProcessingMenu();
   void createImageMenu();
   void createDemoMenu();
   void createHelpMenu();
@@ -108,6 +111,7 @@ private:
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
   QImage originalImage_;
+  std::shared_ptr<const VolumeData> currentMedicalVolume_;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
 
@@ -125,6 +129,7 @@ private:
   QAction* grayscaleAction_ = nullptr;
   QAction* resetImageAction_ = nullptr;
   QAction* openMedicalVolumeAction_ = nullptr;
+  QAction* resampleVolumeAction_ = nullptr;
   QAction* openMaskOverlayAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
