@@ -9,6 +9,7 @@
 #include <QStringList>
 
 #include <cstddef>
+#include <chrono>
 #include <memory>
 
 class QMenu;
@@ -84,6 +85,7 @@ private:
     VolumeData volume;
     QString errorMessage;
     bool success = false;
+    std::chrono::steady_clock::time_point backgroundStart;
   };
 
   // UI

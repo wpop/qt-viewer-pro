@@ -6,8 +6,11 @@
 #include <itkResampleImageFilter.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <exception>
+#include <QDebug>
+#include <QString>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -16,6 +19,12 @@
 namespace
 {
 using ImageType = itk::Image<float, 3>;
+using Clock = std::chrono::steady_clock;
+
+double durationMilliseconds(const Clock::duration& duration)
+{
+  return std::chrono::duration<double, std::milli>(duration).count();
+}
 
 std::size_t checkedMultiply(std::size_t lhs, std::size_t rhs)
 {
@@ -143,7 +152,11 @@ namespace qvp
 
 VolumeData VolumeResampler::resampleToIsotropicSpacing(const VolumeData& volume)
 {
+  const auto totalStart = Clock::now();
+
+  const auto conversionStart = Clock::now();
   const auto inputImage = volumeToItkImage(volume);
+  const auto conversionEnd = Clock::now();
 
   constexpr float kTargetSpacing = 1.0F;
 
@@ -172,6 +185,7 @@ VolumeData VolumeResampler::resampleToIsotropicSpacing(const VolumeData& volume)
   const auto interpolator = InterpolatorType::New();
   const auto resampleFilter = ResampleFilterType::New();
 
+  const auto resampleStart = Clock::now();
   resampleFilter->SetInput(inputImage);
   resampleFilter->SetTransform(transform);
   resampleFilter->SetInterpolator(interpolator);
@@ -181,8 +195,26 @@ VolumeData VolumeResampler::resampleToIsotropicSpacing(const VolumeData& volume)
   resampleFilter->SetOutputDirection(outputDirection);
   resampleFilter->SetDefaultPixelValue(0.0F);
   resampleFilter->UpdateLargestPossibleRegion();
+  const auto resampleEnd = Clock::now();
 
-  return itkImageToVolume(resampleFilter->GetOutput());
+  const auto reconversionStart = Clock::now();
+  const VolumeData outputVolume = itkImageToVolume(resampleFilter->GetOutput());
+  const auto reconversionEnd = Clock::now();
+
+  const auto totalEnd = Clock::now();
+
+  qDebug().noquote()
+      << QStringLiteral("Volume resampling timings:\n"
+                        "  VolumeData -> ITK: %1 ms\n"
+                        "  ITK resample:      %2 ms\n"
+                        "  ITK -> VolumeData: %3 ms\n"
+                        "  Total:             %4 ms")
+             .arg(QString::number(durationMilliseconds(conversionEnd - conversionStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(resampleEnd - resampleStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(reconversionEnd - reconversionStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
+
+  return outputVolume;
 }
 
 } // namespace qvp
