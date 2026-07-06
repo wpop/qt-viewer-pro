@@ -507,6 +507,12 @@ void MainWindow::createViewMenu()
   connect(ctBoneRenderPresetAction, &QAction::triggered, this,
           [this]() { setVolumeRenderPreset(VolumeRenderPreset::CtBone); });
 
+  QAction* ctLungRenderPresetAction = renderPresetMenu->addAction("CT Lung");
+  ctLungRenderPresetAction->setCheckable(true);
+  renderPresetActionGroup->addAction(ctLungRenderPresetAction);
+  connect(ctLungRenderPresetAction, &QAction::triggered, this,
+          [this]() { setVolumeRenderPreset(VolumeRenderPreset::CtLung); });
+
   QAction* reset3DViewAction = viewMenu->addAction("Reset 3D View");
   reset3DViewAction->setStatusTip("Reset the interactive 3D volume view");
   connect(reset3DViewAction, &QAction::triggered, this, &MainWindow::reset3DView);
