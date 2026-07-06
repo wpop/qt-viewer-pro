@@ -733,6 +733,7 @@ void MainWindow::setVolumeRenderPreset(VolumeRenderPreset preset)
   if (volume3DViewerWidget_)
   {
     volume3DViewerWidget_->setRenderPreset(preset);
+    showVolume3DPage();
   }
 }
 
