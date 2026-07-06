@@ -17,7 +17,8 @@ namespace qvp
 enum class VolumeRenderPreset
 {
   Default = 0,
-  CtBone = 1
+  CtBone = 1,
+  CtLung = 2
 };
 
 class VolumeData;

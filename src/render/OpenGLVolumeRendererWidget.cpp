@@ -619,11 +619,35 @@ vec4 applyCtBoneTransferFunction(float rawSampleValue)
   return vec4(sampleColor, sampleAlpha);
 }
 
+vec4 applyCtLungTransferFunction(float rawSampleValue)
+{
+  float outsideAirSuppression = smoothstep(-1024.0, -860.0, rawSampleValue);
+  float lungVisibility = smoothstep(-950.0, -600.0, rawSampleValue) *
+                         (1.0 - smoothstep(-450.0, -120.0, rawSampleValue));
+  float softTissueVisibility = smoothstep(-300.0, 80.0, rawSampleValue);
+  float boneVisibility = smoothstep(200.0, 1100.0, rawSampleValue);
+
+  vec3 sampleColor = mix(vec3(0.10, 0.14, 0.18), vec3(0.84, 0.89, 0.93), lungVisibility);
+  sampleColor = mix(sampleColor, vec3(0.95, 0.96, 0.98), boneVisibility * 0.35);
+
+  float sampleAlpha = clamp(lungVisibility * 0.18 + softTissueVisibility * 0.05 +
+                                boneVisibility * 0.03,
+                            0.0,
+                            1.0);
+  sampleAlpha *= outsideAirSuppression;
+
+  return vec4(sampleColor, sampleAlpha);
+}
+
 vec4 applyTransferFunction(float rawSampleValue)
 {
   if (renderPreset == 1)
   {
     return applyCtBoneTransferFunction(rawSampleValue);
+  }
+  if (renderPreset == 2)
+  {
+    return applyCtLungTransferFunction(rawSampleValue);
   }
 
   return applyDefaultTransferFunction(rawSampleValue);
