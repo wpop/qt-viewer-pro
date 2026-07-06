@@ -576,6 +576,23 @@ bool insideVolume(vec3 position)
          all(lessThanEqual(position, vec3(1.0)));
 }
 
+vec4 applyTransferFunction(float rawSampleValue)
+{
+  float intensityRange = volumeIntensityMaximum - volumeIntensityMinimum;
+  float normalizedSampleValue = 0.0;
+  if (intensityRange > 0.0)
+  {
+    normalizedSampleValue =
+        clamp((rawSampleValue - volumeIntensityMinimum) / intensityRange, 0.0, 1.0);
+  }
+
+  float sampleIntensity = smoothstep(0.10, 0.80, normalizedSampleValue);
+  vec3 sampleColor = vec3(sampleIntensity);
+  float sampleAlpha = sampleIntensity * 0.08;
+
+  return vec4(sampleColor, sampleAlpha);
+}
+
 void main()
 {
   vec3 rayDirection =
@@ -596,35 +613,19 @@ void main()
       break;
     }
 
-    float sampleValue =
+    float rawSampleValue =
         texture(volumeTexture, samplePosition).r;
 
-    float intensityRange =
-        volumeIntensityMaximum - volumeIntensityMinimum;
-
-    float normalizedSampleValue = 0.0;
-    if (intensityRange > 0.0)
-    {
-      normalizedSampleValue =
-          clamp((sampleValue - volumeIntensityMinimum) / intensityRange,
-                0.0,
-                1.0);
-    }
-
-    float sampleIntensity =
-        smoothstep(0.10, 0.80, normalizedSampleValue);
-
-    float sampleAlpha =
-        sampleIntensity * 0.08;
+    vec4 sampleTransfer = applyTransferFunction(rawSampleValue);
 
     accumulatedColor +=
         (1.0 - accumulatedAlpha) *
-        vec3(sampleIntensity) *
-        sampleAlpha;
+        sampleTransfer.rgb *
+        sampleTransfer.a;
 
     accumulatedAlpha +=
         (1.0 - accumulatedAlpha) *
-        sampleAlpha;
+        sampleTransfer.a;
 
     if (accumulatedAlpha >= 0.98)
     {
