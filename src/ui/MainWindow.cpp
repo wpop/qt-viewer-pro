@@ -846,19 +846,17 @@ void MainWindow::handleVolumeResampleFinished()
     return;
   }
 
-  const auto renderStart = std::chrono::steady_clock::now();
   displayLoadedVolume(std::move(result.volume));
+  const auto showVolume3DStart = std::chrono::steady_clock::now();
   showVolume3DPage();
-  const auto renderEnd = std::chrono::steady_clock::now();
+  const auto showVolume3DEnd = std::chrono::steady_clock::now();
 
   qDebug().noquote()
-      << QStringLiteral("Volume resample delivery timings:\n"
-                        "  Background start -> GUI thread: %1 ms\n"
-                        "  GUI handoff to 3D view:          %2 ms")
-             .arg(QString::number(durationMilliseconds(guiReceiveTime - result.backgroundStart),
+      << QStringLiteral("Volume page switch timings:\n"
+                        "  showVolume3DPage:                %1 ms")
+             .arg(QString::number(durationMilliseconds(showVolume3DEnd - showVolume3DStart),
                                   'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(renderEnd - renderStart), 'f', 1));
+                                  1));
 }
 
 void MainWindow::openDicomSeriesFolder()
@@ -889,12 +887,58 @@ void MainWindow::openMaskOverlay()
 
 void MainWindow::displayLoadedVolume(VolumeData volume)
 {
+  const auto totalStart = std::chrono::steady_clock::now();
+
+  const auto sharedStart = std::chrono::steady_clock::now();
   auto sharedVolume = std::make_shared<const VolumeData>(std::move(volume));
+  const auto sharedEnd = std::chrono::steady_clock::now();
+
+  const auto assignmentStart = std::chrono::steady_clock::now();
   currentMedicalVolume_ = sharedVolume;
+  const auto assignmentEnd = std::chrono::steady_clock::now();
+
+  const auto medicalViewerStart = std::chrono::steady_clock::now();
   medicalVolumeViewerWidget_->setVolume(sharedVolume);
+  const auto medicalViewerEnd = std::chrono::steady_clock::now();
+
+  const auto volume3DViewerStart = std::chrono::steady_clock::now();
   volume3DViewerWidget_->setVolume(sharedVolume);
+  const auto volume3DViewerEnd = std::chrono::steady_clock::now();
+
+  const auto showMedicalPageStart = std::chrono::steady_clock::now();
   showMedicalVolumePage();
+  const auto showMedicalPageEnd = std::chrono::steady_clock::now();
+
+  const auto updateActionsStart = std::chrono::steady_clock::now();
   updateActions();
+  const auto updateActionsEnd = std::chrono::steady_clock::now();
+
+  const auto totalEnd = std::chrono::steady_clock::now();
+
+  qDebug().noquote()
+      << QStringLiteral("Volume display timings:\n"
+                        "  shared ownership setup:      %1 ms\n"
+                        "  current volume assignment:    %2 ms\n"
+                        "  medical viewer setVolume:     %3 ms\n"
+                        "  3D viewer setVolume:          %4 ms\n"
+                        "  show medical page:            %5 ms\n"
+                        "  update actions:               %6 ms\n"
+                        "  displayLoadedVolume total:    %7 ms")
+             .arg(QString::number(durationMilliseconds(sharedEnd - sharedStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(assignmentEnd - assignmentStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(medicalViewerEnd - medicalViewerStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(volume3DViewerEnd - volume3DViewerStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(showMedicalPageEnd - showMedicalPageStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(updateActionsEnd - updateActionsStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void MainWindow::showImagePage()
