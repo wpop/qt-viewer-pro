@@ -25,8 +25,10 @@
 #include <QSlider>
 #include <QSpinBox>
 #include <QVBoxLayout>
+#include <QDebug>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <exception>
 #include <limits>
@@ -39,6 +41,12 @@ namespace qvp
 
 namespace
 {
+using Clock = std::chrono::steady_clock;
+
+double durationMilliseconds(const Clock::duration& duration)
+{
+  return std::chrono::duration<double, std::milli>(duration).count();
+}
 
 QString orientationName(SliceOrientation orientation)
 {
@@ -192,26 +200,73 @@ void OpenGLVolumeViewerWidget::setVolume(VolumeData volume)
 
 void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
 {
+  const auto totalStart = Clock::now();
   if (!volume || !volume->isValid())
   {
     QMessageBox::warning(this, "Volume Load Error", "Loaded volume data is invalid.");
     return;
   }
 
+  const auto ownershipStart = Clock::now();
   currentVolume_ = std::move(volume);
+  const auto ownershipEnd = Clock::now();
+
+  const auto resetMaskStart = Clock::now();
   maskVolume_.reset();
   {
     const QSignalBlocker blocker(showMaskOverlayCheckBox_);
     showMaskOverlayCheckBox_->setChecked(false);
   }
+  const auto resetMaskEnd = Clock::now();
+
+  const auto maskControlsStart = Clock::now();
   updateMaskOpacityControls();
+  const auto maskControlsEnd = Clock::now();
+
+  const auto rangeScanStart = Clock::now();
   const auto [minIt, maxIt] =
       std::minmax_element(currentVolume_->voxels().begin(), currentVolume_->voxels().end());
+  const auto rangeScanEnd = Clock::now();
   currentVolumeRange_ = std::make_pair(*minIt, *maxIt);
+
+  const auto ctPresetStart = Clock::now();
   applyCtWindowLevelPresetIfNeeded(*currentVolume_);
+  const auto ctPresetEnd = Clock::now();
+
+  const auto middleSliceStart = Clock::now();
   resetToAxialMiddleSlice();
+  const auto middleSliceEnd = Clock::now();
+
+  const auto volumeSliceStart = Clock::now();
   updateVolumeSlice();
+  const auto volumeSliceEnd = Clock::now();
+
+  const auto resetViewStart = Clock::now();
   openGLViewer_->resetView();
+  const auto resetViewEnd = Clock::now();
+
+  const auto totalEnd = Clock::now();
+
+  qDebug().noquote()
+      << QStringLiteral("Medical volume viewer timings:\n"
+                        "  ownership move:              %1 ms\n"
+                        "  mask reset/setup:            %2 ms\n"
+                        "  mask controls update:         %3 ms\n"
+                        "  current volume min/max scan:  %4 ms\n"
+                        "  CT preset setup:              %5 ms\n"
+                        "  middle slice setup:           %6 ms\n"
+                        "  volume slice update:          %7 ms\n"
+                        "  OpenGL viewer reset:          %8 ms\n"
+                        "  setVolume total:              %9 ms")
+             .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(resetMaskEnd - resetMaskStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(maskControlsEnd - maskControlsStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(rangeScanEnd - rangeScanStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(ctPresetEnd - ctPresetStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(middleSliceEnd - middleSliceStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(volumeSliceEnd - volumeSliceStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(resetViewEnd - resetViewStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void OpenGLVolumeViewerWidget::createUi()
@@ -817,6 +872,7 @@ void OpenGLVolumeViewerWidget::updateMaskOpacityControls()
 
 void OpenGLVolumeViewerWidget::updateVolumeSlice()
 {
+  const auto totalStart = Clock::now();
   if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     return;
@@ -824,19 +880,47 @@ void OpenGLVolumeViewerWidget::updateVolumeSlice()
 
   try
   {
+    const auto sliceExtractStart = Clock::now();
     const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
+    const auto sliceExtractEnd = Clock::now();
+
+    const auto imageConvertStart = Clock::now();
     QImage image = SliceImageConverter::toGrayscaleImage(
         slice, static_cast<float>(windowSpinBox_->value()), static_cast<float>(levelSpinBox_->value()));
+    const auto imageConvertEnd = Clock::now();
 
+    const auto overlayStart = Clock::now();
     if (maskVolume_.has_value() && showMaskOverlayCheckBox_->isChecked())
     {
       const auto maskSlice =
           SliceExtractor::extract(maskVolume_.value(), currentOrientation_, currentSliceIndex_);
       image = applyMaskOverlay(image, maskSlice);
     }
+    const auto overlayEnd = Clock::now();
 
+    const auto setImageStart = Clock::now();
     openGLViewer_->setSliceImage(image, static_cast<float>(slice.spacingX()),
                                  static_cast<float>(slice.spacingY()));
+    const auto setImageEnd = Clock::now();
+
+    const auto totalEnd = Clock::now();
+
+    qDebug().noquote()
+        << QStringLiteral("Medical volume slice timings:\n"
+                          "  SliceExtractor::extract:     %1 ms\n"
+                          "  SliceImageConverter::to...:   %2 ms\n"
+                          "  mask overlay:                %3 ms\n"
+                          "  openGLViewer setSliceImage:   %4 ms\n"
+                          "  updateVolumeSlice total:      %5 ms")
+               .arg(QString::number(durationMilliseconds(sliceExtractEnd - sliceExtractStart),
+                                    'f',
+                                    1))
+               .arg(QString::number(durationMilliseconds(imageConvertEnd - imageConvertStart),
+                                    'f',
+                                    1))
+               .arg(QString::number(durationMilliseconds(overlayEnd - overlayStart), 'f', 1))
+               .arg(QString::number(durationMilliseconds(setImageEnd - setImageStart), 'f', 1))
+               .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
   }
   catch (const std::exception& error)
   {
@@ -909,8 +993,14 @@ bool OpenGLVolumeViewerWidget::looksLikeCtVolume(const VolumeData& volume) const
 
 void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData& volume)
 {
+  const auto start = Clock::now();
   if (!looksLikeCtVolume(volume))
   {
+    const auto end = Clock::now();
+    qDebug().noquote()
+        << QStringLiteral("Medical volume CT preset timing:\n"
+                          "  looksLikeCtVolume: %1 ms")
+               .arg(QString::number(durationMilliseconds(end - start), 'f', 1));
     return;
   }
 
@@ -919,6 +1009,12 @@ void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData
 
   windowSpinBox_->setValue(1500);
   levelSpinBox_->setValue(-600);
+
+  const auto end = Clock::now();
+  qDebug().noquote()
+      << QStringLiteral("Medical volume CT preset timing:\n"
+                        "  looksLikeCtVolume: %1 ms")
+             .arg(QString::number(durationMilliseconds(end - start), 'f', 1));
 }
 
 bool OpenGLVolumeViewerWidget::maskMatchesCurrentVolume(const VolumeData& mask) const
