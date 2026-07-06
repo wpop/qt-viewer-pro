@@ -149,6 +149,8 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   if (!volume || !volume->isValid())
   {
     currentVolume_.reset();
+    volumeIntensityMinimum_ = 0.0F;
+    volumeIntensityMaximum_ = 0.0F;
     volumeTextureDirty_ = true;
     volumeTextureReady_ = false;
     update();
@@ -158,6 +160,19 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   const auto ownershipStart = Clock::now();
   currentVolume_ = std::move(volume);
   const auto ownershipEnd = Clock::now();
+
+  const auto rangeStart = Clock::now();
+  if (currentVolume_ && currentVolume_->hasIntensityRange())
+  {
+    volumeIntensityMinimum_ = currentVolume_->intensityMinimum();
+    volumeIntensityMaximum_ = currentVolume_->intensityMaximum();
+  }
+  else
+  {
+    volumeIntensityMinimum_ = 0.0F;
+    volumeIntensityMaximum_ = 0.0F;
+  }
+  const auto rangeEnd = Clock::now();
 
   const auto dirtyStart = Clock::now();
   volumeTextureDirty_ = true;
@@ -169,9 +184,11 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   qDebug().noquote()
       << QStringLiteral("3D renderer setVolume timings:\n"
                         "  ownership move:       %1 ms\n"
-                        "  dirty flag update:     %2 ms\n"
-                        "  setVolume total:      %3 ms")
+                        "  cached range setup:    %2 ms\n"
+                        "  dirty flag update:     %3 ms\n"
+                        "  setVolume total:       %4 ms")
              .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(rangeEnd - rangeStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(dirtyEnd - dirtyStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
@@ -501,9 +518,15 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
     return;
   }
 
-  const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
-  volumeIntensityMinimum_ = *minIt;
-  volumeIntensityMaximum_ = *maxIt;
+  if (!currentVolume_->hasIntensityRange())
+  {
+    emitFailure(QStringLiteral("Volume intensity range cache is unavailable"));
+    return;
+  }
+
+  volumeIntensityMinimum_ = currentVolume_->intensityMinimum();
+  volumeIntensityMaximum_ = currentVolume_->intensityMaximum();
+
   const auto prepEnd = Clock::now();
 
   while (glGetError() != GL_NO_ERROR)

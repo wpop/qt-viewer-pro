@@ -223,11 +223,11 @@ void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volum
   updateMaskOpacityControls();
   const auto maskControlsEnd = Clock::now();
 
-  const auto rangeScanStart = Clock::now();
-  const auto [minIt, maxIt] =
-      std::minmax_element(currentVolume_->voxels().begin(), currentVolume_->voxels().end());
-  const auto rangeScanEnd = Clock::now();
-  currentVolumeRange_ = std::make_pair(*minIt, *maxIt);
+  const auto rangeReadStart = Clock::now();
+  const float cachedMinimumIntensity = currentVolume_->intensityMinimum();
+  const float cachedMaximumIntensity = currentVolume_->intensityMaximum();
+  const auto rangeReadEnd = Clock::now();
+  currentVolumeRange_ = std::make_pair(cachedMinimumIntensity, cachedMaximumIntensity);
 
   const auto ctPresetStart = Clock::now();
   applyCtWindowLevelPresetIfNeeded(*currentVolume_);
@@ -252,7 +252,7 @@ void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volum
                         "  ownership move:              %1 ms\n"
                         "  mask reset/setup:            %2 ms\n"
                         "  mask controls update:         %3 ms\n"
-                        "  current volume min/max scan:  %4 ms\n"
+                        "  cached intensity range read:  %4 ms\n"
                         "  CT preset setup:              %5 ms\n"
                         "  middle slice setup:           %6 ms\n"
                         "  volume slice update:          %7 ms\n"
@@ -261,12 +261,13 @@ void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volum
              .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(resetMaskEnd - resetMaskStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(maskControlsEnd - maskControlsStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(rangeScanEnd - rangeScanStart), 'f', 1))
+             .arg(QString::number(durationMilliseconds(rangeReadEnd - rangeReadStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(ctPresetEnd - ctPresetStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(middleSliceEnd - middleSliceStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(volumeSliceEnd - volumeSliceStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(resetViewEnd - resetViewStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
+
 }
 
 void OpenGLVolumeViewerWidget::createUi()
@@ -981,14 +982,12 @@ bool OpenGLVolumeViewerWidget::looksLikeCtVolume(const VolumeData& volume) const
     return false;
   }
 
-  const auto& voxels = volume.voxels();
-  if (voxels.empty())
+  if (!volume.hasIntensityRange())
   {
     return false;
   }
 
-  const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
-  return *minIt < -500.0F && *maxIt > 500.0F;
+  return volume.intensityMinimum() < -500.0F && volume.intensityMaximum() > 500.0F;
 }
 
 void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData& volume)

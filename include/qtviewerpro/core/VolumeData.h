@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <utility>
 
 namespace qvp
 {
@@ -69,6 +70,21 @@ public:
   const std::vector<float>& voxels() const;
 
   /**
+   * @brief Returns true when the volume has a cached intensity range.
+   */
+  bool hasIntensityRange() const;
+
+  /**
+   * @brief Returns the minimum voxel intensity in the cached range.
+   */
+  float intensityMinimum() const;
+
+  /**
+   * @brief Returns the maximum voxel intensity in the cached range.
+   */
+  float intensityMaximum() const;
+
+  /**
    * @brief Returns true when the volume has no usable voxel data.
    */
   bool isEmpty() const;
@@ -91,6 +107,9 @@ private:
   float spacingY_ = 1.0F;
   float spacingZ_ = 1.0F;
   std::vector<float> voxels_;
+  float intensityMinimum_ = 0.0F;
+  float intensityMaximum_ = 0.0F;
+  bool hasIntensityRange_ = false;
 };
 
 } // namespace qvp
