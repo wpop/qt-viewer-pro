@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test Concurrent)
 find_package(OpenCV REQUIRED)
 
 # The Ubuntu ITK package may try to load ITKVtkGlue, which pulls VTK/MPI.
@@ -87,6 +87,7 @@ target_link_libraries(qt-viewer-pro-processing
         qt-viewer-pro-core
     PRIVATE
         Qt6::Widgets
+        Qt6::Concurrent
         ${OpenCV_LIBS}
         ${ITK_LIBRARIES}
 )
