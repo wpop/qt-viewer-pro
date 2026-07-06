@@ -32,6 +32,7 @@
 #include <QStyle>
 
 #include <QIcon>
+#include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -42,6 +43,7 @@
 
 #include <cmath>
 #include <exception>
+#include <chrono>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -50,6 +52,11 @@
 namespace
 {
 constexpr int kMaxRecentFiles = 5;
+
+double durationMilliseconds(const std::chrono::steady_clock::duration& duration)
+{
+  return std::chrono::duration<double, std::milli>(duration).count();
+}
 
 QIcon createTextIcon(const QString& text)
 {
@@ -787,6 +794,7 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
   resampleWatcher_.setFuture(QtConcurrent::run([sourceVolume]() {
     VolumeResampleResult result;
     result.sourceVolume = sourceVolume;
+    result.backgroundStart = std::chrono::steady_clock::now();
 
     try
     {
@@ -809,7 +817,10 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
 
 void MainWindow::handleVolumeResampleFinished()
 {
+  const auto guiReceiveTime = std::chrono::steady_clock::now();
   const VolumeResampleResult result = resampleWatcher_.result();
+  const auto backgroundToGuiMs =
+      durationMilliseconds(guiReceiveTime - result.backgroundStart);
 
   resamplingInProgress_ = false;
   if (QApplication::overrideCursor() != nullptr)
@@ -818,6 +829,11 @@ void MainWindow::handleVolumeResampleFinished()
   }
   statusBar()->clearMessage();
   updateActions();
+
+  qDebug().noquote()
+      << QStringLiteral("Volume resample delivery timings:\n"
+                        "  Background start -> GUI thread: %1 ms")
+             .arg(QString::number(backgroundToGuiMs, 'f', 1));
 
   if (currentMedicalVolume_ != result.sourceVolume)
   {
@@ -830,8 +846,19 @@ void MainWindow::handleVolumeResampleFinished()
     return;
   }
 
+  const auto renderStart = std::chrono::steady_clock::now();
   displayLoadedVolume(std::move(result.volume));
   showVolume3DPage();
+  const auto renderEnd = std::chrono::steady_clock::now();
+
+  qDebug().noquote()
+      << QStringLiteral("Volume resample delivery timings:\n"
+                        "  Background start -> GUI thread: %1 ms\n"
+                        "  GUI handoff to 3D view:          %2 ms")
+             .arg(QString::number(durationMilliseconds(guiReceiveTime - result.backgroundStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(renderEnd - renderStart), 'f', 1));
 }
 
 void MainWindow::openDicomSeriesFolder()
