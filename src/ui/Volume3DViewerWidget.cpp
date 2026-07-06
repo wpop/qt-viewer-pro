@@ -86,6 +86,14 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   }
 }
 
+void Volume3DViewerWidget::setRenderPreset(VolumeRenderPreset preset)
+{
+  if (rendererWidget_)
+  {
+    rendererWidget_->setRenderPreset(preset);
+  }
+}
+
 void Volume3DViewerWidget::resetView()
 {
   if (rendererWidget_)

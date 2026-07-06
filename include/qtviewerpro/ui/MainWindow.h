@@ -19,6 +19,7 @@ namespace qvp
 class ImageViewer2D;
 class OpenGLVolumeViewerWidget;
 class Volume3DViewerWidget;
+enum class VolumeRenderPreset;
 
 /**
  * @brief Main application window for Qt Viewer Pro.
@@ -61,6 +62,7 @@ private slots:
   void convertToGrayscale();
   void resetImage();
   void reset3DView();
+  void setVolumeRenderPreset(VolumeRenderPreset preset);
   void openMedicalVolume();
   void openDicomSeriesFolder();
   void openMaskOverlay();

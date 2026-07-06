@@ -10,6 +10,7 @@ class QLabel;
 namespace qvp
 {
 
+enum class VolumeRenderPreset;
 class OpenGLVolumeRendererWidget;
 
 class Volume3DViewerWidget : public QWidget
@@ -20,6 +21,7 @@ public:
   explicit Volume3DViewerWidget(QWidget* parent = nullptr);
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
+  void setRenderPreset(VolumeRenderPreset preset);
   void resetView();
 
 private:
