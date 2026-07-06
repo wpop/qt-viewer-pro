@@ -13,6 +13,7 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -31,6 +32,7 @@
 #include <QStyle>
 
 #include <QIcon>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -302,6 +304,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
   setWindowTitle("Qt Viewer");
   resize(1000, 700);
+
+  connect(&resampleWatcher_, &QFutureWatcher<VolumeResampleResult>::finished, this,
+          &MainWindow::handleVolumeResampleFinished);
 
   createViewer();
   createMenus();
@@ -610,6 +615,7 @@ void MainWindow::updateActions()
 {
   const bool hasImage = !viewer_->image().isNull();
   const bool hasMedicalVolume = currentMedicalVolume_ && currentMedicalVolume_->isValid();
+  const bool canResample = hasMedicalVolume && !resamplingInProgress_;
 
   saveAsAction_->setEnabled(hasImage);
 
@@ -624,7 +630,7 @@ void MainWindow::updateActions()
   flipVerticalAction_->setEnabled(hasImage);
   grayscaleAction_->setEnabled(hasImage);
   resetImageAction_->setEnabled(hasImage);
-  resampleVolumeAction_->setEnabled(hasMedicalVolume);
+  resampleVolumeAction_->setEnabled(canResample);
 }
 
 void MainWindow::zoomIn()
@@ -759,6 +765,11 @@ void MainWindow::setVolumeRenderPreset(VolumeRenderPreset preset)
 
 void MainWindow::resampleVolumeToIsotropicSpacing()
 {
+  if (resamplingInProgress_ || resampleWatcher_.isRunning())
+  {
+    return;
+  }
+
   if (!currentMedicalVolume_ || !currentMedicalVolume_->isValid())
   {
     QMessageBox::information(this,
@@ -767,20 +778,60 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
     return;
   }
 
-  try
+  const auto sourceVolume = currentMedicalVolume_;
+  resamplingInProgress_ = true;
+  updateActions();
+  statusBar()->showMessage("Resampling volume...");
+  QApplication::setOverrideCursor(Qt::BusyCursor);
+
+  resampleWatcher_.setFuture(QtConcurrent::run([sourceVolume]() {
+    VolumeResampleResult result;
+    result.sourceVolume = sourceVolume;
+
+    try
+    {
+      result.volume = VolumeResampler::resampleToIsotropicSpacing(*sourceVolume);
+      result.success = true;
+    }
+    catch (const std::exception& exception)
+    {
+      result.errorMessage = QStringLiteral("Failed to resample the medical volume: %1")
+                                .arg(QString::fromUtf8(exception.what()));
+    }
+    catch (...)
+    {
+      result.errorMessage = QStringLiteral("Failed to resample the medical volume.");
+    }
+
+    return result;
+  }));
+}
+
+void MainWindow::handleVolumeResampleFinished()
+{
+  const VolumeResampleResult result = resampleWatcher_.result();
+
+  resamplingInProgress_ = false;
+  if (QApplication::overrideCursor() != nullptr)
   {
-    const VolumeData resampledVolume =
-        VolumeResampler::resampleToIsotropicSpacing(*currentMedicalVolume_);
-    displayLoadedVolume(std::move(resampledVolume));
-    showVolume3DPage();
+    QApplication::restoreOverrideCursor();
   }
-  catch (const std::exception& exception)
+  statusBar()->clearMessage();
+  updateActions();
+
+  if (currentMedicalVolume_ != result.sourceVolume)
   {
-    QMessageBox::warning(this,
-                         "Resample Failed",
-                         QStringLiteral("Failed to resample the medical volume: %1")
-                             .arg(QString::fromUtf8(exception.what())));
+    return;
   }
+
+  if (!result.success)
+  {
+    QMessageBox::warning(this, "Resample Failed", result.errorMessage);
+    return;
+  }
+
+  displayLoadedVolume(std::move(result.volume));
+  showVolume3DPage();
 }
 
 void MainWindow::openDicomSeriesFolder()

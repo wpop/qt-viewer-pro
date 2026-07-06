@@ -4,6 +4,8 @@
 
 #include <QImage>
 #include <QMainWindow>
+#include <QFutureWatcher>
+#include <QString>
 #include <QStringList>
 
 #include <cstddef>
@@ -64,6 +66,7 @@ private slots:
   void resetImage();
   void reset3DView();
   void setVolumeRenderPreset(VolumeRenderPreset preset);
+  void handleVolumeResampleFinished();
   void resampleVolumeToIsotropicSpacing();
   void openMedicalVolume();
   void openDicomSeriesFolder();
@@ -75,6 +78,14 @@ private slots:
   void clearRecentFiles();
 
 private:
+  struct VolumeResampleResult
+  {
+    std::shared_ptr<const VolumeData> sourceVolume;
+    VolumeData volume;
+    QString errorMessage;
+    bool success = false;
+  };
+
   // UI
   void createViewer();
   void createMenus();
@@ -112,6 +123,8 @@ private:
   Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
   QImage originalImage_;
   std::shared_ptr<const VolumeData> currentMedicalVolume_;
+  QFutureWatcher<VolumeResampleResult> resampleWatcher_;
+  bool resamplingInProgress_ = false;
   QMenu* recentMenu_ = nullptr;
   QStringList recentFiles_{};
 
