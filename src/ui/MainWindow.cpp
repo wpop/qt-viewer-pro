@@ -4,12 +4,14 @@
 #include "qtviewerpro/io/ImageLoader.h"
 #include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
+#include "qtviewerpro/render/OpenGLVolumeRendererWidget.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 #include "qtviewerpro/ui/Volume3DViewerWidget.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -488,6 +490,23 @@ void MainWindow::createViewMenu()
   showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
   connect(showVolume3DViewerAction, &QAction::triggered, this, &MainWindow::showVolume3DPage);
 
+  QMenu* renderPresetMenu = viewMenu->addMenu("3D Render Preset");
+  auto* renderPresetActionGroup = new QActionGroup(renderPresetMenu);
+  renderPresetActionGroup->setExclusive(true);
+
+  QAction* defaultRenderPresetAction = renderPresetMenu->addAction("Default");
+  defaultRenderPresetAction->setCheckable(true);
+  defaultRenderPresetAction->setChecked(true);
+  renderPresetActionGroup->addAction(defaultRenderPresetAction);
+  connect(defaultRenderPresetAction, &QAction::triggered, this,
+          [this]() { setVolumeRenderPreset(VolumeRenderPreset::Default); });
+
+  QAction* ctBoneRenderPresetAction = renderPresetMenu->addAction("CT Bone");
+  ctBoneRenderPresetAction->setCheckable(true);
+  renderPresetActionGroup->addAction(ctBoneRenderPresetAction);
+  connect(ctBoneRenderPresetAction, &QAction::triggered, this,
+          [this]() { setVolumeRenderPreset(VolumeRenderPreset::CtBone); });
+
   QAction* reset3DViewAction = viewMenu->addAction("Reset 3D View");
   reset3DViewAction->setStatusTip("Reset the interactive 3D volume view");
   connect(reset3DViewAction, &QAction::triggered, this, &MainWindow::reset3DView);
@@ -706,6 +725,14 @@ void MainWindow::reset3DView()
   if (volume3DViewerWidget_)
   {
     volume3DViewerWidget_->resetView();
+  }
+}
+
+void MainWindow::setVolumeRenderPreset(VolumeRenderPreset preset)
+{
+  if (volume3DViewerWidget_)
+  {
+    volume3DViewerWidget_->setRenderPreset(preset);
   }
 }
 

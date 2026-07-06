@@ -152,6 +152,17 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   update();
 }
 
+void OpenGLVolumeRendererWidget::setRenderPreset(VolumeRenderPreset renderPreset)
+{
+  if (activeRenderPreset_ == renderPreset)
+  {
+    return;
+  }
+
+  activeRenderPreset_ = renderPreset;
+  update();
+}
+
 void OpenGLVolumeRendererWidget::resetView()
 {
   volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
@@ -349,6 +360,8 @@ void OpenGLVolumeRendererWidget::paintGL()
           glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMinimum");
       const GLint volumeIntensityMaximumLocation =
           glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMaximum");
+      const GLint renderPresetLocation =
+          glGetUniformLocation(volumeShaderProgram_, "renderPreset");
       glUniformMatrix4fv(volumeMvpLocation, 1, GL_FALSE, mvpMatrix.constData());
       glUniform1i(volumeTextureLocation, 0);
       glUniform3f(cameraPositionLocation,
@@ -358,6 +371,7 @@ void OpenGLVolumeRendererWidget::paintGL()
       glUniform1f(stepSizeLocation, stepSize);
       glUniform1f(volumeIntensityMinimumLocation, volumeIntensityMinimum_);
       glUniform1f(volumeIntensityMaximumLocation, volumeIntensityMaximum_);
+      glUniform1i(renderPresetLocation, static_cast<GLint>(activeRenderPreset_));
 
       auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
       extraFunctions->glBindVertexArray(volumeVao_);
@@ -569,6 +583,7 @@ uniform vec3 cameraPositionTexture;
 uniform float stepSize;
 uniform float volumeIntensityMinimum;
 uniform float volumeIntensityMaximum;
+uniform int renderPreset;
 
 bool insideVolume(vec3 position)
 {
@@ -576,7 +591,7 @@ bool insideVolume(vec3 position)
          all(lessThanEqual(position, vec3(1.0)));
 }
 
-vec4 applyTransferFunction(float rawSampleValue)
+vec4 applyDefaultTransferFunction(float rawSampleValue)
 {
   float intensityRange = volumeIntensityMaximum - volumeIntensityMinimum;
   float normalizedSampleValue = 0.0;
@@ -591,6 +606,27 @@ vec4 applyTransferFunction(float rawSampleValue)
   float sampleAlpha = sampleIntensity * 0.08;
 
   return vec4(sampleColor, sampleAlpha);
+}
+
+vec4 applyCtBoneTransferFunction(float rawSampleValue)
+{
+  float boneVisibility = smoothstep(150.0, 600.0, rawSampleValue);
+  vec3 sampleColor = mix(vec3(0.72, 0.66, 0.60), vec3(1.0, 0.98, 0.94), boneVisibility);
+  float softTissueAlpha = smoothstep(0.0, 220.0, rawSampleValue) * 0.03;
+  float boneAlpha = boneVisibility * 0.38;
+  float sampleAlpha = clamp(softTissueAlpha + boneAlpha, 0.0, 1.0);
+
+  return vec4(sampleColor, sampleAlpha);
+}
+
+vec4 applyTransferFunction(float rawSampleValue)
+{
+  if (renderPreset == 1)
+  {
+    return applyCtBoneTransferFunction(rawSampleValue);
+  }
+
+  return applyDefaultTransferFunction(rawSampleValue);
 }
 
 void main()

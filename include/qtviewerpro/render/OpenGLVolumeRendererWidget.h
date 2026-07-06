@@ -14,6 +14,12 @@ class QWheelEvent;
 namespace qvp
 {
 
+enum class VolumeRenderPreset
+{
+  Default = 0,
+  CtBone = 1
+};
+
 class VolumeData;
 
 class OpenGLVolumeRendererWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -25,6 +31,7 @@ public:
   ~OpenGLVolumeRendererWidget() override;
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
+  void setRenderPreset(VolumeRenderPreset renderPreset);
   void resetView();
 
 signals:
@@ -63,6 +70,7 @@ private:
   GLuint volumeVbo_ = 0;
   float volumeIntensityMinimum_ = 0.0F;
   float volumeIntensityMaximum_ = 0.0F;
+  VolumeRenderPreset activeRenderPreset_ = VolumeRenderPreset::Default;
   QQuaternion volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
   QPoint lastMousePosition_;
   bool isRotating_ = false;
