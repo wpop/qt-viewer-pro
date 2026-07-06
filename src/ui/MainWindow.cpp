@@ -772,6 +772,7 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
     const VolumeData resampledVolume =
         VolumeResampler::resampleToIsotropicSpacing(*currentMedicalVolume_);
     displayLoadedVolume(std::move(resampledVolume));
+    showVolume3DPage();
   }
   catch (const std::exception& exception)
   {
