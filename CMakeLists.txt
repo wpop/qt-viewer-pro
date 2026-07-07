@@ -166,6 +166,7 @@ set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
     src/ui/MprCoordinateMapper.cpp
+    src/ui/MprOrientationLabelMapper.cpp
     src/ui/MprViewerWidget.cpp
     src/ui/OpenGLVolumeViewerWidget.cpp
     src/ui/Volume3DViewerWidget.cpp
@@ -176,6 +177,7 @@ set(QTVIEWERPRO_APP_SOURCES
 set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MainWindow.h
     include/qtviewerpro/ui/MprCoordinateMapper.h
+    include/qtviewerpro/ui/MprOrientationLabelMapper.h
     include/qtviewerpro/ui/MprViewerWidget.h
     include/qtviewerpro/ui/OpenGLVolumeViewerWidget.h
     include/qtviewerpro/ui/Volume3DViewerWidget.h
@@ -270,6 +272,24 @@ target_link_libraries(test-mpr-coordinate-mapper
 )
 
 add_test(NAME test-mpr-coordinate-mapper COMMAND test-mpr-coordinate-mapper)
+
+qt6_add_executable(test-mpr-orientation-label-mapper
+    tests/TestMprOrientationLabelMapper.cpp
+    src/ui/MprOrientationLabelMapper.cpp
+)
+
+target_include_directories(test-mpr-orientation-label-mapper
+    PRIVATE
+        include
+)
+
+target_link_libraries(test-mpr-orientation-label-mapper
+    PRIVATE
+        qt-viewer-pro-core
+        Qt6::Test
+)
+
+add_test(NAME test-mpr-orientation-label-mapper COMMAND test-mpr-orientation-label-mapper)
 
 qt6_add_executable(test-window-level-processor
     tests/TestWindowLevelProcessor.cpp
