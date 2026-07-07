@@ -13,6 +13,7 @@ private slots:
   void extractsAxialSlice();
   void extractsCoronalSlice();
   void extractsSagittalSlice();
+  void preservesOrientationSpecificPixelSpacing();
   void extractsOrthogonalSlicesFromUniqueVolume();
   void extractsDistinctCoronalAndSagittalSlices();
   void throwsForInvalidSliceIndex();
@@ -38,6 +39,11 @@ qvp::VolumeData makeUniqueVolume()
                          1.25F,
                          {0.0F, 1.0F, 2.0F, 10.0F, 11.0F, 12.0F,
                           100.0F, 101.0F, 102.0F, 110.0F, 111.0F, 112.0F});
+}
+
+qvp::VolumeData makeSpacingVolume()
+{
+  return qvp::VolumeData(2, 2, 2, 0.5F, 0.8F, 2.5F, std::vector<float>(8, 0.0F));
 }
 
 } // namespace
@@ -85,6 +91,23 @@ void TestSliceExtractor::extractsSagittalSlice()
   QCOMPARE(slice.orientation(), qvp::SliceOrientation::Sagittal);
   QCOMPARE(slice.sliceIndex(), std::size_t{1});
   QVERIFY(slice.pixels() == expected);
+}
+
+void TestSliceExtractor::preservesOrientationSpecificPixelSpacing()
+{
+  const auto volume = makeSpacingVolume();
+
+  const auto axial = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Axial, 0);
+  QCOMPARE(axial.spacingX(), 0.5F);
+  QCOMPARE(axial.spacingY(), 0.8F);
+
+  const auto sagittal = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Sagittal, 0);
+  QCOMPARE(sagittal.spacingX(), 0.8F);
+  QCOMPARE(sagittal.spacingY(), 2.5F);
+
+  const auto coronal = qvp::SliceExtractor::extract(volume, qvp::SliceOrientation::Coronal, 0);
+  QCOMPARE(coronal.spacingX(), 0.5F);
+  QCOMPARE(coronal.spacingY(), 2.5F);
 }
 
 void TestSliceExtractor::extractsOrthogonalSlicesFromUniqueVolume()
