@@ -10,6 +10,7 @@
 #include <memory>
 
 class QLabel;
+class QSlider;
 
 namespace qvp
 {
@@ -33,6 +34,8 @@ private:
     SliceOrientation orientation = SliceOrientation::Axial;
     QLabel* titleLabel = nullptr;
     QLabel* coordinateLabel = nullptr;
+    QSlider* sliceSlider = nullptr;
+    QLabel* sliceValueLabel = nullptr;
     ImageViewer2D* viewer = nullptr;
   };
 
