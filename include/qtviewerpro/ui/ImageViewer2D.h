@@ -127,6 +127,13 @@ public:
    */
   void setImageClickEnabled(bool enabled);
 
+  /**
+   * @brief Sets the relative physical pixel spacing used for display geometry.
+   * @param spacingX Physical pixel size along the image X axis.
+   * @param spacingY Physical pixel size along the image Y axis.
+   */
+  void setPixelSpacing(float spacingX, float spacingY);
+
 protected:
   void drawForeground(QPainter* painter, const QRectF& rect) override;
   void leaveEvent(QEvent* event) override;
@@ -169,11 +176,15 @@ signals:
 private:
   std::optional<QPointF> imagePositionFromViewportPosition(const QPointF& viewportPosition) const;
   void drawCrosshair(QPainter* painter, const QPointF& imagePosition) const;
+  void updatePixmapDisplayGeometry();
+  void updateSceneRect();
   QGraphicsPixmapItem* pixmapItem_ = nullptr;
   bool fitMode_ = true;
   bool sliceNavigationEnabled_ = false;
   bool hoverCrosshairEnabled_ = true;
   bool imageClickEnabled_ = false;
+  float pixelSpacingX_ = 1.0F;
+  float pixelSpacingY_ = 1.0F;
   std::optional<QPointF> persistentCrosshairPosition_;
   std::optional<QPointF> currentImageMousePosition_;
 };

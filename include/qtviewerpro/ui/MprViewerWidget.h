@@ -32,6 +32,7 @@ private:
   {
     SliceOrientation orientation = SliceOrientation::Axial;
     QLabel* titleLabel = nullptr;
+    QLabel* coordinateLabel = nullptr;
     ImageViewer2D* viewer = nullptr;
   };
 
@@ -39,7 +40,6 @@ private:
   void connectSignals();
   void refreshAllSlices();
   void refreshSlicePane(SlicePane& pane);
-  void updateSharedPositionLabel();
   void setDefaultWindowLevel();
   void updatePositionForOrientation(SliceOrientation orientation, int delta);
   void updatePositionFromImageClick(SliceOrientation orientation, int imageX, int imageY);
@@ -49,7 +49,6 @@ private:
   SlicePane axialPane_;
   SlicePane sagittalPane_;
   SlicePane coronalPane_;
-  QLabel* sharedPositionLabel_ = nullptr;
   std::shared_ptr<const VolumeData> currentVolume_;
   MprVoxelPosition currentPosition_{};
   float window_ = 255.0F;

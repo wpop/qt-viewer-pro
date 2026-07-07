@@ -17,9 +17,22 @@
 #include <QWheelEvent>
 #include <QWidget>
 
+#include <algorithm>
+#include <cmath>
+
 namespace
 {
 constexpr double kZoomFactor = 1.25;
+
+double sanitizePixelSpacing(float spacing)
+{
+  if (!std::isfinite(spacing) || spacing <= 0.0F)
+  {
+    return 1.0;
+  }
+
+  return static_cast<double>(spacing);
+}
 }
 
 namespace qvp
@@ -66,7 +79,8 @@ void ImageViewer2D::setImage(const QImage& image)
 {
   pixmapItem_->setRotation(0.0);
   pixmapItem_->setPixmap(QPixmap::fromImage(image));
-  scene()->setSceneRect(pixmapItem_->boundingRect());
+  updatePixmapDisplayGeometry();
+  updateSceneRect();
   fitMode_ = true;
   fitToWindow();
 }
@@ -251,6 +265,43 @@ void ImageViewer2D::setImageClickEnabled(bool enabled)
   imageClickEnabled_ = enabled;
 }
 
+void ImageViewer2D::setPixelSpacing(float spacingX, float spacingY)
+{
+  if (pixelSpacingX_ == spacingX && pixelSpacingY_ == spacingY)
+  {
+    return;
+  }
+
+  pixelSpacingX_ = spacingX;
+  pixelSpacingY_ = spacingY;
+  updatePixmapDisplayGeometry();
+  updateSceneRect();
+
+  if (fitMode_)
+  {
+    fitToWindow();
+  }
+}
+
+void ImageViewer2D::updatePixmapDisplayGeometry()
+{
+  const double spacingX = sanitizePixelSpacing(pixelSpacingX_);
+  const double spacingY = sanitizePixelSpacing(pixelSpacingY_);
+  const double baseSpacing = std::min(spacingX, spacingY);
+  pixmapItem_->setTransform(
+      QTransform::fromScale(spacingX / baseSpacing, spacingY / baseSpacing));
+}
+
+void ImageViewer2D::updateSceneRect()
+{
+  if (!scene())
+  {
+    return;
+  }
+
+  scene()->setSceneRect(pixmapItem_->sceneBoundingRect());
+}
+
 void ImageViewer2D::zoomIn()
 {
   fitMode_ = false;
@@ -294,7 +345,7 @@ void ImageViewer2D::dropEvent(QDropEvent* event)
 void ImageViewer2D::rotateLeft()
 {
   pixmapItem_->setRotation(pixmapItem_->rotation() - 90.0);
-  scene()->setSceneRect(pixmapItem_->sceneBoundingRect());
+  updateSceneRect();
 
   if (fitMode_)
     fitToWindow();
@@ -303,7 +354,7 @@ void ImageViewer2D::rotateLeft()
 void ImageViewer2D::rotateRight()
 {
   pixmapItem_->setRotation(pixmapItem_->rotation() + 90.0);
-  scene()->setSceneRect(pixmapItem_->sceneBoundingRect());
+  updateSceneRect();
 
   if (fitMode_)
     fitToWindow();
@@ -317,8 +368,8 @@ void ImageViewer2D::flipHorizontal()
   transform.scale(-1.0, 1.0);
 
   pixmapItem_->setPixmap(pixmap.transformed(transform));
-
-  scene()->setSceneRect(pixmapItem_->boundingRect());
+  updatePixmapDisplayGeometry();
+  updateSceneRect();
 
   if (fitMode_)
     fitToWindow();
@@ -332,8 +383,8 @@ void ImageViewer2D::flipVertical()
   transform.scale(1.0, -1.0);
 
   pixmapItem_->setPixmap(pixmap.transformed(transform));
-
-  scene()->setSceneRect(pixmapItem_->boundingRect());
+  updatePixmapDisplayGeometry();
+  updateSceneRect();
 
   if (fitMode_)
     fitToWindow();

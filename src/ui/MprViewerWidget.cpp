@@ -61,13 +61,18 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   {
     currentVolume_.reset();
     currentPosition_ = {};
-    sharedPositionLabel_->setText(QStringLiteral("Shared voxel: no volume loaded"));
+    axialPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     axialPane_.viewer->setImage(QImage());
     axialPane_.viewer->setCrosshairPosition(std::nullopt);
+    axialPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    sagittalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     sagittalPane_.viewer->setImage(QImage());
     sagittalPane_.viewer->setCrosshairPosition(std::nullopt);
+    sagittalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    coronalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     coronalPane_.viewer->setImage(QImage());
     coronalPane_.viewer->setCrosshairPosition(std::nullopt);
+    coronalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
     axialPane_.titleLabel->setText(QStringLiteral("Axial"));
     sagittalPane_.titleLabel->setText(QStringLiteral("Sagittal"));
     coronalPane_.titleLabel->setText(QStringLiteral("Coronal"));
@@ -92,9 +97,6 @@ void MprViewerWidget::createUi()
   rootLayout->setContentsMargins(8, 8, 8, 8);
   rootLayout->setSpacing(8);
 
-  sharedPositionLabel_ = new QLabel(QStringLiteral("Shared voxel: no volume loaded"), this);
-  rootLayout->addWidget(sharedPositionLabel_);
-
   auto* gridLayout = new QGridLayout();
   gridLayout->setContentsMargins(0, 0, 0, 0);
   gridLayout->setHorizontalSpacing(8);
@@ -108,11 +110,13 @@ void MprViewerWidget::createUi()
     layout->setSpacing(4);
 
     pane.titleLabel = new QLabel(orientationName(pane.orientation), container);
+    pane.coordinateLabel = new QLabel(QStringLiteral("No volume loaded"), container);
     pane.viewer = new ImageViewer2D(container);
     pane.viewer->setSliceNavigationEnabled(true);
     pane.viewer->setHoverCrosshairEnabled(false);
     pane.viewer->setImageClickEnabled(true);
     layout->addWidget(pane.titleLabel);
+    layout->addWidget(pane.coordinateLabel);
     layout->addWidget(pane.viewer, 1);
 
     gridLayout->addWidget(container, row, column);
@@ -159,13 +163,13 @@ void MprViewerWidget::refreshAllSlices()
   refreshSlicePane(axialPane_);
   refreshSlicePane(sagittalPane_);
   refreshSlicePane(coronalPane_);
-  updateSharedPositionLabel();
 }
 
 void MprViewerWidget::refreshSlicePane(SlicePane& pane)
 {
   const std::size_t sliceIndex = currentSliceIndexForOrientation(pane.orientation);
   const SliceData slice = SliceExtractor::extract(*currentVolume_, pane.orientation, sliceIndex);
+  pane.viewer->setPixelSpacing(slice.spacingX(), slice.spacingY());
   pane.viewer->setImage(SliceImageConverter::toGrayscaleImage(slice, window_, level_));
   const MprImagePoint imagePoint =
       MprCoordinateMapper::crosshairImagePoint(pane.orientation, currentPosition_);
@@ -175,17 +179,7 @@ void MprViewerWidget::refreshSlicePane(SlicePane& pane)
                                .arg(orientationName(pane.orientation))
                                .arg(sliceIndex)
                                .arg(sliceCountForOrientation(pane.orientation) - 1));
-}
-
-void MprViewerWidget::updateSharedPositionLabel()
-{
-  if (!currentVolume_)
-  {
-    sharedPositionLabel_->setText(QStringLiteral("Shared voxel: no volume loaded"));
-    return;
-  }
-
-  sharedPositionLabel_->setText(QStringLiteral("Shared voxel: x=%1  y=%2  z=%3")
+  pane.coordinateLabel->setText(QStringLiteral("x=%1  y=%2  z=%3")
                                     .arg(currentPosition_.x)
                                     .arg(currentPosition_.y)
                                     .arg(currentPosition_.z));
