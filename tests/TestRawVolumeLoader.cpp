@@ -88,9 +88,9 @@ void TestRawVolumeLoader::throwsForMissingMetadataFile()
 
   writeRaw(rawPath(directory), {1.0F});
 
-  QVERIFY_THROWS_EXCEPTION(
-      std::runtime_error,
-      qvp::RawVolumeLoader::load(metadataPath(directory), rawPath(directory)));
+  QVERIFY_EXCEPTION_THROWN(
+      qvp::RawVolumeLoader::load(metadataPath(directory), rawPath(directory)),
+      std::runtime_error);
 }
 
 void TestRawVolumeLoader::throwsForInvalidRawSize()
@@ -101,9 +101,9 @@ void TestRawVolumeLoader::throwsForInvalidRawSize()
   writeMetadata(metadataPath(directory), 2, 2, 1, 1.0, 1.0, 1.0);
   writeRaw(rawPath(directory), {1.0F});
 
-  QVERIFY_THROWS_EXCEPTION(
-      std::runtime_error,
-      qvp::RawVolumeLoader::load(metadataPath(directory), rawPath(directory)));
+  QVERIFY_EXCEPTION_THROWN(
+      qvp::RawVolumeLoader::load(metadataPath(directory), rawPath(directory)),
+      std::runtime_error);
 }
 
 QTEST_MAIN(TestRawVolumeLoader)
