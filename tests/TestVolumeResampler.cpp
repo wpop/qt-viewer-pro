@@ -3,9 +3,50 @@
 #include <QtTest/QtTest>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <vector>
+
+namespace
+{
+
+bool nearlyEqual(double lhs, double rhs, double tolerance = 1e-9)
+{
+  return std::fabs(lhs - rhs) <= tolerance;
+}
+
+void verifyOriginEquals(const qvp::VolumeData::Origin& actual, const qvp::VolumeData::Origin& expected)
+{
+  for (std::size_t i = 0; i < actual.size(); ++i)
+  {
+    QVERIFY(nearlyEqual(actual[i], expected[i]));
+  }
+}
+
+void verifyDirectionEquals(const qvp::VolumeData::Direction& actual,
+                           const qvp::VolumeData::Direction& expected)
+{
+  for (std::size_t i = 0; i < actual.size(); ++i)
+  {
+    QVERIFY(nearlyEqual(actual[i], expected[i]));
+  }
+}
+
+qvp::VolumeData::SpatialGeometry makeTestGeometry(qvp::VolumeData::CoordinateSystem coordinateSystem,
+                                                  bool hasOrientation)
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.origin = {12.5, -8.25, 42.0};
+  geometry.direction = {0.0, -1.0, 0.0,
+                        1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0};
+  geometry.coordinateSystem = coordinateSystem;
+  geometry.hasOrientation = hasOrientation;
+  return geometry;
+}
+
+} // namespace
 
 class TestVolumeResampler : public QObject
 {
@@ -14,6 +55,11 @@ class TestVolumeResampler : public QObject
 private slots:
   void resamplesAnisotropicVolumeToIsotropicSpacing();
   void leavesAlreadyIsotropicVolumeUnchanged();
+  void preservesExplicitOriginThroughResampling();
+  void preservesNonIdentityDirectionThroughResampling();
+  void preservesCoordinateSystemThroughResampling();
+  void preservesTrustedOrientationFlagThroughResampling();
+  void preservesUntrustedOrientationFlagThroughResampling();
 };
 
 void TestVolumeResampler::resamplesAnisotropicVolumeToIsotropicSpacing()
@@ -74,6 +120,72 @@ void TestVolumeResampler::leavesAlreadyIsotropicVolumeUnchanged()
   const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
   QCOMPARE(outputVolume.intensityMinimum(), *minIt);
   QCOMPARE(outputVolume.intensityMaximum(), *maxIt);
+}
+
+void TestVolumeResampler::preservesExplicitOriginThroughResampling()
+{
+  const std::vector<float> voxels(3 * 4 * 5, 7.25F);
+  const qvp::VolumeData::SpatialGeometry geometry =
+      makeTestGeometry(qvp::VolumeData::CoordinateSystem::LPS, true);
+  const qvp::VolumeData inputVolume(3, 4, 5, 2.0F, 3.0F, 4.0F, voxels, geometry);
+
+  const qvp::VolumeData outputVolume =
+      qvp::VolumeResampler::resampleToIsotropicSpacing(inputVolume);
+
+  verifyOriginEquals(outputVolume.spatialGeometry().origin, geometry.origin);
+}
+
+void TestVolumeResampler::preservesNonIdentityDirectionThroughResampling()
+{
+  const std::vector<float> voxels(3 * 4 * 5, 7.25F);
+  const qvp::VolumeData::SpatialGeometry geometry =
+      makeTestGeometry(qvp::VolumeData::CoordinateSystem::LPS, true);
+  const qvp::VolumeData inputVolume(3, 4, 5, 2.0F, 3.0F, 4.0F, voxels, geometry);
+
+  const qvp::VolumeData outputVolume =
+      qvp::VolumeResampler::resampleToIsotropicSpacing(inputVolume);
+
+  verifyDirectionEquals(outputVolume.spatialGeometry().direction, geometry.direction);
+}
+
+void TestVolumeResampler::preservesCoordinateSystemThroughResampling()
+{
+  const std::vector<float> voxels(3 * 4 * 5, 7.25F);
+  const qvp::VolumeData::SpatialGeometry geometry =
+      makeTestGeometry(qvp::VolumeData::CoordinateSystem::LPS, true);
+  const qvp::VolumeData inputVolume(3, 4, 5, 2.0F, 3.0F, 4.0F, voxels, geometry);
+
+  const qvp::VolumeData outputVolume =
+      qvp::VolumeResampler::resampleToIsotropicSpacing(inputVolume);
+
+  QCOMPARE(outputVolume.spatialGeometry().coordinateSystem,
+           qvp::VolumeData::CoordinateSystem::LPS);
+}
+
+void TestVolumeResampler::preservesTrustedOrientationFlagThroughResampling()
+{
+  const std::vector<float> voxels(3 * 4 * 5, 7.25F);
+  const qvp::VolumeData::SpatialGeometry geometry =
+      makeTestGeometry(qvp::VolumeData::CoordinateSystem::LPS, true);
+  const qvp::VolumeData inputVolume(3, 4, 5, 2.0F, 3.0F, 4.0F, voxels, geometry);
+
+  const qvp::VolumeData outputVolume =
+      qvp::VolumeResampler::resampleToIsotropicSpacing(inputVolume);
+
+  QVERIFY(outputVolume.hasSpatialOrientation());
+}
+
+void TestVolumeResampler::preservesUntrustedOrientationFlagThroughResampling()
+{
+  const std::vector<float> voxels(3 * 4 * 5, 7.25F);
+  const qvp::VolumeData::SpatialGeometry geometry =
+      makeTestGeometry(qvp::VolumeData::CoordinateSystem::LPS, false);
+  const qvp::VolumeData inputVolume(3, 4, 5, 2.0F, 3.0F, 4.0F, voxels, geometry);
+
+  const qvp::VolumeData outputVolume =
+      qvp::VolumeResampler::resampleToIsotropicSpacing(inputVolume);
+
+  QVERIFY(!outputVolume.hasSpatialOrientation());
 }
 
 QTEST_GUILESS_MAIN(TestVolumeResampler)

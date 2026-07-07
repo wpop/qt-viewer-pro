@@ -86,11 +86,22 @@ ImageType::Pointer volumeToItkImage(const qvp::VolumeData& volume)
   spacing[1] = volume.spacingY();
   spacing[2] = volume.spacingZ();
 
+  const auto& sourceGeometry = volume.spatialGeometry();
   ImageType::PointType origin;
-  origin.Fill(0.0);
+  origin[0] = sourceGeometry.origin[0];
+  origin[1] = sourceGeometry.origin[1];
+  origin[2] = sourceGeometry.origin[2];
 
   ImageType::DirectionType direction;
-  direction.SetIdentity();
+  direction[0][0] = sourceGeometry.direction[0];
+  direction[0][1] = sourceGeometry.direction[1];
+  direction[0][2] = sourceGeometry.direction[2];
+  direction[1][0] = sourceGeometry.direction[3];
+  direction[1][1] = sourceGeometry.direction[4];
+  direction[1][2] = sourceGeometry.direction[5];
+  direction[2][0] = sourceGeometry.direction[6];
+  direction[2][1] = sourceGeometry.direction[7];
+  direction[2][2] = sourceGeometry.direction[8];
 
   image->SetRegions(region);
   image->SetSpacing(spacing);
@@ -108,7 +119,8 @@ ImageType::Pointer volumeToItkImage(const qvp::VolumeData& volume)
   return image;
 }
 
-qvp::VolumeData itkImageToVolume(const ImageType::Pointer& image)
+qvp::VolumeData itkImageToVolume(const ImageType::Pointer& image,
+                                 const qvp::VolumeData::SpatialGeometry& sourceGeometry)
 {
   if (!image)
   {
@@ -132,6 +144,8 @@ qvp::VolumeData itkImageToVolume(const ImageType::Pointer& image)
   const float spacingX = static_cast<float>(spacing[0]);
   const float spacingY = static_cast<float>(spacing[1]);
   const float spacingZ = static_cast<float>(spacing[2]);
+  const auto origin = image->GetOrigin();
+  const auto direction = image->GetDirection();
 
   const auto* buffer = image->GetBufferPointer();
   if (buffer == nullptr)
@@ -142,7 +156,14 @@ qvp::VolumeData itkImageToVolume(const ImageType::Pointer& image)
   std::vector<float> voxels(voxelCount);
   std::copy(buffer, buffer + voxelCount, voxels.begin());
 
-  return qvp::VolumeData(width, height, depth, spacingX, spacingY, spacingZ, std::move(voxels));
+  qvp::VolumeData::SpatialGeometry outputGeometry = sourceGeometry;
+  outputGeometry.origin = {origin[0], origin[1], origin[2]};
+  outputGeometry.direction = {direction[0][0], direction[0][1], direction[0][2],
+                              direction[1][0], direction[1][1], direction[1][2],
+                              direction[2][0], direction[2][1], direction[2][2]};
+
+  return qvp::VolumeData(
+      width, height, depth, spacingX, spacingY, spacingZ, std::move(voxels), outputGeometry);
 }
 
 } // namespace
@@ -198,7 +219,8 @@ VolumeData VolumeResampler::resampleToIsotropicSpacing(const VolumeData& volume)
   const auto resampleEnd = Clock::now();
 
   const auto reconversionStart = Clock::now();
-  const VolumeData outputVolume = itkImageToVolume(resampleFilter->GetOutput());
+  const VolumeData outputVolume =
+      itkImageToVolume(resampleFilter->GetOutput(), volume.spatialGeometry());
   const auto reconversionEnd = Clock::now();
 
   const auto totalEnd = Clock::now();
