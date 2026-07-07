@@ -26,7 +26,9 @@ find_package(ITK REQUIRED COMPONENTS
 )
 include(${ITK_USE_FILE})
 
-qt6_standard_project_setup()
+# Qt 6.2 on Ubuntu 22.04 does not provide qt_standard_project_setup().
+# This project only needs AUTOMOC for Q_OBJECT-based sources.
+set(CMAKE_AUTOMOC ON)
 enable_testing()
 
 # Core library
