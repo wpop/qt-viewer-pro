@@ -22,6 +22,19 @@ VolumeData::VolumeData(std::size_t width, std::size_t height, std::size_t depth,
   }
 }
 
+VolumeData::VolumeData(std::size_t width,
+                       std::size_t height,
+                       std::size_t depth,
+                       float spacingX,
+                       float spacingY,
+                       float spacingZ,
+                       std::vector<float> voxels,
+                       SpatialGeometry spatialGeometry)
+    : VolumeData(width, height, depth, spacingX, spacingY, spacingZ, std::move(voxels))
+{
+  spatialGeometry_ = spatialGeometry;
+}
+
 std::size_t VolumeData::width() const
 {
   return width_;
@@ -55,6 +68,16 @@ float VolumeData::spacingZ() const
 const std::vector<float>& VolumeData::voxels() const
 {
   return voxels_;
+}
+
+const VolumeData::SpatialGeometry& VolumeData::spatialGeometry() const noexcept
+{
+  return spatialGeometry_;
+}
+
+bool VolumeData::hasSpatialOrientation() const noexcept
+{
+  return spatialGeometry_.hasOrientation;
 }
 
 bool VolumeData::hasIntensityRange() const

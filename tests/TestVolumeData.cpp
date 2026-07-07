@@ -16,10 +16,18 @@ private slots:
   void constructorStoresSpacing();
   void constructorStoresVoxelData();
   void constructorCachesIntensityRange();
+  void legacyConstructorCreatesSpacingOnlyVolume();
+  void defaultConstructorHasUnknownSpatialGeometry();
+  void constructorStoresExplicitOrigin();
+  void constructorStoresExplicitDirection();
+  void constructorStoresCoordinateSystem();
+  void constructorStoresExplicitOrientationTrust();
   void constantVolumeCachesSingleIntensityRange();
   void ctLikeVolumeCachesHounsfieldUnitRange();
   void copyPreservesIntensityRange();
   void movePreservesIntensityRange();
+  void copyPreservesSpatialGeometry();
+  void movePreservesSpatialGeometry();
 };
 
 void TestVolumeData::defaultConstructorCreatesEmptyVolume()
@@ -69,6 +77,89 @@ void TestVolumeData::constructorCachesIntensityRange()
   QCOMPARE(volume.intensityMaximum(), 11.25F);
 }
 
+void TestVolumeData::legacyConstructorCreatesSpacingOnlyVolume()
+{
+  const std::vector<float> voxels{1.0F, 2.0F, 3.0F, 4.0F};
+  const qvp::VolumeData volume(2, 2, 1, 0.5F, 0.75F, 1.25F, voxels);
+  const qvp::VolumeData::Origin defaultOrigin{0.0, 0.0, 0.0};
+  const qvp::VolumeData::Direction identityDirection{1.0, 0.0, 0.0,
+                                                     0.0, 1.0, 0.0,
+                                                     0.0, 0.0, 1.0};
+
+  QCOMPARE(volume.width(), std::size_t{2});
+  QCOMPARE(volume.height(), std::size_t{2});
+  QCOMPARE(volume.depth(), std::size_t{1});
+  QCOMPARE(volume.spacingX(), 0.5F);
+  QCOMPARE(volume.spacingY(), 0.75F);
+  QCOMPARE(volume.spacingZ(), 1.25F);
+  QVERIFY(volume.voxels() == voxels);
+  QVERIFY(!volume.hasSpatialOrientation());
+  QVERIFY(volume.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::Unknown);
+  QVERIFY(volume.spatialGeometry().origin == defaultOrigin);
+  QVERIFY(volume.spatialGeometry().direction == identityDirection);
+}
+
+void TestVolumeData::defaultConstructorHasUnknownSpatialGeometry()
+{
+  const qvp::VolumeData volume;
+
+  QVERIFY(!volume.hasSpatialOrientation());
+  QVERIFY(volume.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::Unknown);
+}
+
+void TestVolumeData::constructorStoresExplicitOrigin()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.origin = {12.5, -8.25, 42.0};
+
+  const qvp::VolumeData volume(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry);
+
+  QVERIFY(volume.spatialGeometry().origin == geometry.origin);
+}
+
+void TestVolumeData::constructorStoresExplicitDirection()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.direction = {0.0, -1.0, 0.0,
+                        1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0};
+
+  const qvp::VolumeData volume(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry);
+
+  QVERIFY(volume.spatialGeometry().direction == geometry.direction);
+}
+
+void TestVolumeData::constructorStoresCoordinateSystem()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.coordinateSystem = qvp::VolumeData::CoordinateSystem::LPS;
+
+  const qvp::VolumeData volume(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry);
+
+  QVERIFY(volume.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::LPS);
+}
+
+void TestVolumeData::constructorStoresExplicitOrientationTrust()
+{
+  qvp::VolumeData::SpatialGeometry untrustedGeometry;
+  untrustedGeometry.coordinateSystem = qvp::VolumeData::CoordinateSystem::LPS;
+  untrustedGeometry.origin = {1.0, 2.0, 3.0};
+
+  const qvp::VolumeData untrustedVolume(
+      1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, untrustedGeometry);
+  QVERIFY(!untrustedVolume.hasSpatialOrientation());
+
+  qvp::VolumeData::SpatialGeometry trustedGeometry = untrustedGeometry;
+  trustedGeometry.hasOrientation = true;
+
+  const qvp::VolumeData trustedVolume(
+      1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, trustedGeometry);
+  QVERIFY(trustedVolume.hasSpatialOrientation());
+}
+
 void TestVolumeData::constantVolumeCachesSingleIntensityRange()
 {
   const std::vector<float> voxels(8, 42.0F);
@@ -115,6 +206,46 @@ void TestVolumeData::movePreservesIntensityRange()
   QVERIFY(moved.hasIntensityRange());
   QCOMPARE(moved.intensityMinimum(), -9.5F);
   QCOMPARE(moved.intensityMaximum(), 13.0F);
+}
+
+void TestVolumeData::copyPreservesSpatialGeometry()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.origin = {4.0, 5.0, 6.0};
+  geometry.direction = {0.0, 1.0, 0.0,
+                        1.0, 0.0, 0.0,
+                        0.0, 0.0, -1.0};
+  geometry.coordinateSystem = qvp::VolumeData::CoordinateSystem::LPS;
+  geometry.hasOrientation = true;
+
+  const qvp::VolumeData original(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry);
+  const qvp::VolumeData copied = original;
+
+  QVERIFY(copied.hasSpatialOrientation());
+  QVERIFY(copied.spatialGeometry().origin == geometry.origin);
+  QVERIFY(copied.spatialGeometry().direction == geometry.direction);
+  QVERIFY(copied.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::LPS);
+}
+
+void TestVolumeData::movePreservesSpatialGeometry()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  geometry.origin = {-1.0, -2.0, -3.0};
+  geometry.direction = {-1.0, 0.0, 0.0,
+                        0.0, -1.0, 0.0,
+                        0.0, 0.0, 1.0};
+  geometry.coordinateSystem = qvp::VolumeData::CoordinateSystem::RAS;
+  geometry.hasOrientation = true;
+
+  qvp::VolumeData original(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry);
+  qvp::VolumeData moved = std::move(original);
+
+  QVERIFY(moved.hasSpatialOrientation());
+  QVERIFY(moved.spatialGeometry().origin == geometry.origin);
+  QVERIFY(moved.spatialGeometry().direction == geometry.direction);
+  QVERIFY(moved.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::RAS);
 }
 
 QTEST_MAIN(TestVolumeData)
