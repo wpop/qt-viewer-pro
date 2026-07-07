@@ -20,6 +20,10 @@ constexpr std::size_t kDepth = 2;
 constexpr float kSpacingX = 1.5F;
 constexpr float kSpacingY = 2.0F;
 constexpr float kSpacingZ = 2.5F;
+const qvp::VolumeData::Origin kOrigin{12.5, -8.25, 42.0};
+const qvp::VolumeData::Direction kDirection{0.0, -1.0, 0.0,
+                                            1.0, 0.0, 0.0,
+                                            0.0, 0.0, 1.0};
 
 std::size_t linearIndex(std::size_t x, std::size_t y, std::size_t z)
 {
@@ -48,6 +52,22 @@ ImageType::Pointer createTinyVolume()
   spacing[1] = kSpacingY;
   spacing[2] = kSpacingZ;
   image->SetSpacing(spacing);
+  ImageType::PointType origin;
+  origin[0] = kOrigin[0];
+  origin[1] = kOrigin[1];
+  origin[2] = kOrigin[2];
+  image->SetOrigin(origin);
+  ImageType::DirectionType direction;
+  direction[0][0] = kDirection[0];
+  direction[0][1] = kDirection[1];
+  direction[0][2] = kDirection[2];
+  direction[1][0] = kDirection[3];
+  direction[1][1] = kDirection[4];
+  direction[1][2] = kDirection[5];
+  direction[2][0] = kDirection[6];
+  direction[2][1] = kDirection[7];
+  direction[2][2] = kDirection[8];
+  image->SetDirection(direction);
   image->Allocate();
 
   itk::ImageRegionIterator<ImageType> it(image, region);
@@ -81,6 +101,17 @@ void verifyLoadedVolume(const qvp::VolumeData& volume)
   QVERIFY(std::fabs(volume.spacingX() - kSpacingX) < 1e-6F);
   QVERIFY(std::fabs(volume.spacingY() - kSpacingY) < 1e-6F);
   QVERIFY(std::fabs(volume.spacingZ() - kSpacingZ) < 1e-6F);
+  QVERIFY(!volume.hasSpatialOrientation());
+  QVERIFY(volume.spatialGeometry().coordinateSystem ==
+          qvp::VolumeData::CoordinateSystem::LPS);
+  for (std::size_t i = 0; i < kOrigin.size(); ++i)
+  {
+    QVERIFY(std::fabs(volume.spatialGeometry().origin[i] - kOrigin[i]) < 1e-6);
+  }
+  for (std::size_t i = 0; i < kDirection.size(); ++i)
+  {
+    QVERIFY(std::fabs(volume.spatialGeometry().direction[i] - kDirection[i]) < 1e-6);
+  }
 
   QCOMPARE(volume.voxelCount(), kWidth * kHeight * kDepth);
   QCOMPARE(volume.voxels().size(), kWidth * kHeight * kDepth);

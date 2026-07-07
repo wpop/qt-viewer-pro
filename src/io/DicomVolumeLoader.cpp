@@ -1,19 +1,17 @@
 #include "qtviewerpro/io/DicomVolumeLoader.h"
 
-#include "qtviewerpro/core/VolumeData.h"
+#include "qtviewerpro/io/ItkVolumeConverter.h"
 
 #include <QDir>
 #include <QFileInfo>
 
 #include <itkGDCMImageIO.h>
 #include <itkGDCMSeriesFileNames.h>
-#include <itkImage.h>
 #include <itkImageSeriesReader.h>
 
 #include <algorithm>
 #include <exception>
-#include <limits>
-#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace
@@ -28,48 +26,6 @@ bool hasDicomExtension(const QString& path)
   }
 
   return fileInfo.fileName().toLower().endsWith(QStringLiteral(".dcm"));
-}
-
-std::size_t checkedMultiply(std::size_t lhs, std::size_t rhs)
-{
-  if (lhs != 0 && rhs > std::numeric_limits<std::size_t>::max() / lhs)
-  {
-    throw std::overflow_error("DICOM volume dimensions exceed size limits");
-  }
-
-  return lhs * rhs;
-}
-
-qvp::VolumeData convertImageToVolume(const itk::Image<float, 3>::Pointer& image)
-{
-  const auto region = image->GetLargestPossibleRegion();
-  const auto size = region.GetSize();
-
-  const std::size_t width = static_cast<std::size_t>(size[0]);
-  const std::size_t height = static_cast<std::size_t>(size[1]);
-  const std::size_t depth = static_cast<std::size_t>(size[2]);
-  if (width == 0 || height == 0 || depth == 0)
-  {
-    throw std::runtime_error("DICOM volume has zero dimensions");
-  }
-
-  const std::size_t voxelCount = checkedMultiply(checkedMultiply(width, height), depth);
-
-  const auto spacing = image->GetSpacing();
-  const float spacingX = static_cast<float>(spacing[0]);
-  const float spacingY = static_cast<float>(spacing[1]);
-  const float spacingZ = static_cast<float>(spacing[2]);
-
-  const auto* buffer = image->GetBufferPointer();
-  if (buffer == nullptr)
-  {
-    throw std::runtime_error("DICOM image buffer is null");
-  }
-
-  std::vector<float> voxels(voxelCount);
-  std::copy(buffer, buffer + voxelCount, voxels.begin());
-
-  return qvp::VolumeData(width, height, depth, spacingX, spacingY, spacingZ, std::move(voxels));
 }
 
 QString normalizedPath(const QString& path)
@@ -99,13 +55,34 @@ namespace qvp
 namespace
 {
 
+bool hasDicomPatientOrientationTags(const std::string& fileName)
+{
+  const auto imageIO = itk::GDCMImageIO::New();
+  imageIO->SetFileName(fileName);
+
+  try
+  {
+    imageIO->ReadImageInformation();
+  }
+  catch (...)
+  {
+    return false;
+  }
+
+  std::string imageOrientationPatient;
+  std::string imagePositionPatient;
+  return imageIO->GetValueFromTag("0020|0037", imageOrientationPatient) &&
+         !imageOrientationPatient.empty() &&
+         imageIO->GetValueFromTag("0020|0032", imagePositionPatient) &&
+         !imagePositionPatient.empty();
+}
+
 VolumeLoadResult loadSeriesFromDirectory(const QString& directoryPath,
                                          const QString* selectedFilePath)
 {
-  using ImageType = itk::Image<float, 3>;
   using ImageIOType = itk::GDCMImageIO;
   using NamesGeneratorType = itk::GDCMSeriesFileNames;
-  using ReaderType = itk::ImageSeriesReader<ImageType>;
+  using ReaderType = itk::ImageSeriesReader<ItkVolumeImage>;
 
   const QFileInfo directoryInfo(directoryPath);
   if (!directoryInfo.exists() || !directoryInfo.isDir())
@@ -155,7 +132,14 @@ VolumeLoadResult loadSeriesFromDirectory(const QString& directoryPath,
     reader->SetFileNames(fileNames);
     reader->Update();
 
-    const VolumeData volume = convertImageToVolume(reader->GetOutput());
+    const std::string metadataFileName =
+        selectedFilePath != nullptr ? selectedFilePath->toStdString() : fileNames.front();
+    const ItkSpatialGeometryPolicy geometryPolicy{
+        hasDicomPatientOrientationTags(metadataFileName),
+        VolumeData::CoordinateSystem::LPS};
+    const VolumeData volume = convertItkImageToVolume(reader->GetOutput(),
+                                                      geometryPolicy,
+                                                      "DICOM");
     if (!volume.isValid())
     {
       return VolumeLoadResult::makeFailure(QStringLiteral("Loaded DICOM volume is invalid"));
