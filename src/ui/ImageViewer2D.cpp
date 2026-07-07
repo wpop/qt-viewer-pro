@@ -25,6 +25,27 @@ constexpr double kZoomFactor = 1.25;
 namespace qvp
 {
 
+std::optional<QPointF> ImageViewer2D::imagePositionFromViewportPosition(const QPointF& viewportPosition) const
+{
+  if (!pixmapItem_ || pixmapItem_->pixmap().isNull())
+  {
+    return std::nullopt;
+  }
+
+  const QPointF scenePosition = mapToScene(viewportPosition.toPoint());
+  const QPointF imagePosition = pixmapItem_->mapFromScene(scenePosition);
+  const QSize imageSize = pixmapItem_->pixmap().size();
+
+  if (imagePosition.x() < 0.0 || imagePosition.y() < 0.0 ||
+      imagePosition.x() >= static_cast<double>(imageSize.width()) ||
+      imagePosition.y() >= static_cast<double>(imageSize.height()))
+  {
+    return std::nullopt;
+  }
+
+  return imagePosition;
+}
+
 ImageViewer2D::ImageViewer2D(QWidget* parent) : QGraphicsView(parent)
 {
   setRenderHint(QPainter::Antialiasing);
@@ -89,26 +110,15 @@ void ImageViewer2D::wheelEvent(QWheelEvent* event)
 
 void ImageViewer2D::mouseMoveEvent(QMouseEvent* event)
 {
-  bool hasValidImagePosition = false;
-  if (pixmapItem_ && !pixmapItem_->pixmap().isNull())
+  const auto imagePosition = imagePositionFromViewportPosition(event->position());
+  if (imagePosition.has_value())
   {
-    const QPointF scenePosition = mapToScene(event->position().toPoint());
-    const QPointF imagePosition = pixmapItem_->mapFromScene(scenePosition);
-    const QSize imageSize = pixmapItem_->pixmap().size();
-
-    if (imagePosition.x() >= 0.0 && imagePosition.y() >= 0.0 &&
-        imagePosition.x() < static_cast<double>(imageSize.width()) &&
-        imagePosition.y() < static_cast<double>(imageSize.height()))
-    {
-      currentImageMousePosition_ = imagePosition;
-      hasValidImagePosition = true;
-      viewport()->update();
-      emit imageMousePositionChanged(static_cast<int>(imagePosition.x()),
-                                     static_cast<int>(imagePosition.y()));
-    }
+    currentImageMousePosition_ = imagePosition;
+    viewport()->update();
+    emit imageMousePositionChanged(static_cast<int>(imagePosition->x()),
+                                   static_cast<int>(imagePosition->y()));
   }
-
-  if (!hasValidImagePosition && currentImageMousePosition_.has_value())
+  else if (currentImageMousePosition_.has_value())
   {
     currentImageMousePosition_.reset();
     viewport()->update();
@@ -128,17 +138,46 @@ void ImageViewer2D::leaveEvent(QEvent* event)
   QGraphicsView::leaveEvent(event);
 }
 
+void ImageViewer2D::mousePressEvent(QMouseEvent* event)
+{
+  if (imageClickEnabled_ && event->button() == Qt::LeftButton)
+  {
+    const auto imagePosition = imagePositionFromViewportPosition(event->position());
+    if (imagePosition.has_value())
+    {
+      emit imageClicked(static_cast<int>(imagePosition->x()),
+                        static_cast<int>(imagePosition->y()));
+      event->accept();
+      return;
+    }
+  }
+
+  QGraphicsView::mousePressEvent(event);
+}
+
 void ImageViewer2D::drawForeground(QPainter* painter, const QRectF& rect)
 {
   QGraphicsView::drawForeground(painter, rect);
 
-  if (!pixmapItem_ || pixmapItem_->pixmap().isNull() || !currentImageMousePosition_.has_value())
+  if (!pixmapItem_ || pixmapItem_->pixmap().isNull())
   {
     return;
   }
 
+  if (persistentCrosshairPosition_.has_value())
+  {
+    drawCrosshair(painter, persistentCrosshairPosition_.value());
+  }
+
+  if (hoverCrosshairEnabled_ && currentImageMousePosition_.has_value())
+  {
+    drawCrosshair(painter, currentImageMousePosition_.value());
+  }
+}
+
+void ImageViewer2D::drawCrosshair(QPainter* painter, const QPointF& imagePosition) const
+{
   const QRectF imageBounds = pixmapItem_->boundingRect();
-  const QPointF imagePosition = currentImageMousePosition_.value();
   const QPointF top = pixmapItem_->mapToScene(QPointF(imagePosition.x(), imageBounds.top()));
   const QPointF bottom = pixmapItem_->mapToScene(QPointF(imagePosition.x(), imageBounds.bottom()));
   const QPointF left = pixmapItem_->mapToScene(QPointF(imageBounds.left(), imagePosition.y()));
@@ -189,6 +228,27 @@ double ImageViewer2D::zoomFactor() const
 void ImageViewer2D::setSliceNavigationEnabled(bool enabled)
 {
   sliceNavigationEnabled_ = enabled;
+}
+
+void ImageViewer2D::setHoverCrosshairEnabled(bool enabled)
+{
+  hoverCrosshairEnabled_ = enabled;
+  if (!hoverCrosshairEnabled_ && currentImageMousePosition_.has_value())
+  {
+    currentImageMousePosition_.reset();
+  }
+  viewport()->update();
+}
+
+void ImageViewer2D::setCrosshairPosition(const std::optional<QPointF>& position)
+{
+  persistentCrosshairPosition_ = position;
+  viewport()->update();
+}
+
+void ImageViewer2D::setImageClickEnabled(bool enabled)
+{
+  imageClickEnabled_ = enabled;
 }
 
 void ImageViewer2D::zoomIn()
