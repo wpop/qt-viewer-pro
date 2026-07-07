@@ -104,7 +104,7 @@ private:
   void createToolBar();
   void showImagePage();
   void showMedicalVolumePage();
-  void showOpenGLMedicalVolumePage();
+  void showMprViewerPage();
   void showVolume3DPage();
   void displayLoadedVolume(VolumeData volume);
   VolumeData createSyntheticVolume() const;

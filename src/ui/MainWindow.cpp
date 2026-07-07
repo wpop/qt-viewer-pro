@@ -445,7 +445,7 @@ void MainWindow::createFileMenu()
   fileMenu->addSeparator();
 
   openMedicalVolumeAction_ = fileMenu->addAction("Open Medical Volume...");
-  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the synchronized MPR viewer");
+  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the medical volume viewer");
   connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
 
   QAction* openDicomSeriesFolderAction = fileMenu->addAction("Open DICOM Series Folder...");
@@ -499,14 +499,13 @@ void MainWindow::createViewMenu()
   connect(showImageViewerAction, &QAction::triggered, this, &MainWindow::showImagePage);
 
   QAction* showMedicalVolumeViewerAction = viewMenu->addAction("Medical Volume Viewer");
-  showMedicalVolumeViewerAction->setStatusTip("Switch to the synchronized MPR viewer page");
+  showMedicalVolumeViewerAction->setStatusTip("Switch to the medical volume viewer page");
   connect(showMedicalVolumeViewerAction, &QAction::triggered, this,
           &MainWindow::showMedicalVolumePage);
 
-  QAction* showOpenGLSliceViewerAction = viewMenu->addAction("OpenGL Slice Viewer");
-  showOpenGLSliceViewerAction->setStatusTip("Switch to the OpenGL slice viewer page");
-  connect(showOpenGLSliceViewerAction, &QAction::triggered, this,
-          &MainWindow::showOpenGLMedicalVolumePage);
+  QAction* showMprViewerAction = viewMenu->addAction("MPR Viewer");
+  showMprViewerAction->setStatusTip("Switch to the synchronized MPR viewer page");
+  connect(showMprViewerAction, &QAction::triggered, this, &MainWindow::showMprViewerPage);
 
   QAction* showVolume3DViewerAction = viewMenu->addAction("3D Volume Viewer");
   showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
@@ -592,7 +591,7 @@ void MainWindow::createDemoMenu()
   QMenu* demoMenu = menuBar()->addMenu("&Tools");
 
   openSyntheticVolumeSliceAction_ = demoMenu->addAction("Load Synthetic Test Volume");
-  openSyntheticVolumeSliceAction_->setStatusTip("Load a synthetic test volume into the synchronized MPR viewer");
+  openSyntheticVolumeSliceAction_->setStatusTip("Load a synthetic test volume into the medical viewer");
   connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
           &MainWindow::openSyntheticVolumeSlice);
 
@@ -889,7 +888,7 @@ void MainWindow::openDicomSeriesFolder()
 
 void MainWindow::openMaskOverlay()
 {
-  showOpenGLMedicalVolumePage();
+  showMedicalVolumePage();
   medicalVolumeViewerWidget_->openMaskOverlay();
 }
 
@@ -962,12 +961,12 @@ void MainWindow::showImagePage()
 
 void MainWindow::showMedicalVolumePage()
 {
-  pageStack_->setCurrentWidget(mprViewerWidget_);
+  pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
 }
 
-void MainWindow::showOpenGLMedicalVolumePage()
+void MainWindow::showMprViewerPage()
 {
-  pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
+  pageStack_->setCurrentWidget(mprViewerWidget_);
 }
 
 void MainWindow::showVolume3DPage()
