@@ -33,6 +33,14 @@ class ImageViewer2D : public QGraphicsView
   Q_OBJECT
 
 public:
+  struct EdgeLabels
+  {
+    QString left;
+    QString right;
+    QString top;
+    QString bottom;
+  };
+
   /**
    * @brief Constructs an image viewer widget.
    * @param parent Optional Qt parent widget.
@@ -128,6 +136,12 @@ public:
   void setImageClickEnabled(bool enabled);
 
   /**
+   * @brief Sets optional viewport-fixed edge labels for overlay display.
+   * @param labels Labels to draw near the viewport edges, or std::nullopt to hide them.
+   */
+  void setEdgeLabels(const std::optional<EdgeLabels>& labels);
+
+  /**
    * @brief Sets the relative physical pixel spacing used for display geometry.
    * @param spacingX Physical pixel size along the image X axis.
    * @param spacingY Physical pixel size along the image Y axis.
@@ -187,6 +201,7 @@ private:
   float pixelSpacingY_ = 1.0F;
   std::optional<QPointF> persistentCrosshairPosition_;
   std::optional<QPointF> currentImageMousePosition_;
+  std::optional<EdgeLabels> edgeLabels_;
 };
 
 } // namespace qvp
