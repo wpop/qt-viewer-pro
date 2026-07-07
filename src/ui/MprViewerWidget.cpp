@@ -5,8 +5,11 @@
 #include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
+#include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
+#include <QSignalBlocker>
+#include <QSlider>
 #include <QSplitter>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -59,16 +62,27 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
 {
   if (!volume || !volume->isValid())
   {
+    auto resetPane = [](SlicePane& pane) {
+      const QSignalBlocker blocker(pane.sliceSlider);
+      pane.sliceSlider->setRange(0, 0);
+      pane.sliceSlider->setValue(0);
+      pane.sliceSlider->setEnabled(false);
+      pane.sliceValueLabel->setText(QStringLiteral("0 / 0"));
+    };
+
     currentVolume_.reset();
     currentPosition_ = {};
+    resetPane(axialPane_);
     axialPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     axialPane_.viewer->setImage(QImage());
     axialPane_.viewer->setCrosshairPosition(std::nullopt);
     axialPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    resetPane(sagittalPane_);
     sagittalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     sagittalPane_.viewer->setImage(QImage());
     sagittalPane_.viewer->setCrosshairPosition(std::nullopt);
     sagittalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    resetPane(coronalPane_);
     coronalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     coronalPane_.viewer->setImage(QImage());
     coronalPane_.viewer->setCrosshairPosition(std::nullopt);
@@ -104,18 +118,32 @@ void MprViewerWidget::createUi()
   auto createPane = [this, splitter](SlicePane& pane) {
     auto* container = new QWidget(splitter);
     auto* layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(4);
+    layout->setContentsMargins(6, 0, 6, 0);
+    layout->setSpacing(5);
 
     pane.titleLabel = new QLabel(orientationName(pane.orientation), container);
     pane.coordinateLabel = new QLabel(QStringLiteral("No volume loaded"), container);
+    pane.sliceSlider = new QSlider(Qt::Horizontal, container);
+    pane.sliceSlider->setRange(0, 0);
+    pane.sliceSlider->setValue(0);
+    pane.sliceSlider->setEnabled(false);
+    pane.sliceValueLabel = new QLabel(QStringLiteral("0 / 0"), container);
+    pane.sliceValueLabel->setMinimumWidth(56);
+    pane.sliceValueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     pane.viewer = new ImageViewer2D(container);
     pane.viewer->setSliceNavigationEnabled(true);
     pane.viewer->setHoverCrosshairEnabled(false);
     pane.viewer->setImageClickEnabled(true);
+    auto* navigationLayout = new QHBoxLayout();
+    navigationLayout->setContentsMargins(0, 0, 0, 0);
+    navigationLayout->setSpacing(8);
+    navigationLayout->addWidget(new QLabel(QStringLiteral("Slice"), container));
+    navigationLayout->addWidget(pane.sliceSlider, 1);
+    navigationLayout->addWidget(pane.sliceValueLabel);
     layout->addWidget(pane.titleLabel);
     layout->addWidget(pane.coordinateLabel);
     layout->addWidget(pane.viewer, 1);
+    layout->addLayout(navigationLayout);
 
     splitter->addWidget(container);
   };
@@ -130,6 +158,35 @@ void MprViewerWidget::createUi()
 
 void MprViewerWidget::connectSignals()
 {
+  auto connectSlider = [this](SlicePane& pane) {
+    connect(pane.sliceSlider, &QSlider::valueChanged, this, [this, orientation = pane.orientation](int value) {
+      if (!currentVolume_)
+      {
+        return;
+      }
+
+      const auto sliceIndex = static_cast<std::size_t>(value);
+      switch (orientation)
+      {
+      case SliceOrientation::Axial:
+        currentPosition_.z = sliceIndex;
+        break;
+      case SliceOrientation::Sagittal:
+        currentPosition_.x = sliceIndex;
+        break;
+      case SliceOrientation::Coronal:
+        currentPosition_.y = sliceIndex;
+        break;
+      }
+
+      refreshAllSlices();
+    });
+  };
+
+  connectSlider(axialPane_);
+  connectSlider(sagittalPane_);
+  connectSlider(coronalPane_);
+
   connect(axialPane_.viewer, &ImageViewer2D::sliceNavigationRequested, this, [this](int delta) {
     updatePositionForOrientation(SliceOrientation::Axial, delta);
   });
@@ -165,17 +222,20 @@ void MprViewerWidget::refreshAllSlices()
 void MprViewerWidget::refreshSlicePane(SlicePane& pane)
 {
   const std::size_t sliceIndex = currentSliceIndexForOrientation(pane.orientation);
+  const std::size_t sliceCount = sliceCountForOrientation(pane.orientation);
   const SliceData slice = SliceExtractor::extract(*currentVolume_, pane.orientation, sliceIndex);
+  const QSignalBlocker blocker(pane.sliceSlider);
+  pane.sliceSlider->setRange(0, static_cast<int>(sliceCount - 1));
+  pane.sliceSlider->setEnabled(true);
+  pane.sliceSlider->setValue(static_cast<int>(sliceIndex));
   pane.viewer->setPixelSpacing(slice.spacingX(), slice.spacingY());
   pane.viewer->setImage(SliceImageConverter::toGrayscaleImage(slice, window_, level_));
   const MprImagePoint imagePoint =
       MprCoordinateMapper::crosshairImagePoint(pane.orientation, currentPosition_);
   pane.viewer->setCrosshairPosition(
       QPointF(static_cast<double>(imagePoint.x) + 0.5, static_cast<double>(imagePoint.y) + 0.5));
-  pane.titleLabel->setText(QStringLiteral("%1  slice %2 / %3")
-                               .arg(orientationName(pane.orientation))
-                               .arg(sliceIndex)
-                               .arg(sliceCountForOrientation(pane.orientation) - 1));
+  pane.titleLabel->setText(orientationName(pane.orientation));
+  pane.sliceValueLabel->setText(QStringLiteral("%1 / %2").arg(sliceIndex).arg(sliceCount - 1));
   pane.coordinateLabel->setText(QStringLiteral("x=%1  y=%2  z=%3")
                                     .arg(currentPosition_.x)
                                     .arg(currentPosition_.y)
