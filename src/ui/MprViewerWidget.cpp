@@ -2,6 +2,7 @@
 
 #include "qtviewerpro/core/SliceExtractor.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
+#include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
 #include <QGridLayout>
@@ -62,8 +63,11 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
     currentPosition_ = {};
     sharedPositionLabel_->setText(QStringLiteral("Shared voxel: no volume loaded"));
     axialPane_.viewer->setImage(QImage());
+    axialPane_.viewer->setCrosshairPosition(std::nullopt);
     sagittalPane_.viewer->setImage(QImage());
+    sagittalPane_.viewer->setCrosshairPosition(std::nullopt);
     coronalPane_.viewer->setImage(QImage());
+    coronalPane_.viewer->setCrosshairPosition(std::nullopt);
     axialPane_.titleLabel->setText(QStringLiteral("Axial"));
     sagittalPane_.titleLabel->setText(QStringLiteral("Sagittal"));
     coronalPane_.titleLabel->setText(QStringLiteral("Coronal"));
@@ -106,6 +110,8 @@ void MprViewerWidget::createUi()
     pane.titleLabel = new QLabel(orientationName(pane.orientation), container);
     pane.viewer = new ImageViewer2D(container);
     pane.viewer->setSliceNavigationEnabled(true);
+    pane.viewer->setHoverCrosshairEnabled(false);
+    pane.viewer->setImageClickEnabled(true);
     layout->addWidget(pane.titleLabel);
     layout->addWidget(pane.viewer, 1);
 
@@ -126,11 +132,20 @@ void MprViewerWidget::connectSignals()
   connect(axialPane_.viewer, &ImageViewer2D::sliceNavigationRequested, this, [this](int delta) {
     updatePositionForOrientation(SliceOrientation::Axial, delta);
   });
+  connect(axialPane_.viewer, &ImageViewer2D::imageClicked, this, [this](int x, int y) {
+    updatePositionFromImageClick(SliceOrientation::Axial, x, y);
+  });
   connect(sagittalPane_.viewer, &ImageViewer2D::sliceNavigationRequested, this, [this](int delta) {
     updatePositionForOrientation(SliceOrientation::Sagittal, delta);
   });
+  connect(sagittalPane_.viewer, &ImageViewer2D::imageClicked, this, [this](int x, int y) {
+    updatePositionFromImageClick(SliceOrientation::Sagittal, x, y);
+  });
   connect(coronalPane_.viewer, &ImageViewer2D::sliceNavigationRequested, this, [this](int delta) {
     updatePositionForOrientation(SliceOrientation::Coronal, delta);
+  });
+  connect(coronalPane_.viewer, &ImageViewer2D::imageClicked, this, [this](int x, int y) {
+    updatePositionFromImageClick(SliceOrientation::Coronal, x, y);
   });
 }
 
@@ -152,6 +167,10 @@ void MprViewerWidget::refreshSlicePane(SlicePane& pane)
   const std::size_t sliceIndex = currentSliceIndexForOrientation(pane.orientation);
   const SliceData slice = SliceExtractor::extract(*currentVolume_, pane.orientation, sliceIndex);
   pane.viewer->setImage(SliceImageConverter::toGrayscaleImage(slice, window_, level_));
+  const MprImagePoint imagePoint =
+      MprCoordinateMapper::crosshairImagePoint(pane.orientation, currentPosition_);
+  pane.viewer->setCrosshairPosition(
+      QPointF(static_cast<double>(imagePoint.x) + 0.5, static_cast<double>(imagePoint.y) + 0.5));
   pane.titleLabel->setText(QStringLiteral("%1  slice %2 / %3")
                                .arg(orientationName(pane.orientation))
                                .arg(sliceIndex)
@@ -227,6 +246,24 @@ void MprViewerWidget::updatePositionForOrientation(SliceOrientation orientation,
     break;
   }
 
+  refreshAllSlices();
+}
+
+void MprViewerWidget::updatePositionFromImageClick(SliceOrientation orientation,
+                                                   int imageX,
+                                                   int imageY)
+{
+  if (!currentVolume_ || imageX < 0 || imageY < 0)
+  {
+    return;
+  }
+
+  currentPosition_ =
+      MprCoordinateMapper::voxelPositionFromImagePoint(*currentVolume_,
+                                                       orientation,
+                                                       static_cast<std::size_t>(imageX),
+                                                       static_cast<std::size_t>(imageY),
+                                                       currentPosition_);
   refreshAllSlices();
 }
 

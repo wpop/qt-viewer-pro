@@ -1,5 +1,6 @@
 #pragma once
 
+#include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 
@@ -27,13 +28,6 @@ public:
   void setVolume(std::shared_ptr<const VolumeData> volume);
 
 private:
-  struct VoxelPosition
-  {
-    std::size_t x = 0;
-    std::size_t y = 0;
-    std::size_t z = 0;
-  };
-
   struct SlicePane
   {
     SliceOrientation orientation = SliceOrientation::Axial;
@@ -48,6 +42,7 @@ private:
   void updateSharedPositionLabel();
   void setDefaultWindowLevel();
   void updatePositionForOrientation(SliceOrientation orientation, int delta);
+  void updatePositionFromImageClick(SliceOrientation orientation, int imageX, int imageY);
   std::size_t sliceCountForOrientation(SliceOrientation orientation) const;
   std::size_t currentSliceIndexForOrientation(SliceOrientation orientation) const;
 
@@ -56,7 +51,7 @@ private:
   SlicePane coronalPane_;
   QLabel* sharedPositionLabel_ = nullptr;
   std::shared_ptr<const VolumeData> currentVolume_;
-  VoxelPosition currentPosition_{};
+  MprVoxelPosition currentPosition_{};
   float window_ = 255.0F;
   float level_ = 127.0F;
 };

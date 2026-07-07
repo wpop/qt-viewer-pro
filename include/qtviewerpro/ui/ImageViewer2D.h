@@ -3,6 +3,7 @@
 #include <QGraphicsView>
 #include <QImage>
 #include <QPointF>
+#include <QPoint>
 #include <QSize>
 #include <QString>
 
@@ -108,9 +109,28 @@ public:
    */
   void setSliceNavigationEnabled(bool enabled);
 
+  /**
+   * @brief Enables or disables the hover crosshair overlay.
+   * @param enabled When true, hover coordinates are rendered in drawForeground().
+   */
+  void setHoverCrosshairEnabled(bool enabled);
+
+  /**
+   * @brief Sets an optional persistent crosshair in image coordinates.
+   * @param position Crosshair position in image coordinates, or std::nullopt to hide it.
+   */
+  void setCrosshairPosition(const std::optional<QPointF>& position);
+
+  /**
+   * @brief Enables or disables explicit image click reporting.
+   * @param enabled When true, left clicks inside the image emit imageClicked.
+   */
+  void setImageClickEnabled(bool enabled);
+
 protected:
   void drawForeground(QPainter* painter, const QRectF& rect) override;
   void leaveEvent(QEvent* event) override;
+  void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
@@ -139,10 +159,22 @@ signals:
    */
   void sliceNavigationRequested(int delta);
 
+  /**
+   * @brief Emitted when the user clicks inside the displayed image.
+   * @param x Image pixel coordinate along the horizontal axis.
+   * @param y Image pixel coordinate along the vertical axis.
+   */
+  void imageClicked(int x, int y);
+
 private:
+  std::optional<QPointF> imagePositionFromViewportPosition(const QPointF& viewportPosition) const;
+  void drawCrosshair(QPainter* painter, const QPointF& imagePosition) const;
   QGraphicsPixmapItem* pixmapItem_ = nullptr;
   bool fitMode_ = true;
   bool sliceNavigationEnabled_ = false;
+  bool hoverCrosshairEnabled_ = true;
+  bool imageClickEnabled_ = false;
+  std::optional<QPointF> persistentCrosshairPosition_;
   std::optional<QPointF> currentImageMousePosition_;
 };
 
