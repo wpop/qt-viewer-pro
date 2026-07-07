@@ -2,6 +2,7 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -31,12 +32,23 @@ void TestVolumeResampler::resamplesAnisotropicVolumeToIsotropicSpacing()
   QCOMPARE(outputVolume.height(), std::size_t{10});
   QCOMPARE(outputVolume.depth(), std::size_t{17});
   QCOMPARE(outputVolume.voxels().size(), outputVolume.voxelCount());
+  QVERIFY(outputVolume.hasIntensityRange());
+  QVERIFY(std::isfinite(outputVolume.intensityMinimum()));
+  QVERIFY(std::isfinite(outputVolume.intensityMaximum()));
+  QVERIFY(outputVolume.intensityMinimum() <= outputVolume.intensityMaximum());
+  QCOMPARE(outputVolume.intensityMinimum(), 7.25F);
+  QCOMPARE(outputVolume.intensityMaximum(), 7.25F);
 
   for (const float value : outputVolume.voxels())
   {
     QVERIFY(std::isfinite(value));
     QVERIFY(std::fabs(value - 7.25F) <= 1e-5F);
   }
+
+  const auto [minIt, maxIt] =
+      std::minmax_element(outputVolume.voxels().begin(), outputVolume.voxels().end());
+  QCOMPARE(outputVolume.intensityMinimum(), *minIt);
+  QCOMPARE(outputVolume.intensityMaximum(), *maxIt);
 }
 
 void TestVolumeResampler::leavesAlreadyIsotropicVolumeUnchanged()
@@ -54,6 +66,14 @@ void TestVolumeResampler::leavesAlreadyIsotropicVolumeUnchanged()
   QCOMPARE(outputVolume.spacingY(), 1.0F);
   QCOMPARE(outputVolume.spacingZ(), 1.0F);
   QVERIFY(outputVolume.voxels() == voxels);
+  QVERIFY(outputVolume.hasIntensityRange());
+  QVERIFY(std::isfinite(outputVolume.intensityMinimum()));
+  QVERIFY(std::isfinite(outputVolume.intensityMaximum()));
+  QVERIFY(outputVolume.intensityMinimum() <= outputVolume.intensityMaximum());
+
+  const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
+  QCOMPARE(outputVolume.intensityMinimum(), *minIt);
+  QCOMPARE(outputVolume.intensityMaximum(), *maxIt);
 }
 
 QTEST_GUILESS_MAIN(TestVolumeResampler)
