@@ -97,6 +97,7 @@ target_link_libraries(qt-viewer-pro-processing
 # IO library
 set(QTVIEWERPRO_IO_SOURCES
     src/io/DicomVolumeLoader.cpp
+    src/io/ItkVolumeConverter.cpp
     src/io/MedicalVolumeLoaderRegistry.cpp
     src/io/MetaImageVolumeLoader.cpp
     src/io/NiftiVolumeLoader.cpp
@@ -106,6 +107,7 @@ set(QTVIEWERPRO_IO_SOURCES
 
 set(QTVIEWERPRO_IO_HEADERS
     include/qtviewerpro/io/DicomVolumeLoader.h
+    include/qtviewerpro/io/ItkVolumeConverter.h
     include/qtviewerpro/io/MedicalVolumeLoader.h
     include/qtviewerpro/io/MedicalVolumeLoaderRegistry.h
     include/qtviewerpro/io/MetaImageVolumeLoader.h
