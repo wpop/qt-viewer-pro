@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <vector>
 #include <utility>
@@ -16,6 +17,26 @@ namespace qvp
 class VolumeData
 {
 public:
+  using Origin = std::array<double, 3>;
+  using Direction = std::array<double, 9>;
+
+  enum class CoordinateSystem
+  {
+    Unknown,
+    LPS,
+    RAS
+  };
+
+  struct SpatialGeometry
+  {
+    Origin origin{0.0, 0.0, 0.0};
+    Direction direction{1.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0,
+                        0.0, 0.0, 1.0};
+    CoordinateSystem coordinateSystem = CoordinateSystem::Unknown;
+    bool hasOrientation = false;
+  };
+
   /**
    * @brief Creates an empty volume with zero dimensions and unit spacing.
    */
@@ -33,6 +54,26 @@ public:
    */
   VolumeData(std::size_t width, std::size_t height, std::size_t depth, float spacingX,
              float spacingY, float spacingZ, std::vector<float> voxels);
+
+  /**
+   * @brief Creates a volume with dimensions, spacing, voxel values, and spatial geometry.
+   * @param width Number of voxels along the X axis.
+   * @param height Number of voxels along the Y axis.
+   * @param depth Number of voxels along the Z axis.
+   * @param spacingX Physical spacing between voxels along the X axis.
+   * @param spacingY Physical spacing between voxels along the Y axis.
+   * @param spacingZ Physical spacing between voxels along the Z axis.
+   * @param voxels Linear voxel values stored as floats.
+   * @param spatialGeometry Optional origin, direction, and coordinate system metadata.
+   */
+  VolumeData(std::size_t width,
+             std::size_t height,
+             std::size_t depth,
+             float spacingX,
+             float spacingY,
+             float spacingZ,
+             std::vector<float> voxels,
+             SpatialGeometry spatialGeometry);
 
   /**
    * @brief Returns the number of voxels along the X axis.
@@ -68,6 +109,16 @@ public:
    * @brief Returns the linear voxel value buffer.
    */
   const std::vector<float>& voxels() const;
+
+  /**
+   * @brief Returns optional spatial geometry metadata for the volume.
+   */
+  const SpatialGeometry& spatialGeometry() const noexcept;
+
+  /**
+   * @brief Returns true when spatial orientation is explicitly trusted.
+   */
+  bool hasSpatialOrientation() const noexcept;
 
   /**
    * @brief Returns true when the volume has a cached intensity range.
@@ -110,6 +161,7 @@ private:
   float intensityMinimum_ = 0.0F;
   float intensityMaximum_ = 0.0F;
   bool hasIntensityRange_ = false;
+  SpatialGeometry spatialGeometry_;
 };
 
 } // namespace qvp
