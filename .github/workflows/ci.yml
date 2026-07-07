@@ -23,6 +23,7 @@ jobs:
             libgl1-mesa-dev \
             libinsighttoolkit5-dev \
             libopencv-dev \
+            libqt6opengl6-dev \
             ninja-build \
             qt6-base-dev
 
