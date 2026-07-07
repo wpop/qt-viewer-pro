@@ -42,10 +42,40 @@ namespace qvp
 namespace
 {
 using Clock = std::chrono::steady_clock;
+constexpr int kDefaultWindow = 255;
+constexpr int kDefaultLevel = 127;
+constexpr int kSoftTissueWindow = 400;
+constexpr int kSoftTissueLevel = 40;
+constexpr int kLungWindow = 1500;
+constexpr int kLungLevel = -600;
+constexpr int kBoneWindow = 2000;
+constexpr int kBoneLevel = 300;
+constexpr int kPresetIndexNone = 0;
+constexpr int kPresetIndexSoftTissue = 1;
+constexpr int kPresetIndexLung = 2;
+constexpr int kPresetIndexBone = 3;
+constexpr int kPresetIndexReset = 4;
 
 double durationMilliseconds(const Clock::duration& duration)
 {
   return std::chrono::duration<double, std::milli>(duration).count();
+}
+
+void setWindowLevelControls(QSpinBox* windowSpinBox,
+                            QSpinBox* levelSpinBox,
+                            int window,
+                            int level)
+{
+  const QSignalBlocker windowBlocker(windowSpinBox);
+  const QSignalBlocker levelBlocker(levelSpinBox);
+  windowSpinBox->setValue(window);
+  levelSpinBox->setValue(level);
+}
+
+void setWindowLevelPresetIndex(QComboBox* presetComboBox, int presetIndex)
+{
+  const QSignalBlocker presetBlocker(presetComboBox);
+  presetComboBox->setCurrentIndex(presetIndex);
 }
 
 QString orientationName(SliceOrientation orientation)
@@ -229,6 +259,9 @@ void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volum
   const auto rangeReadEnd = Clock::now();
   currentVolumeRange_ = std::make_pair(cachedMinimumIntensity, cachedMaximumIntensity);
 
+  setWindowLevelControls(windowSpinBox_, levelSpinBox_, kDefaultWindow, kDefaultLevel);
+  setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexReset);
+
   const auto ctPresetStart = Clock::now();
   applyCtWindowLevelPresetIfNeeded(*currentVolume_);
   const auto ctPresetEnd = Clock::now();
@@ -300,10 +333,10 @@ void OpenGLVolumeViewerWidget::createUi()
 
   windowSpinBox_ = new QSpinBox(this);
   windowSpinBox_->setRange(1, 4096);
-  windowSpinBox_->setValue(255);
+  windowSpinBox_->setValue(kDefaultWindow);
   levelSpinBox_ = new QSpinBox(this);
   levelSpinBox_->setRange(-2048, 4096);
-  levelSpinBox_->setValue(127);
+  levelSpinBox_->setValue(kDefaultLevel);
   resetWindowLevelButton_ = new QPushButton("Reset W/L", this);
   windowLevelPresetComboBox_ = new QComboBox(this);
   windowLevelPresetComboBox_->addItems({"Preset", "Soft Tissue", "Lung", "Bone", "Reset"});
@@ -673,16 +706,15 @@ void OpenGLVolumeViewerWidget::nextSlice()
 
 void OpenGLVolumeViewerWidget::updateWindowLevel()
 {
+  setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexNone);
   updateVolumeSlice();
   updateVolumeMetadataLabel();
 }
 
 void OpenGLVolumeViewerWidget::resetWindowLevel()
 {
-  const QSignalBlocker windowBlocker(windowSpinBox_);
-  const QSignalBlocker levelBlocker(levelSpinBox_);
-  windowSpinBox_->setValue(255);
-  levelSpinBox_->setValue(127);
+  setWindowLevelControls(windowSpinBox_, levelSpinBox_, kDefaultWindow, kDefaultLevel);
+  setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexReset);
   updateVolumeSlice();
   updateVolumeMetadataLabel();
 }
@@ -694,30 +726,27 @@ void OpenGLVolumeViewerWidget::applyWindowLevelPreset(int presetIndex)
 
   switch (presetIndex)
   {
-  case 1:
-    window = 400;
-    level = 40;
+  case kPresetIndexSoftTissue:
+    window = kSoftTissueWindow;
+    level = kSoftTissueLevel;
     break;
-  case 2:
-    window = 1500;
-    level = -600;
+  case kPresetIndexLung:
+    window = kLungWindow;
+    level = kLungLevel;
     break;
-  case 3:
-    window = 2000;
-    level = 300;
+  case kPresetIndexBone:
+    window = kBoneWindow;
+    level = kBoneLevel;
     break;
-  case 4:
-    window = 255;
-    level = 127;
+  case kPresetIndexReset:
+    window = kDefaultWindow;
+    level = kDefaultLevel;
     break;
   default:
     return;
   }
 
-  const QSignalBlocker windowBlocker(windowSpinBox_);
-  const QSignalBlocker levelBlocker(levelSpinBox_);
-  windowSpinBox_->setValue(window);
-  levelSpinBox_->setValue(level);
+  setWindowLevelControls(windowSpinBox_, levelSpinBox_, window, level);
   updateVolumeSlice();
   updateVolumeMetadataLabel();
 }
@@ -1003,11 +1032,8 @@ void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData
     return;
   }
 
-  const QSignalBlocker windowBlocker(windowSpinBox_);
-  const QSignalBlocker levelBlocker(levelSpinBox_);
-
-  windowSpinBox_->setValue(1500);
-  levelSpinBox_->setValue(-600);
+  setWindowLevelControls(windowSpinBox_, levelSpinBox_, kLungWindow, kLungLevel);
+  setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexLung);
 
   const auto end = Clock::now();
   qDebug().noquote()
