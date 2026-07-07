@@ -17,14 +17,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             build-essential \
             cmake \
             libgl1-mesa-dev \
             libinsighttoolkit5-dev \
-            libopencv-core-dev \
-            libopencv-imgcodecs-dev \
-            libopencv-imgproc-dev \
+            libopencv-dev \
             ninja-build \
             qt6-base-dev
 
