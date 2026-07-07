@@ -5,9 +5,9 @@
 #include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
 
-#include <QGridLayout>
 #include <QImage>
 #include <QLabel>
+#include <QSplitter>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -97,14 +97,12 @@ void MprViewerWidget::createUi()
   rootLayout->setContentsMargins(8, 8, 8, 8);
   rootLayout->setSpacing(8);
 
-  auto* gridLayout = new QGridLayout();
-  gridLayout->setContentsMargins(0, 0, 0, 0);
-  gridLayout->setHorizontalSpacing(8);
-  gridLayout->setVerticalSpacing(8);
-  rootLayout->addLayout(gridLayout, 1);
+  auto* splitter = new QSplitter(Qt::Horizontal, this);
+  splitter->setChildrenCollapsible(false);
+  rootLayout->addWidget(splitter, 1);
 
-  auto createPane = [this, gridLayout](SlicePane& pane, int row, int column) {
-    auto* container = new QWidget(this);
+  auto createPane = [this, splitter](SlicePane& pane) {
+    auto* container = new QWidget(splitter);
     auto* layout = new QVBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(4);
@@ -119,16 +117,15 @@ void MprViewerWidget::createUi()
     layout->addWidget(pane.coordinateLabel);
     layout->addWidget(pane.viewer, 1);
 
-    gridLayout->addWidget(container, row, column);
+    splitter->addWidget(container);
   };
 
-  createPane(axialPane_, 0, 0);
-  createPane(sagittalPane_, 0, 1);
-  createPane(coronalPane_, 1, 0);
-  gridLayout->setColumnStretch(0, 1);
-  gridLayout->setColumnStretch(1, 1);
-  gridLayout->setRowStretch(0, 1);
-  gridLayout->setRowStretch(1, 1);
+  createPane(axialPane_);
+  createPane(sagittalPane_);
+  createPane(coronalPane_);
+  splitter->setStretchFactor(0, 1);
+  splitter->setStretchFactor(1, 1);
+  splitter->setStretchFactor(2, 1);
 }
 
 void MprViewerWidget::connectSignals()
