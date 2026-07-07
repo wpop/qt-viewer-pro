@@ -60,7 +60,22 @@ void ImageViewer2D::resizeEvent(QResizeEvent* event)
 
 void ImageViewer2D::wheelEvent(QWheelEvent* event)
 {
-  if (event->angleDelta().y() > 0)
+  const int verticalDelta = event->angleDelta().y();
+  if (verticalDelta == 0)
+  {
+    event->ignore();
+    return;
+  }
+
+  if (sliceNavigationEnabled_)
+  {
+    const int delta = verticalDelta > 0 ? 1 : -1;
+    emit sliceNavigationRequested(delta);
+    event->accept();
+    return;
+  }
+
+  if (verticalDelta > 0)
   {
     zoomIn();
   }
@@ -68,6 +83,8 @@ void ImageViewer2D::wheelEvent(QWheelEvent* event)
   {
     zoomOut();
   }
+
+  event->accept();
 }
 
 void ImageViewer2D::mouseMoveEvent(QMouseEvent* event)
@@ -167,6 +184,11 @@ QSize ImageViewer2D::imageSize() const
 double ImageViewer2D::zoomFactor() const
 {
   return transform().m11();
+}
+
+void ImageViewer2D::setSliceNavigationEnabled(bool enabled)
+{
+  sliceNavigationEnabled_ = enabled;
 }
 
 void ImageViewer2D::zoomIn()

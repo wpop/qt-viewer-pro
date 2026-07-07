@@ -21,6 +21,7 @@ namespace qvp
 {
 
 class ImageViewer2D;
+class MprViewerWidget;
 class OpenGLVolumeViewerWidget;
 class Volume3DViewerWidget;
 enum class VolumeRenderPreset;
@@ -103,6 +104,7 @@ private:
   void createToolBar();
   void showImagePage();
   void showMedicalVolumePage();
+  void showOpenGLMedicalVolumePage();
   void showVolume3DPage();
   void displayLoadedVolume(VolumeData volume);
   VolumeData createSyntheticVolume() const;
@@ -121,6 +123,7 @@ private:
 private:
   QStackedWidget* pageStack_ = nullptr;
   ImageViewer2D* viewer_ = nullptr;
+  MprViewerWidget* mprViewerWidget_ = nullptr;
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
   QImage originalImage_;

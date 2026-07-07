@@ -8,6 +8,7 @@
 #include "qtviewerpro/processing/VolumeResampler.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
+#include "qtviewerpro/ui/MprViewerWidget.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 #include "qtviewerpro/ui/Volume3DViewerWidget.h"
 
@@ -403,9 +404,11 @@ void MainWindow::createViewer()
 {
   pageStack_ = new QStackedWidget(this);
   viewer_ = new ImageViewer2D(pageStack_);
+  mprViewerWidget_ = new MprViewerWidget(pageStack_);
   medicalVolumeViewerWidget_ = new OpenGLVolumeViewerWidget(pageStack_);
   volume3DViewerWidget_ = new Volume3DViewerWidget(pageStack_);
   pageStack_->addWidget(viewer_);
+  pageStack_->addWidget(mprViewerWidget_);
   pageStack_->addWidget(medicalVolumeViewerWidget_);
   pageStack_->addWidget(volume3DViewerWidget_);
   setCentralWidget(pageStack_);
@@ -442,7 +445,7 @@ void MainWindow::createFileMenu()
   fileMenu->addSeparator();
 
   openMedicalVolumeAction_ = fileMenu->addAction("Open Medical Volume...");
-  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the OpenGL slice viewer");
+  openMedicalVolumeAction_->setStatusTip("Open a medical volume in the synchronized MPR viewer");
   connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
 
   QAction* openDicomSeriesFolderAction = fileMenu->addAction("Open DICOM Series Folder...");
@@ -496,9 +499,14 @@ void MainWindow::createViewMenu()
   connect(showImageViewerAction, &QAction::triggered, this, &MainWindow::showImagePage);
 
   QAction* showMedicalVolumeViewerAction = viewMenu->addAction("Medical Volume Viewer");
-  showMedicalVolumeViewerAction->setStatusTip("Switch to the medical volume viewer page");
+  showMedicalVolumeViewerAction->setStatusTip("Switch to the synchronized MPR viewer page");
   connect(showMedicalVolumeViewerAction, &QAction::triggered, this,
           &MainWindow::showMedicalVolumePage);
+
+  QAction* showOpenGLSliceViewerAction = viewMenu->addAction("OpenGL Slice Viewer");
+  showOpenGLSliceViewerAction->setStatusTip("Switch to the OpenGL slice viewer page");
+  connect(showOpenGLSliceViewerAction, &QAction::triggered, this,
+          &MainWindow::showOpenGLMedicalVolumePage);
 
   QAction* showVolume3DViewerAction = viewMenu->addAction("3D Volume Viewer");
   showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
@@ -584,7 +592,7 @@ void MainWindow::createDemoMenu()
   QMenu* demoMenu = menuBar()->addMenu("&Tools");
 
   openSyntheticVolumeSliceAction_ = demoMenu->addAction("Load Synthetic Test Volume");
-  openSyntheticVolumeSliceAction_->setStatusTip("Load a synthetic test volume into the medical viewer");
+  openSyntheticVolumeSliceAction_->setStatusTip("Load a synthetic test volume into the synchronized MPR viewer");
   connect(openSyntheticVolumeSliceAction_, &QAction::triggered, this,
           &MainWindow::openSyntheticVolumeSlice);
 
@@ -881,7 +889,7 @@ void MainWindow::openDicomSeriesFolder()
 
 void MainWindow::openMaskOverlay()
 {
-  showMedicalVolumePage();
+  showOpenGLMedicalVolumePage();
   medicalVolumeViewerWidget_->openMaskOverlay();
 }
 
@@ -898,6 +906,8 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
   const auto assignmentEnd = std::chrono::steady_clock::now();
 
   const auto medicalViewerStart = std::chrono::steady_clock::now();
+  mprViewerWidget_->setVolume(sharedVolume);
+  const auto medicalMprViewerEnd = std::chrono::steady_clock::now();
   medicalVolumeViewerWidget_->setVolume(sharedVolume);
   const auto medicalViewerEnd = std::chrono::steady_clock::now();
 
@@ -919,14 +929,18 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
       << QStringLiteral("Volume display timings:\n"
                         "  shared ownership setup:      %1 ms\n"
                         "  current volume assignment:    %2 ms\n"
-                        "  medical viewer setVolume:     %3 ms\n"
-                        "  3D viewer setVolume:          %4 ms\n"
-                        "  show medical page:            %5 ms\n"
-                        "  update actions:               %6 ms\n"
-                        "  displayLoadedVolume total:    %7 ms")
+                        "  MPR viewer setVolume:         %3 ms\n"
+                        "  OpenGL slice setVolume:       %4 ms\n"
+                        "  3D viewer setVolume:          %5 ms\n"
+                        "  show medical page:            %6 ms\n"
+                        "  update actions:               %7 ms\n"
+                        "  displayLoadedVolume total:    %8 ms")
              .arg(QString::number(durationMilliseconds(sharedEnd - sharedStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(assignmentEnd - assignmentStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(medicalViewerEnd - medicalViewerStart),
+             .arg(QString::number(durationMilliseconds(medicalMprViewerEnd - medicalViewerStart),
+                                  'f',
+                                  1))
+             .arg(QString::number(durationMilliseconds(medicalViewerEnd - medicalMprViewerEnd),
                                   'f',
                                   1))
              .arg(QString::number(durationMilliseconds(volume3DViewerEnd - volume3DViewerStart),
@@ -947,6 +961,11 @@ void MainWindow::showImagePage()
 }
 
 void MainWindow::showMedicalVolumePage()
+{
+  pageStack_->setCurrentWidget(mprViewerWidget_);
+}
+
+void MainWindow::showOpenGLMedicalVolumePage()
 {
   pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
 }
