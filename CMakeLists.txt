@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets Test Concurrent)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS imgcodecs imgproc)
 
 # The Ubuntu ITK package may try to load ITKVtkGlue, which pulls VTK/MPI.
 # qt-viewer-pro does not use ITK-VTK glue, so mark it as already loaded.
@@ -26,7 +26,9 @@ find_package(ITK REQUIRED COMPONENTS
 )
 include(${ITK_USE_FILE})
 
-qt_standard_project_setup()
+# Qt 6.2 on Ubuntu 22.04 does not provide qt_standard_project_setup().
+# This project only needs AUTOMOC for Q_OBJECT-based sources.
+set(CMAKE_AUTOMOC ON)
 enable_testing()
 
 # Core library
@@ -175,7 +177,7 @@ set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/io/ImageLoader.h
 )
 
-qt_add_executable(qt-viewer-pro
+qt6_add_executable(qt-viewer-pro
     ${QTVIEWERPRO_APP_SOURCES}
     ${QTVIEWERPRO_APP_HEADERS}
 )
@@ -197,7 +199,7 @@ target_link_libraries(qt-viewer-pro
 )
 
 # Tests
-qt_add_executable(test-volume-data
+qt6_add_executable(test-volume-data
     tests/TestVolumeData.cpp
 )
 
@@ -209,7 +211,7 @@ target_link_libraries(test-volume-data
 
 add_test(NAME test-volume-data COMMAND test-volume-data)
 
-qt_add_executable(test-volume-metadata
+qt6_add_executable(test-volume-metadata
     tests/TestVolumeMetadata.cpp
 )
 
@@ -221,7 +223,7 @@ target_link_libraries(test-volume-metadata
 
 add_test(NAME test-volume-metadata COMMAND test-volume-metadata)
 
-qt_add_executable(test-slice-data
+qt6_add_executable(test-slice-data
     tests/TestSliceData.cpp
 )
 
@@ -233,7 +235,7 @@ target_link_libraries(test-slice-data
 
 add_test(NAME test-slice-data COMMAND test-slice-data)
 
-qt_add_executable(test-slice-extractor
+qt6_add_executable(test-slice-extractor
     tests/TestSliceExtractor.cpp
 )
 
@@ -245,7 +247,7 @@ target_link_libraries(test-slice-extractor
 
 add_test(NAME test-slice-extractor COMMAND test-slice-extractor)
 
-qt_add_executable(test-window-level-processor
+qt6_add_executable(test-window-level-processor
     tests/TestWindowLevelProcessor.cpp
 )
 
@@ -257,7 +259,7 @@ target_link_libraries(test-window-level-processor
 
 add_test(NAME test-window-level-processor COMMAND test-window-level-processor)
 
-qt_add_executable(test-volume-resampler
+qt6_add_executable(test-volume-resampler
     tests/TestVolumeResampler.cpp
 )
 
@@ -270,7 +272,7 @@ target_link_libraries(test-volume-resampler
 
 add_test(NAME test-volume-resampler COMMAND test-volume-resampler)
 
-qt_add_executable(test-slice-image-converter
+qt6_add_executable(test-slice-image-converter
     tests/TestSliceImageConverter.cpp
 )
 
@@ -283,7 +285,7 @@ target_link_libraries(test-slice-image-converter
 
 add_test(NAME test-slice-image-converter COMMAND test-slice-image-converter)
 
-qt_add_executable(test-raw-volume-loader
+qt6_add_executable(test-raw-volume-loader
     tests/TestRawVolumeLoader.cpp
 )
 
@@ -295,7 +297,7 @@ target_link_libraries(test-raw-volume-loader
 
 add_test(NAME test-raw-volume-loader COMMAND test-raw-volume-loader)
 
-qt_add_executable(test-nifti-volume-loader
+qt6_add_executable(test-nifti-volume-loader
     tests/TestNiftiVolumeLoader.cpp
 )
 
@@ -308,7 +310,7 @@ target_link_libraries(test-nifti-volume-loader
 
 add_test(NAME test-nifti-volume-loader COMMAND test-nifti-volume-loader)
 
-qt_add_executable(test-metaimage-volume-loader
+qt6_add_executable(test-metaimage-volume-loader
     tests/TestMetaImageVolumeLoader.cpp
 )
 
