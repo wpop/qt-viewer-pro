@@ -2,6 +2,7 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <vector>
 #include <utility>
 
@@ -16,6 +17,7 @@ private slots:
   void constructorStoresVoxelData();
   void constructorCachesIntensityRange();
   void constantVolumeCachesSingleIntensityRange();
+  void ctLikeVolumeCachesHounsfieldUnitRange();
   void copyPreservesIntensityRange();
   void movePreservesIntensityRange();
 };
@@ -75,6 +77,20 @@ void TestVolumeData::constantVolumeCachesSingleIntensityRange()
   QVERIFY(volume.hasIntensityRange());
   QCOMPARE(volume.intensityMinimum(), 42.0F);
   QCOMPARE(volume.intensityMaximum(), 42.0F);
+}
+
+void TestVolumeData::ctLikeVolumeCachesHounsfieldUnitRange()
+{
+  const std::vector<float> voxels{-1024.0F, -950.0F, -120.0F, 0.0F, 45.0F, 325.0F, 1024.0F};
+  const qvp::VolumeData volume(7, 1, 1, 0.7F, 0.7F, 1.5F, voxels);
+
+  QVERIFY(volume.hasIntensityRange());
+  QCOMPARE(volume.intensityMinimum(), -1024.0F);
+  QCOMPARE(volume.intensityMaximum(), 1024.0F);
+
+  const auto [minIt, maxIt] = std::minmax_element(voxels.begin(), voxels.end());
+  QCOMPARE(volume.intensityMinimum(), *minIt);
+  QCOMPARE(volume.intensityMaximum(), *maxIt);
 }
 
 void TestVolumeData::copyPreservesIntensityRange()
