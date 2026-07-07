@@ -163,6 +163,7 @@ target_link_libraries(qt-viewer-pro-render
 set(QTVIEWERPRO_APP_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
+    src/ui/MprViewerWidget.cpp
     src/ui/OpenGLVolumeViewerWidget.cpp
     src/ui/Volume3DViewerWidget.cpp
     src/ui/ImageViewer2D.cpp
@@ -171,6 +172,7 @@ set(QTVIEWERPRO_APP_SOURCES
 
 set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MainWindow.h
+    include/qtviewerpro/ui/MprViewerWidget.h
     include/qtviewerpro/ui/OpenGLVolumeViewerWidget.h
     include/qtviewerpro/ui/Volume3DViewerWidget.h
     include/qtviewerpro/ui/ImageViewer2D.h

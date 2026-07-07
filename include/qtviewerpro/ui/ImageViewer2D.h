@@ -102,6 +102,12 @@ public:
    */
   double zoomFactor() const;
 
+  /**
+   * @brief Enables or disables wheel-based slice navigation mode.
+   * @param enabled When true, wheel input emits sliceNavigationRequested instead of zooming.
+   */
+  void setSliceNavigationEnabled(bool enabled);
+
 protected:
   void drawForeground(QPainter* painter, const QRectF& rect) override;
   void leaveEvent(QEvent* event) override;
@@ -127,9 +133,16 @@ signals:
    */
   void imageMousePositionChanged(int x, int y);
 
+  /**
+   * @brief Emitted when wheel input requests moving to an adjacent slice.
+   * @param delta +1 for the next slice, -1 for the previous slice.
+   */
+  void sliceNavigationRequested(int delta);
+
 private:
   QGraphicsPixmapItem* pixmapItem_ = nullptr;
   bool fitMode_ = true;
+  bool sliceNavigationEnabled_ = false;
   std::optional<QPointF> currentImageMousePosition_;
 };
 
