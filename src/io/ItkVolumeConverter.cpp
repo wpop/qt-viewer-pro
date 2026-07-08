@@ -27,7 +27,8 @@ namespace qvp
 
 VolumeData convertItkImageToVolume(const ItkVolumeImage::Pointer& image,
                                    const ItkSpatialGeometryPolicy& policy,
-                                   const char* formatName)
+                                   const char* formatName,
+                                   std::optional<VoxelAxisAnatomy> voxelAxisAnatomy)
 {
   if (!image)
   {
@@ -79,7 +80,8 @@ VolumeData convertItkImageToVolume(const ItkVolumeImage::Pointer& image,
                     spacingY,
                     spacingZ,
                     std::move(voxels),
-                    spatialGeometry);
+                    spatialGeometry,
+                    std::move(voxelAxisAnatomy));
 }
 
 } // namespace qvp

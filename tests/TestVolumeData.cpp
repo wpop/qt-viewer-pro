@@ -22,6 +22,7 @@ private slots:
   void constructorStoresExplicitDirection();
   void constructorStoresCoordinateSystem();
   void constructorStoresExplicitOrientationTrust();
+  void constructorStoresVoxelAxisAnatomy();
   void constantVolumeCachesSingleIntensityRange();
   void ctLikeVolumeCachesHounsfieldUnitRange();
   void copyPreservesIntensityRange();
@@ -158,6 +159,23 @@ void TestVolumeData::constructorStoresExplicitOrientationTrust()
   const qvp::VolumeData trustedVolume(
       1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, trustedGeometry);
   QVERIFY(trustedVolume.hasSpatialOrientation());
+}
+
+void TestVolumeData::constructorStoresVoxelAxisAnatomy()
+{
+  qvp::VolumeData::SpatialGeometry geometry;
+  const qvp::VoxelAxisAnatomy anatomy{qvp::AnatomicalDirection::Left,
+                                      qvp::AnatomicalDirection::Posterior,
+                                      qvp::AnatomicalDirection::Superior};
+
+  const qvp::VolumeData volume(1, 1, 1, 1.0F, 1.0F, 1.0F, {7.0F}, geometry, anatomy);
+
+  QVERIFY(volume.hasVoxelAxisAnatomy());
+  QVERIFY(volume.voxelAxisAnatomy().has_value());
+  QCOMPARE(volume.voxelAxisAnatomy()->x, qvp::AnatomicalDirection::Left);
+  QCOMPARE(volume.voxelAxisAnatomy()->y, qvp::AnatomicalDirection::Posterior);
+  QCOMPARE(volume.voxelAxisAnatomy()->z, qvp::AnatomicalDirection::Superior);
+  QVERIFY(!volume.hasSpatialOrientation());
 }
 
 void TestVolumeData::constantVolumeCachesSingleIntensityRange()

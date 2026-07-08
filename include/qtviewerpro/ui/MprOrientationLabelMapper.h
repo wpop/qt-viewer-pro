@@ -1,5 +1,6 @@
 #pragma once
 
+#include "qtviewerpro/core/AnatomicalOrientation.h"
 #include "qtviewerpro/core/SliceOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 
@@ -22,6 +23,10 @@ class MprOrientationLabelMapper
 public:
   static std::optional<OrientationEdgeLabels> edgeLabels(
       const VolumeData::SpatialGeometry& geometry,
+      SliceOrientation orientation);
+
+  static std::optional<OrientationEdgeLabels> edgeLabels(
+      const VoxelAxisAnatomy& anatomy,
       SliceOrientation orientation);
 };
 

@@ -1,3 +1,4 @@
+#include "qtviewerpro/core/AnatomicalOrientation.h"
 #include "qtviewerpro/io/MetaImageVolumeLoader.h"
 
 #include "qtviewerpro/io/ItkVolumeConverter.h"
@@ -5,6 +6,7 @@
 #include <QFileInfo>
 
 #include <itkImageFileReader.h>
+#include <itkMetaImageIO.h>
 
 #include <exception>
 
@@ -34,12 +36,23 @@ VolumeLoadResult MetaImageVolumeLoader::load(const QString& path) const
 
   try
   {
+    const auto metaImageIO = itk::MetaImageIO::New();
     const auto reader = ReaderType::New();
+    reader->SetImageIO(metaImageIO);
     reader->SetFileName(path.toStdString());
     reader->Update();
 
-    const VolumeData volume =
-        convertItkImageToVolume(reader->GetOutput(), ItkSpatialGeometryPolicy{}, "MetaImage");
+    std::optional<VoxelAxisAnatomy> voxelAxisAnatomy;
+    if (auto* metaImage = metaImageIO->GetMetaImagePointer())
+    {
+      voxelAxisAnatomy =
+          parseAnatomicalOrientationAcronym(metaImage->AnatomicalOrientationAcronym());
+    }
+
+    const VolumeData volume = convertItkImageToVolume(reader->GetOutput(),
+                                                      ItkSpatialGeometryPolicy{},
+                                                      "MetaImage",
+                                                      std::move(voxelAxisAnatomy));
     if (!volume.isValid())
     {
       return VolumeLoadResult::makeFailure(QStringLiteral("Loaded MetaImage volume is invalid"));

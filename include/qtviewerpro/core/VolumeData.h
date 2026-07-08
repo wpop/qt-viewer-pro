@@ -1,7 +1,10 @@
 #pragma once
 
+#include "qtviewerpro/core/AnatomicalOrientation.h"
+
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <vector>
 #include <utility>
 
@@ -73,7 +76,8 @@ public:
              float spacingY,
              float spacingZ,
              std::vector<float> voxels,
-             SpatialGeometry spatialGeometry);
+             SpatialGeometry spatialGeometry,
+             std::optional<VoxelAxisAnatomy> voxelAxisAnatomy = std::nullopt);
 
   /**
    * @brief Returns the number of voxels along the X axis.
@@ -114,6 +118,16 @@ public:
    * @brief Returns optional spatial geometry metadata for the volume.
    */
   const SpatialGeometry& spatialGeometry() const noexcept;
+
+  /**
+   * @brief Returns optional voxel-axis anatomical direction metadata.
+   */
+  const std::optional<VoxelAxisAnatomy>& voxelAxisAnatomy() const noexcept;
+
+  /**
+   * @brief Returns true when voxel-axis anatomical directions are available.
+   */
+  bool hasVoxelAxisAnatomy() const noexcept;
 
   /**
    * @brief Returns true when spatial orientation is explicitly trusted.
@@ -162,6 +176,7 @@ private:
   float intensityMaximum_ = 0.0F;
   bool hasIntensityRange_ = false;
   SpatialGeometry spatialGeometry_;
+  std::optional<VoxelAxisAnatomy> voxelAxisAnatomy_;
 };
 
 } // namespace qvp

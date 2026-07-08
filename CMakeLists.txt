@@ -33,6 +33,7 @@ enable_testing()
 
 # Core library
 set(QTVIEWERPRO_CORE_SOURCES
+    src/core/AnatomicalOrientation.cpp
     src/core/SliceData.cpp
     src/core/SliceExtractor.cpp
     src/core/VolumeData.cpp
@@ -41,6 +42,7 @@ set(QTVIEWERPRO_CORE_SOURCES
 )
 
 set(QTVIEWERPRO_CORE_HEADERS
+    include/qtviewerpro/core/AnatomicalOrientation.h
     include/qtviewerpro/core/SliceData.h
     include/qtviewerpro/core/SliceExtractor.h
     include/qtviewerpro/core/SliceOrientation.h
@@ -232,6 +234,18 @@ target_link_libraries(test-volume-metadata
 )
 
 add_test(NAME test-volume-metadata COMMAND test-volume-metadata)
+
+qt6_add_executable(test-anatomical-orientation
+    tests/TestAnatomicalOrientation.cpp
+)
+
+target_link_libraries(test-anatomical-orientation
+    PRIVATE
+        qt-viewer-pro-core
+        Qt6::Test
+)
+
+add_test(NAME test-anatomical-orientation COMMAND test-anatomical-orientation)
 
 qt6_add_executable(test-volume-physical-coordinate-mapper
     tests/TestVolumePhysicalCoordinateMapper.cpp
