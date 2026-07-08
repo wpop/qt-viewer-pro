@@ -1,6 +1,7 @@
 #pragma once
 
 #include "qtviewerpro/core/VolumeData.h"
+#include "qtviewerpro/render/VolumeTransferFunction.h"
 
 #include <QImage>
 #include <QMainWindow>
@@ -103,9 +104,11 @@ private:
   void createStatusBar();
   void updateStatusBar();
   void updateActions();
+  void syncRenderPresetActions();
   bool volumeToolsAvailable() const;
   void refreshVolumeToolsWindow();
   void updateVolumeToolsNavigationState();
+  void updateTransferFunctionUi();
   void createToolBar();
   void showImagePage();
   void showMedicalVolumePage();
@@ -158,6 +161,10 @@ private:
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
   QAction* volumeToolsAction_ = nullptr;
+  QAction* renderPresetDefaultAction_ = nullptr;
+  QAction* renderPresetCtBoneAction_ = nullptr;
+  QAction* renderPresetCtLungAction_ = nullptr;
+  QAction* renderPresetCustomAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
 };
 

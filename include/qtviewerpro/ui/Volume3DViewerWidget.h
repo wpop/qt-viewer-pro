@@ -1,6 +1,7 @@
 #pragma once
 
 #include "qtviewerpro/core/VolumeData.h"
+#include "qtviewerpro/render/VolumeTransferFunction.h"
 
 #include <memory>
 #include <QWidget>
@@ -22,6 +23,9 @@ public:
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
   void setRenderPreset(VolumeRenderPreset preset);
+  void setGlobalOpacity(float opacity);
+  void setManualIntensityRange(float minimum, float maximum);
+  VolumeTransferFunctionState transferFunctionState() const;
   void resetView();
 
 private:

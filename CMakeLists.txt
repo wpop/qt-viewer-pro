@@ -275,6 +275,22 @@ target_link_libraries(test-volume-information
 
 add_test(NAME test-volume-information COMMAND test-volume-information)
 
+qt6_add_executable(test-volume-transfer-function
+    tests/TestVolumeTransferFunction.cpp
+)
+
+target_include_directories(test-volume-transfer-function
+    PRIVATE
+        include
+)
+
+target_link_libraries(test-volume-transfer-function
+    PRIVATE
+        Qt6::Test
+)
+
+add_test(NAME test-volume-transfer-function COMMAND test-volume-transfer-function)
+
 qt6_add_executable(test-slice-data
     tests/TestSliceData.cpp
 )

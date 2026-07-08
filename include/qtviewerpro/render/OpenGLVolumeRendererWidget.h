@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qtviewerpro/render/VolumeTransferFunction.h"
+
 #include <memory>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
@@ -14,13 +16,6 @@ class QWheelEvent;
 namespace qvp
 {
 
-enum class VolumeRenderPreset
-{
-  Default = 0,
-  CtBone = 1,
-  CtLung = 2
-};
-
 class VolumeData;
 
 class OpenGLVolumeRendererWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -33,6 +28,9 @@ public:
 
   void setVolume(std::shared_ptr<const VolumeData> volume);
   void setRenderPreset(VolumeRenderPreset renderPreset);
+  void setGlobalOpacity(float opacity);
+  void setManualIntensityRange(float minimum, float maximum);
+  VolumeTransferFunctionState transferFunctionState() const;
   void resetView();
 
 signals:
@@ -69,9 +67,9 @@ private:
   GLuint vbo_ = 0;
   GLuint volumeVao_ = 0;
   GLuint volumeVbo_ = 0;
-  float volumeIntensityMinimum_ = 0.0F;
-  float volumeIntensityMaximum_ = 0.0F;
-  VolumeRenderPreset activeRenderPreset_ = VolumeRenderPreset::Default;
+  float sourceIntensityMinimum_ = 0.0F;
+  float sourceIntensityMaximum_ = 0.0F;
+  VolumeTransferFunctionState transferFunctionState_{};
   QQuaternion volumeRotation_ = QQuaternion(1.0F, 0.0F, 0.0F, 0.0F);
   QPoint lastMousePosition_;
   bool isRotating_ = false;
