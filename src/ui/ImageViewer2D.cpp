@@ -10,8 +10,10 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPen>
 #include <QPixmap>
+#include <QRect>
 #include <QTransform>
 #include <QUrl>
 #include <QWheelEvent>
@@ -23,6 +25,9 @@
 namespace
 {
 constexpr double kZoomFactor = 1.25;
+constexpr int kOverlayMargin = 10;
+constexpr int kOverlayPaddingX = 6;
+constexpr int kOverlayPaddingY = 3;
 
 double sanitizePixelSpacing(float spacing)
 {
@@ -32,6 +37,53 @@ double sanitizePixelSpacing(float spacing)
   }
 
   return static_cast<double>(spacing);
+}
+
+void drawEdgeLabel(QPainter* painter, const QRect& viewportRect, Qt::Alignment alignment, const QString& text)
+{
+  if (text.isEmpty())
+  {
+    return;
+  }
+
+  const QFontMetrics metrics(painter->font());
+  const QSize textSize = metrics.size(Qt::TextSingleLine, text);
+  QRect textRect(QPoint(0, 0),
+                 QSize(textSize.width() + (2 * kOverlayPaddingX),
+                       textSize.height() + (2 * kOverlayPaddingY)));
+
+  if (alignment.testFlag(Qt::AlignHCenter))
+  {
+    textRect.moveCenter(QPoint(viewportRect.center().x(), textRect.center().y()));
+  }
+  else if (alignment.testFlag(Qt::AlignLeft))
+  {
+    textRect.moveLeft(viewportRect.left() + kOverlayMargin);
+  }
+  else if (alignment.testFlag(Qt::AlignRight))
+  {
+    textRect.moveRight(viewportRect.right() - kOverlayMargin);
+  }
+
+  if (alignment.testFlag(Qt::AlignVCenter))
+  {
+    textRect.moveCenter(QPoint(textRect.center().x(), viewportRect.center().y()));
+  }
+  else if (alignment.testFlag(Qt::AlignTop))
+  {
+    textRect.moveTop(viewportRect.top() + kOverlayMargin);
+  }
+  else if (alignment.testFlag(Qt::AlignBottom))
+  {
+    textRect.moveBottom(viewportRect.bottom() - kOverlayMargin);
+  }
+
+  QPainterPath backgroundPath;
+  backgroundPath.addRoundedRect(QRectF(textRect), 4.0, 4.0);
+
+  painter->fillPath(backgroundPath, QColor(0, 0, 0, 120));
+  painter->setPen(QColor(255, 255, 255, 235));
+  painter->drawText(textRect, Qt::AlignCenter, text);
 }
 }
 
@@ -187,6 +239,25 @@ void ImageViewer2D::drawForeground(QPainter* painter, const QRectF& rect)
   {
     drawCrosshair(painter, currentImageMousePosition_.value());
   }
+
+  if (!edgeLabels_.has_value())
+  {
+    return;
+  }
+
+  painter->save();
+  painter->resetTransform();
+
+  QFont overlayFont = painter->font();
+  overlayFont.setBold(true);
+  painter->setFont(overlayFont);
+
+  const QRect viewportRect = viewport()->rect();
+  drawEdgeLabel(painter, viewportRect, Qt::AlignHCenter | Qt::AlignTop, edgeLabels_->top);
+  drawEdgeLabel(painter, viewportRect, Qt::AlignHCenter | Qt::AlignBottom, edgeLabels_->bottom);
+  drawEdgeLabel(painter, viewportRect, Qt::AlignLeft | Qt::AlignVCenter, edgeLabels_->left);
+  drawEdgeLabel(painter, viewportRect, Qt::AlignRight | Qt::AlignVCenter, edgeLabels_->right);
+  painter->restore();
 }
 
 void ImageViewer2D::drawCrosshair(QPainter* painter, const QPointF& imagePosition) const
@@ -263,6 +334,12 @@ void ImageViewer2D::setCrosshairPosition(const std::optional<QPointF>& position)
 void ImageViewer2D::setImageClickEnabled(bool enabled)
 {
   imageClickEnabled_ = enabled;
+}
+
+void ImageViewer2D::setEdgeLabels(const std::optional<EdgeLabels>& labels)
+{
+  edgeLabels_ = labels;
+  viewport()->update();
 }
 
 void ImageViewer2D::setPixelSpacing(float spacingX, float spacingY)

@@ -4,6 +4,7 @@
 #include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
+#include "qtviewerpro/ui/MprOrientationLabelMapper.h"
 
 #include <QHBoxLayout>
 #include <QImage>
@@ -42,6 +43,29 @@ QString orientationName(qvp::SliceOrientation orientation)
   return QStringLiteral("Unknown");
 }
 
+std::optional<qvp::ImageViewer2D::EdgeLabels> edgeLabelsForOrientation(
+    const qvp::VolumeData* volume,
+    qvp::SliceOrientation orientation)
+{
+  if (volume == nullptr)
+  {
+    return std::nullopt;
+  }
+
+  const auto labels =
+      qvp::MprOrientationLabelMapper::edgeLabels(volume->spatialGeometry(), orientation);
+  if (!labels.has_value())
+  {
+    return std::nullopt;
+  }
+
+  return qvp::ImageViewer2D::EdgeLabels{
+      QString::fromLatin1(labels->left.data(), static_cast<int>(labels->left.size())),
+      QString::fromLatin1(labels->right.data(), static_cast<int>(labels->right.size())),
+      QString::fromLatin1(labels->top.data(), static_cast<int>(labels->top.size())),
+      QString::fromLatin1(labels->bottom.data(), static_cast<int>(labels->bottom.size()))};
+}
+
 } // namespace
 
 namespace qvp
@@ -76,16 +100,19 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
     axialPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     axialPane_.viewer->setImage(QImage());
     axialPane_.viewer->setCrosshairPosition(std::nullopt);
+    axialPane_.viewer->setEdgeLabels(std::nullopt);
     axialPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
     resetPane(sagittalPane_);
     sagittalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     sagittalPane_.viewer->setImage(QImage());
     sagittalPane_.viewer->setCrosshairPosition(std::nullopt);
+    sagittalPane_.viewer->setEdgeLabels(std::nullopt);
     sagittalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
     resetPane(coronalPane_);
     coronalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     coronalPane_.viewer->setImage(QImage());
     coronalPane_.viewer->setCrosshairPosition(std::nullopt);
+    coronalPane_.viewer->setEdgeLabels(std::nullopt);
     coronalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
     axialPane_.titleLabel->setText(QStringLiteral("Axial"));
     sagittalPane_.titleLabel->setText(QStringLiteral("Sagittal"));
@@ -234,6 +261,7 @@ void MprViewerWidget::refreshSlicePane(SlicePane& pane)
       MprCoordinateMapper::crosshairImagePoint(pane.orientation, currentPosition_);
   pane.viewer->setCrosshairPosition(
       QPointF(static_cast<double>(imagePoint.x) + 0.5, static_cast<double>(imagePoint.y) + 0.5));
+  pane.viewer->setEdgeLabels(edgeLabelsForOrientation(currentVolume_.get(), pane.orientation));
   pane.titleLabel->setText(orientationName(pane.orientation));
   pane.sliceValueLabel->setText(QStringLiteral("%1 / %2").arg(sliceIndex).arg(sliceCount - 1));
   pane.coordinateLabel->setText(QStringLiteral("x=%1  y=%2  z=%3")
