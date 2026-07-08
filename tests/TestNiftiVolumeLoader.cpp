@@ -6,8 +6,11 @@
 #include <itkImage.h>
 #include <itkImageFileWriter.h>
 #include <itkImageRegionIterator.h>
+#include <nifti1.h>
 
 #include <cmath>
+#include <cstddef>
+#include <fstream>
 #include <stdexcept>
 
 namespace
@@ -25,13 +28,16 @@ const qvp::VolumeData::Origin kOrigin{12.5, -8.25, 42.0};
 const qvp::VolumeData::Direction kDirection{0.0, -1.0, 0.0,
                                             1.0, 0.0, 0.0,
                                             0.0, 0.0, 1.0};
+const qvp::VolumeData::Direction kIdentityDirection{1.0, 0.0, 0.0,
+                                                    0.0, 1.0, 0.0,
+                                                    0.0, 0.0, 1.0};
 
 std::size_t linearIndex(std::size_t x, std::size_t y, std::size_t z)
 {
   return x + (kWidth * (y + (kHeight * z)));
 }
 
-ImageType::Pointer createTinyVolume()
+ImageType::Pointer createTinyVolume(const qvp::VolumeData::Direction& directionValues = kDirection)
 {
   auto image = ImageType::New();
 
@@ -59,15 +65,15 @@ ImageType::Pointer createTinyVolume()
   origin[2] = kOrigin[2];
   image->SetOrigin(origin);
   ImageType::DirectionType direction;
-  direction[0][0] = kDirection[0];
-  direction[0][1] = kDirection[1];
-  direction[0][2] = kDirection[2];
-  direction[1][0] = kDirection[3];
-  direction[1][1] = kDirection[4];
-  direction[1][2] = kDirection[5];
-  direction[2][0] = kDirection[6];
-  direction[2][1] = kDirection[7];
-  direction[2][2] = kDirection[8];
+  direction[0][0] = directionValues[0];
+  direction[0][1] = directionValues[1];
+  direction[0][2] = directionValues[2];
+  direction[1][0] = directionValues[3];
+  direction[1][1] = directionValues[4];
+  direction[1][2] = directionValues[5];
+  direction[2][0] = directionValues[6];
+  direction[2][1] = directionValues[7];
+  direction[2][2] = directionValues[8];
   image->SetDirection(direction);
   image->Allocate();
 
@@ -82,9 +88,10 @@ ImageType::Pointer createTinyVolume()
   return image;
 }
 
-void writeTinyNiftiFile(const QString& path)
+void writeTinyNiftiFile(const QString& path,
+                        const qvp::VolumeData::Direction& directionValues = kDirection)
 {
-  const auto image = createTinyVolume();
+  const auto image = createTinyVolume(directionValues);
 
   using WriterType = itk::ImageFileWriter<ImageType>;
   const auto writer = WriterType::New();
@@ -93,7 +100,26 @@ void writeTinyNiftiFile(const QString& path)
   writer->Update();
 }
 
-void verifyLoadedVolume(const qvp::VolumeData& volume)
+void clearNiftiOrientationCodes(const QString& path)
+{
+  std::fstream file(path.toStdString(), std::ios::binary | std::ios::in | std::ios::out);
+  if (!file)
+  {
+    throw std::runtime_error("Failed to open NIfTI file for orientation patching");
+  }
+
+  const short zero = 0;
+  file.seekp(static_cast<std::streamoff>(offsetof(nifti_1_header, qform_code)));
+  file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+  file.seekp(static_cast<std::streamoff>(offsetof(nifti_1_header, sform_code)));
+  file.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+  if (!file)
+  {
+    throw std::runtime_error("Failed to patch NIfTI orientation codes");
+  }
+}
+
+void verifyCommonLoadedVolume(const qvp::VolumeData& volume)
 {
   QCOMPARE(volume.width(), kWidth);
   QCOMPARE(volume.height(), kHeight);
@@ -102,17 +128,8 @@ void verifyLoadedVolume(const qvp::VolumeData& volume)
   QVERIFY(std::fabs(volume.spacingX() - kSpacingX) < 1e-6F);
   QVERIFY(std::fabs(volume.spacingY() - kSpacingY) < 1e-6F);
   QVERIFY(std::fabs(volume.spacingZ() - kSpacingZ) < 1e-6F);
-  QVERIFY(!volume.hasSpatialOrientation());
   QVERIFY(volume.spatialGeometry().coordinateSystem ==
           qvp::VolumeData::CoordinateSystem::LPS);
-  for (std::size_t i = 0; i < kOrigin.size(); ++i)
-  {
-    QVERIFY(std::fabs(volume.spatialGeometry().origin[i] - kOrigin[i]) < 1e-6);
-  }
-  for (std::size_t i = 0; i < kDirection.size(); ++i)
-  {
-    QVERIFY(std::fabs(volume.spatialGeometry().direction[i] - kDirection[i]) < 1e-6);
-  }
 
   QCOMPARE(volume.voxelCount(), kWidth * kHeight * kDepth);
   QCOMPARE(volume.voxels().size(), kWidth * kHeight * kDepth);
@@ -124,6 +141,21 @@ void verifyLoadedVolume(const qvp::VolumeData& volume)
   QCOMPARE(voxels[linearIndex(3, 2, 1)], 123.0F);
 }
 
+void verifyTrustedGeometry(const qvp::VolumeData& volume,
+                           const qvp::VolumeData::Origin& expectedOrigin,
+                           const qvp::VolumeData::Direction& expectedDirection)
+{
+  QVERIFY(volume.hasSpatialOrientation());
+  for (std::size_t i = 0; i < expectedOrigin.size(); ++i)
+  {
+    QVERIFY(std::fabs(volume.spatialGeometry().origin[i] - expectedOrigin[i]) < 1e-6);
+  }
+  for (std::size_t i = 0; i < expectedDirection.size(); ++i)
+  {
+    QVERIFY(std::fabs(volume.spatialGeometry().direction[i] - expectedDirection[i]) < 1e-6);
+  }
+}
+
 } // namespace
 
 class TestNiftiVolumeLoader : public QObject
@@ -131,11 +163,13 @@ class TestNiftiVolumeLoader : public QObject
   Q_OBJECT
 
 private slots:
-  void loadsTinySyntheticVolume();
+  void trustedNiftiOrientation();
+  void untrustedNiftiOrientation();
+  void explicitlyAuthoredIdentityOrientationIsTrusted();
   void failsForMissingFile();
 };
 
-void TestNiftiVolumeLoader::loadsTinySyntheticVolume()
+void TestNiftiVolumeLoader::trustedNiftiOrientation()
 {
   QTemporaryDir directory;
   QVERIFY(directory.isValid());
@@ -148,7 +182,43 @@ void TestNiftiVolumeLoader::loadsTinySyntheticVolume()
 
   QVERIFY(result.success);
   QVERIFY(result.volume.isValid());
-  verifyLoadedVolume(result.volume);
+  verifyCommonLoadedVolume(result.volume);
+  verifyTrustedGeometry(result.volume, kOrigin, kDirection);
+}
+
+void TestNiftiVolumeLoader::untrustedNiftiOrientation()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path = directory.filePath("tiny-untrusted.nii");
+  writeTinyNiftiFile(path);
+  clearNiftiOrientationCodes(path);
+
+  const qvp::NiftiVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyCommonLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+}
+
+void TestNiftiVolumeLoader::explicitlyAuthoredIdentityOrientationIsTrusted()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path = directory.filePath("tiny-identity.nii");
+  writeTinyNiftiFile(path, kIdentityDirection);
+
+  const qvp::NiftiVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyCommonLoadedVolume(result.volume);
+  verifyTrustedGeometry(result.volume, kOrigin, kIdentityDirection);
 }
 
 void TestNiftiVolumeLoader::failsForMissingFile()
