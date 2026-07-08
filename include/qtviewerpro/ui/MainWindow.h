@@ -24,6 +24,7 @@ class ImageViewer2D;
 class MprViewerWidget;
 class OpenGLVolumeViewerWidget;
 class Volume3DViewerWidget;
+class VolumeToolsWindow;
 enum class VolumeRenderPreset;
 
 /**
@@ -78,6 +79,7 @@ private slots:
   void showAboutDialog();
   void openRecentFile();
   void clearRecentFiles();
+  void showVolumeTools();
 
 private:
   struct VolumeResampleResult
@@ -101,6 +103,9 @@ private:
   void createStatusBar();
   void updateStatusBar();
   void updateActions();
+  bool volumeToolsAvailable() const;
+  void refreshVolumeToolsWindow();
+  void updateVolumeToolsNavigationState();
   void createToolBar();
   void showImagePage();
   void showMedicalVolumePage();
@@ -126,6 +131,7 @@ private:
   MprViewerWidget* mprViewerWidget_ = nullptr;
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
+  VolumeToolsWindow* volumeToolsWindow_ = nullptr;
   QImage originalImage_;
   std::shared_ptr<const VolumeData> currentMedicalVolume_;
   QFutureWatcher<VolumeResampleResult> resampleWatcher_;
@@ -151,6 +157,7 @@ private:
   QAction* openMaskOverlayAction_ = nullptr;
   QAction* openSyntheticVolumeSliceAction_ = nullptr;
   QAction* openRawVolumeAction_ = nullptr;
+  QAction* volumeToolsAction_ = nullptr;
   QAction* aboutAction_ = nullptr;
 };
 

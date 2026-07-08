@@ -11,6 +11,7 @@
 #include "qtviewerpro/ui/MprViewerWidget.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 #include "qtviewerpro/ui/Volume3DViewerWidget.h"
+#include "qtviewerpro/ui/VolumeToolsWindow.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -183,6 +184,10 @@ QGraphicsView {
 )");
 }
 
+bool hasValidMedicalVolume(const std::shared_ptr<const qvp::VolumeData>& volume)
+{
+  return volume && volume->isValid();
+}
 QString validateRawMetadataFile(const QString& metadataPath)
 {
   QFile metadataFile(metadataPath);
@@ -316,8 +321,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
   connect(&resampleWatcher_, &QFutureWatcher<VolumeResampleResult>::finished, this,
           &MainWindow::handleVolumeResampleFinished);
 
-  createViewer();
   createMenus();
+  createViewer();
   createToolBar();
   createStatusBar();
   loadSettings();
@@ -511,6 +516,13 @@ void MainWindow::createViewMenu()
   showVolume3DViewerAction->setStatusTip("Switch to the 3D volume viewer page");
   connect(showVolume3DViewerAction, &QAction::triggered, this, &MainWindow::showVolume3DPage);
 
+  viewMenu->addSeparator();
+
+  volumeToolsAction_ = viewMenu->addAction("Volume Tools...");
+  volumeToolsAction_->setStatusTip("Open the floating volume tools window");
+  volumeToolsAction_->setEnabled(false);
+  connect(volumeToolsAction_, &QAction::triggered, this, &MainWindow::showVolumeTools);
+
   QMenu* renderPresetMenu = viewMenu->addMenu("3D Render Preset");
   auto* renderPresetActionGroup = new QActionGroup(renderPresetMenu);
   renderPresetActionGroup->setExclusive(true);
@@ -645,6 +657,22 @@ void MainWindow::updateActions()
   grayscaleAction_->setEnabled(hasImage);
   resetImageAction_->setEnabled(hasImage);
   resampleVolumeAction_->setEnabled(canResample);
+  if (volumeToolsAction_)
+  {
+    volumeToolsAction_->setEnabled(volumeToolsAvailable());
+  }
+}
+
+bool MainWindow::volumeToolsAvailable() const
+{
+  if (!hasValidMedicalVolume(currentMedicalVolume_) || pageStack_ == nullptr)
+  {
+    return false;
+  }
+
+  const QWidget* currentWidget = pageStack_->currentWidget();
+  return currentWidget == medicalVolumeViewerWidget_ || currentWidget == mprViewerWidget_ ||
+         currentWidget == volume3DViewerWidget_;
 }
 
 void MainWindow::zoomIn()
@@ -914,6 +942,11 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
   volume3DViewerWidget_->setVolume(sharedVolume);
   const auto volume3DViewerEnd = std::chrono::steady_clock::now();
 
+  if (volumeToolsWindow_)
+  {
+    refreshVolumeToolsWindow();
+  }
+
   const auto showMedicalPageStart = std::chrono::steady_clock::now();
   showMedicalVolumePage();
   const auto showMedicalPageEnd = std::chrono::steady_clock::now();
@@ -957,21 +990,109 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
 void MainWindow::showImagePage()
 {
   pageStack_->setCurrentWidget(viewer_);
+  if (volumeToolsWindow_)
+  {
+    volumeToolsWindow_->clearVolume();
+    volumeToolsWindow_->hide();
+  }
+  updateActions();
 }
 
 void MainWindow::showMedicalVolumePage()
 {
   pageStack_->setCurrentWidget(medicalVolumeViewerWidget_);
+  updateActions();
 }
 
 void MainWindow::showMprViewerPage()
 {
   pageStack_->setCurrentWidget(mprViewerWidget_);
+  updateActions();
 }
 
 void MainWindow::showVolume3DPage()
 {
   pageStack_->setCurrentWidget(volume3DViewerWidget_);
+  updateActions();
+}
+
+void MainWindow::showVolumeTools()
+{
+  if (!volumeToolsAvailable())
+  {
+    return;
+  }
+
+  if (volumeToolsWindow_ == nullptr)
+  {
+    volumeToolsWindow_ = new VolumeToolsWindow(this);
+    connect(volumeToolsWindow_, &VolumeToolsWindow::medicalViewRequested, this,
+            &MainWindow::showMedicalVolumePage);
+    connect(volumeToolsWindow_, &VolumeToolsWindow::mprViewRequested, this,
+            &MainWindow::showMprViewerPage);
+    connect(volumeToolsWindow_, &VolumeToolsWindow::volume3DViewRequested, this,
+            &MainWindow::showVolume3DPage);
+    connect(volumeToolsWindow_, &VolumeToolsWindow::sliceNavigationRequested, this,
+            [this](SliceOrientation orientation, int sliceIndex) {
+              if (sliceIndex < 0)
+              {
+                return;
+              }
+
+              mprViewerWidget_->setSliceIndexForOrientation(
+                  orientation, static_cast<std::size_t>(sliceIndex));
+            });
+    connect(mprViewerWidget_, &MprViewerWidget::navigationStateChanged, this, [this]() {
+      if (volumeToolsWindow_ && volumeToolsWindow_->isVisible())
+      {
+        updateVolumeToolsNavigationState();
+      }
+    });
+  }
+
+  refreshVolumeToolsWindow();
+  volumeToolsWindow_->show();
+  volumeToolsWindow_->raise();
+  volumeToolsWindow_->activateWindow();
+}
+
+void MainWindow::refreshVolumeToolsWindow()
+{
+  if (volumeToolsWindow_ == nullptr)
+  {
+    return;
+  }
+
+  if (!volumeToolsAvailable())
+  {
+    volumeToolsWindow_->clearVolume();
+    return;
+  }
+
+  volumeToolsWindow_->setVolume(currentMedicalVolume_.get());
+  updateVolumeToolsNavigationState();
+}
+
+void MainWindow::updateVolumeToolsNavigationState()
+{
+  if (volumeToolsWindow_ == nullptr || !mprViewerWidget_->hasVolume())
+  {
+    return;
+  }
+
+  auto syncOrientation = [this](SliceOrientation orientation) {
+    const std::size_t sliceCount = mprViewerWidget_->sliceCountForOrientation(orientation);
+    const int maximumIndex = sliceCount == 0 ? 0 : static_cast<int>(sliceCount - 1);
+    const int currentIndex =
+        sliceCount == 0
+            ? 0
+            : static_cast<int>(mprViewerWidget_->currentSliceIndexForOrientation(orientation));
+    volumeToolsWindow_->setSliceNavigationState(orientation, currentIndex, maximumIndex);
+  };
+
+  syncOrientation(SliceOrientation::Axial);
+  syncOrientation(SliceOrientation::Sagittal);
+  syncOrientation(SliceOrientation::Coronal);
 }
 
 void MainWindow::createToolBar()

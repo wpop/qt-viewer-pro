@@ -175,6 +175,7 @@ set(QTVIEWERPRO_APP_SOURCES
     src/ui/MprOrientationLabelMapper.cpp
     src/ui/MprViewerWidget.cpp
     src/ui/OpenGLVolumeViewerWidget.cpp
+    src/ui/VolumeToolsWindow.cpp
     src/ui/Volume3DViewerWidget.cpp
     src/ui/ImageViewer2D.cpp
     src/io/ImageLoader.cpp
@@ -186,6 +187,7 @@ set(QTVIEWERPRO_APP_HEADERS
     include/qtviewerpro/ui/MprOrientationLabelMapper.h
     include/qtviewerpro/ui/MprViewerWidget.h
     include/qtviewerpro/ui/OpenGLVolumeViewerWidget.h
+    include/qtviewerpro/ui/VolumeToolsWindow.h
     include/qtviewerpro/ui/Volume3DViewerWidget.h
     include/qtviewerpro/ui/ImageViewer2D.h
     include/qtviewerpro/io/ImageLoader.h
