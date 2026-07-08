@@ -366,3 +366,16 @@ target_link_libraries(test-metaimage-volume-loader
 )
 
 add_test(NAME test-metaimage-volume-loader COMMAND test-metaimage-volume-loader)
+
+qt6_add_executable(test-nrrd-volume-loader
+    tests/TestNrrdVolumeLoader.cpp
+)
+
+target_link_libraries(test-nrrd-volume-loader
+    PRIVATE
+        qt-viewer-pro-io
+        Qt6::Test
+        ${ITK_LIBRARIES}
+)
+
+add_test(NAME test-nrrd-volume-loader COMMAND test-nrrd-volume-loader)
