@@ -7,14 +7,17 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QComboBox>
 #include <QLabel>
 #include <QLocale>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QDoubleSpinBox>
 #include <QSlider>
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <stdexcept>
 
@@ -46,6 +49,25 @@ QGroupBox::title {
 
 QLabel {
   color: #E6E6E6;
+}
+
+QComboBox, QDoubleSpinBox {
+  background-color: #333333;
+  color: #E6E6E6;
+  border: 1px solid #3A3A3A;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+QComboBox:focus, QDoubleSpinBox:focus {
+  border-color: #4FC3F7;
+}
+
+QComboBox QAbstractItemView {
+  background-color: #252526;
+  color: #E6E6E6;
+  selection-background-color: #315A6D;
+  selection-color: #FFFFFF;
 }
 
 QPushButton {
@@ -93,6 +115,11 @@ QSlider::groove:horizontal:disabled {
 
 QSlider::handle:horizontal:disabled {
   background: #777777;
+}
+
+QComboBox:disabled, QDoubleSpinBox:disabled {
+  color: #777777;
+  background-color: #252526;
 }
 )");
 }
@@ -206,6 +233,11 @@ QLabel* createValueLabel(QWidget* parent)
   return label;
 }
 
+QString formatOpacityValue(int opacityPercent)
+{
+  return QStringLiteral("%1%").arg(opacityPercent);
+}
+
 } // namespace
 
 namespace qvp
@@ -243,11 +275,45 @@ void VolumeToolsWindow::setVolume(const VolumeData* volume)
   voxelAxisAnatomyValueLabel_->setText(formatVoxelAxisAnatomy(information.voxelAxisAnatomy));
   originValueLabel_->setText(formatOrigin(information));
   directionValueLabel_->setText(formatDirection(information));
+
+  if (information.hasIntensityRange)
+  {
+    const QSignalBlocker minimumBlocker(intensityMinimumSpinBox_);
+    const QSignalBlocker maximumBlocker(intensityMaximumSpinBox_);
+    intensityMinimumSpinBox_->setEnabled(true);
+    intensityMaximumSpinBox_->setEnabled(true);
+    intensityMinimumSpinBox_->setRange(information.intensityMinimum, information.intensityMaximum);
+    intensityMaximumSpinBox_->setRange(information.intensityMinimum, information.intensityMaximum);
+  }
+  else
+  {
+    intensityMinimumSpinBox_->setEnabled(false);
+    intensityMaximumSpinBox_->setEnabled(false);
+  }
+
+  renderPresetComboBox_->setEnabled(true);
+  opacitySlider_->setEnabled(true);
+}
+
+void VolumeToolsWindow::setTransferFunctionState(const VolumeTransferFunctionState& state)
+{
+  const int opacityPercent = static_cast<int>(std::lround(state.globalOpacity * 100.0F));
+  const QSignalBlocker presetBlocker(renderPresetComboBox_);
+  const QSignalBlocker opacityBlocker(opacitySlider_);
+  const QSignalBlocker minimumBlocker(intensityMinimumSpinBox_);
+  const QSignalBlocker maximumBlocker(intensityMaximumSpinBox_);
+
+  renderPresetComboBox_->setCurrentIndex(static_cast<int>(state.renderPreset));
+  opacitySlider_->setValue(std::clamp(opacityPercent, 0, 100));
+  updateOpacityValueLabel(std::clamp(opacityPercent, 0, 100));
+  intensityMinimumSpinBox_->setValue(state.intensityMinimum);
+  intensityMaximumSpinBox_->setValue(state.intensityMaximum);
 }
 
 void VolumeToolsWindow::clearVolume()
 {
   resetInformationLabels();
+  resetTransferFunctionControls();
   resetNavigationControls();
 }
 
@@ -295,11 +361,61 @@ void VolumeToolsWindow::createUi()
   informationLayout->addRow(QStringLiteral("Direction"), directionValueLabel_);
   rootLayout->addWidget(informationGroupBox);
 
+  auto* transferGroupBox = new QGroupBox(QStringLiteral("3D Transfer"), this);
+  auto* transferLayout = new QFormLayout(transferGroupBox);
+  transferLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+  transferLayout->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+  transferLayout->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+  renderPresetComboBox_ = new QComboBox(transferGroupBox);
+  renderPresetComboBox_->addItems(
+      {QStringLiteral("Default"), QStringLiteral("CT Bone"), QStringLiteral("CT Lung"),
+       QStringLiteral("Custom")});
+
+  opacitySlider_ = new QSlider(Qt::Horizontal, transferGroupBox);
+  opacitySlider_->setRange(0, 100);
+  opacitySlider_->setValue(100);
+  opacitySlider_->setSingleStep(1);
+  opacityValueLabel_ = new QLabel(QStringLiteral("100%"), transferGroupBox);
+  opacityValueLabel_->setMinimumWidth(48);
+  opacityValueLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+  auto* opacityRowWidget = new QWidget(transferGroupBox);
+  auto* opacityRowLayout = new QHBoxLayout(opacityRowWidget);
+  opacityRowLayout->setContentsMargins(0, 0, 0, 0);
+  opacityRowLayout->setSpacing(8);
+  opacityRowLayout->addWidget(opacitySlider_, 1);
+  opacityRowLayout->addWidget(opacityValueLabel_);
+
+  intensityMinimumSpinBox_ = new QDoubleSpinBox(transferGroupBox);
+  intensityMinimumSpinBox_->setDecimals(1);
+  intensityMinimumSpinBox_->setSingleStep(1.0);
+  intensityMinimumSpinBox_->setKeyboardTracking(false);
+  intensityMinimumSpinBox_->setRange(0.0, 0.0);
+
+  intensityMaximumSpinBox_ = new QDoubleSpinBox(transferGroupBox);
+  intensityMaximumSpinBox_->setDecimals(1);
+  intensityMaximumSpinBox_->setSingleStep(1.0);
+  intensityMaximumSpinBox_->setKeyboardTracking(false);
+  intensityMaximumSpinBox_->setRange(0.0, 0.0);
+
+  transferLayout->addRow(QStringLiteral("Mode / Preset"), renderPresetComboBox_);
+  transferLayout->addRow(QStringLiteral("Opacity"), opacityRowWidget);
+  transferLayout->addRow(QStringLiteral("Intensity Minimum"), intensityMinimumSpinBox_);
+  transferLayout->addRow(QStringLiteral("Intensity Maximum"), intensityMaximumSpinBox_);
+  rootLayout->addWidget(transferGroupBox);
+
   auto* viewGroupBox = new QGroupBox(QStringLiteral("View"), this);
   auto* viewLayout = new QHBoxLayout(viewGroupBox);
   auto* medicalViewButton = new QPushButton(QStringLiteral("Medical"), viewGroupBox);
   auto* mprViewButton = new QPushButton(QStringLiteral("MPR"), viewGroupBox);
   auto* volume3DViewButton = new QPushButton(QStringLiteral("3D"), viewGroupBox);
+  medicalViewButton->setAutoDefault(false);
+  medicalViewButton->setDefault(false);
+  mprViewButton->setAutoDefault(false);
+  mprViewButton->setDefault(false);
+  volume3DViewButton->setAutoDefault(false);
+  volume3DViewButton->setDefault(false);
   viewLayout->addWidget(medicalViewButton);
   viewLayout->addWidget(mprViewButton);
   viewLayout->addWidget(volume3DViewButton);
@@ -308,6 +424,38 @@ void VolumeToolsWindow::createUi()
   connect(medicalViewButton, &QPushButton::clicked, this, &VolumeToolsWindow::medicalViewRequested);
   connect(mprViewButton, &QPushButton::clicked, this, &VolumeToolsWindow::mprViewRequested);
   connect(volume3DViewButton, &QPushButton::clicked, this, &VolumeToolsWindow::volume3DViewRequested);
+  connect(renderPresetComboBox_, qOverload<int>(&QComboBox::currentIndexChanged), this,
+          [this](int presetIndex) {
+            if (presetIndex < 0 ||
+                presetIndex > static_cast<int>(VolumeRenderPreset::Custom))
+            {
+              return;
+            }
+
+            emit renderPresetRequested(static_cast<VolumeRenderPreset>(presetIndex));
+          });
+  connect(opacitySlider_, &QSlider::valueChanged, this, [this](int value) {
+    updateOpacityValueLabel(value);
+    emit globalOpacityRequested(value);
+  });
+  connect(intensityMinimumSpinBox_, qOverload<double>(&QDoubleSpinBox::valueChanged), this,
+          [this](double value) {
+            if (value > intensityMaximumSpinBox_->value())
+            {
+              const QSignalBlocker blocker(intensityMinimumSpinBox_);
+              intensityMinimumSpinBox_->setValue(intensityMaximumSpinBox_->value());
+            }
+            emitManualIntensityRangeRequested();
+          });
+  connect(intensityMaximumSpinBox_, qOverload<double>(&QDoubleSpinBox::valueChanged), this,
+          [this](double value) {
+            if (value < intensityMinimumSpinBox_->value())
+            {
+              const QSignalBlocker blocker(intensityMaximumSpinBox_);
+              intensityMaximumSpinBox_->setValue(intensityMinimumSpinBox_->value());
+            }
+            emitManualIntensityRangeRequested();
+          });
 
   auto* navigationGroupBox = new QGroupBox(QStringLiteral("Navigation"), this);
   auto* navigationLayout = new QVBoxLayout(navigationGroupBox);
@@ -341,6 +489,8 @@ void VolumeToolsWindow::createUi()
   rootLayout->addWidget(navigationGroupBox);
 
   auto* closeButton = new QPushButton(QStringLiteral("Close"), this);
+  closeButton->setAutoDefault(false);
+  closeButton->setDefault(false);
   connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
   rootLayout->addWidget(closeButton, 0, Qt::AlignRight);
 }
@@ -360,11 +510,41 @@ void VolumeToolsWindow::resetInformationLabels()
   directionValueLabel_->clear();
 }
 
+void VolumeToolsWindow::resetTransferFunctionControls()
+{
+  const QSignalBlocker presetBlocker(renderPresetComboBox_);
+  const QSignalBlocker opacityBlocker(opacitySlider_);
+  const QSignalBlocker minimumBlocker(intensityMinimumSpinBox_);
+  const QSignalBlocker maximumBlocker(intensityMaximumSpinBox_);
+
+  renderPresetComboBox_->setCurrentIndex(static_cast<int>(VolumeRenderPreset::Default));
+  opacitySlider_->setValue(100);
+  updateOpacityValueLabel(100);
+  intensityMinimumSpinBox_->setValue(0.0);
+  intensityMaximumSpinBox_->setValue(0.0);
+
+  renderPresetComboBox_->setEnabled(false);
+  opacitySlider_->setEnabled(false);
+  intensityMinimumSpinBox_->setEnabled(false);
+  intensityMaximumSpinBox_->setEnabled(false);
+}
+
 void VolumeToolsWindow::resetNavigationControls()
 {
   updateNavigationRow(axialNavigationRow_, 0, 0);
   updateNavigationRow(sagittalNavigationRow_, 0, 0);
   updateNavigationRow(coronalNavigationRow_, 0, 0);
+}
+
+void VolumeToolsWindow::updateOpacityValueLabel(int opacityPercent)
+{
+  opacityValueLabel_->setText(formatOpacityValue(std::clamp(opacityPercent, 0, 100)));
+}
+
+void VolumeToolsWindow::emitManualIntensityRangeRequested()
+{
+  emit manualIntensityRangeRequested(intensityMinimumSpinBox_->value(),
+                                     intensityMaximumSpinBox_->value());
 }
 
 void VolumeToolsWindow::updateNavigationRow(NavigationRow& row, int currentIndex, int maximumIndex)

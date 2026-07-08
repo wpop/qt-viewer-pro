@@ -527,24 +527,30 @@ void MainWindow::createViewMenu()
   auto* renderPresetActionGroup = new QActionGroup(renderPresetMenu);
   renderPresetActionGroup->setExclusive(true);
 
-  QAction* defaultRenderPresetAction = renderPresetMenu->addAction("Default");
-  defaultRenderPresetAction->setCheckable(true);
-  defaultRenderPresetAction->setChecked(true);
-  renderPresetActionGroup->addAction(defaultRenderPresetAction);
-  connect(defaultRenderPresetAction, &QAction::triggered, this,
+  renderPresetDefaultAction_ = renderPresetMenu->addAction("Default");
+  renderPresetDefaultAction_->setCheckable(true);
+  renderPresetDefaultAction_->setChecked(true);
+  renderPresetActionGroup->addAction(renderPresetDefaultAction_);
+  connect(renderPresetDefaultAction_, &QAction::triggered, this,
           [this]() { setVolumeRenderPreset(VolumeRenderPreset::Default); });
 
-  QAction* ctBoneRenderPresetAction = renderPresetMenu->addAction("CT Bone");
-  ctBoneRenderPresetAction->setCheckable(true);
-  renderPresetActionGroup->addAction(ctBoneRenderPresetAction);
-  connect(ctBoneRenderPresetAction, &QAction::triggered, this,
+  renderPresetCtBoneAction_ = renderPresetMenu->addAction("CT Bone");
+  renderPresetCtBoneAction_->setCheckable(true);
+  renderPresetActionGroup->addAction(renderPresetCtBoneAction_);
+  connect(renderPresetCtBoneAction_, &QAction::triggered, this,
           [this]() { setVolumeRenderPreset(VolumeRenderPreset::CtBone); });
 
-  QAction* ctLungRenderPresetAction = renderPresetMenu->addAction("CT Lung");
-  ctLungRenderPresetAction->setCheckable(true);
-  renderPresetActionGroup->addAction(ctLungRenderPresetAction);
-  connect(ctLungRenderPresetAction, &QAction::triggered, this,
+  renderPresetCtLungAction_ = renderPresetMenu->addAction("CT Lung");
+  renderPresetCtLungAction_->setCheckable(true);
+  renderPresetActionGroup->addAction(renderPresetCtLungAction_);
+  connect(renderPresetCtLungAction_, &QAction::triggered, this,
           [this]() { setVolumeRenderPreset(VolumeRenderPreset::CtLung); });
+
+  renderPresetCustomAction_ = renderPresetMenu->addAction("Custom");
+  renderPresetCustomAction_->setCheckable(true);
+  renderPresetActionGroup->addAction(renderPresetCustomAction_);
+  connect(renderPresetCustomAction_, &QAction::triggered, this,
+          [this]() { setVolumeRenderPreset(VolumeRenderPreset::Custom); });
 
   QAction* reset3DViewAction = viewMenu->addAction("Reset 3D View");
   reset3DViewAction->setStatusTip("Reset the interactive 3D volume view");
@@ -661,6 +667,23 @@ void MainWindow::updateActions()
   {
     volumeToolsAction_->setEnabled(volumeToolsAvailable());
   }
+
+  syncRenderPresetActions();
+}
+
+void MainWindow::syncRenderPresetActions()
+{
+  if (!renderPresetDefaultAction_ || !renderPresetCtBoneAction_ || !renderPresetCtLungAction_ ||
+      !renderPresetCustomAction_ || !volume3DViewerWidget_)
+  {
+    return;
+  }
+
+  const VolumeRenderPreset currentPreset = volume3DViewerWidget_->transferFunctionState().renderPreset;
+  renderPresetDefaultAction_->setChecked(currentPreset == VolumeRenderPreset::Default);
+  renderPresetCtBoneAction_->setChecked(currentPreset == VolumeRenderPreset::CtBone);
+  renderPresetCtLungAction_->setChecked(currentPreset == VolumeRenderPreset::CtLung);
+  renderPresetCustomAction_->setChecked(currentPreset == VolumeRenderPreset::Custom);
 }
 
 bool MainWindow::volumeToolsAvailable() const
@@ -685,6 +708,15 @@ void MainWindow::zoomOut()
 {
   viewer_->zoomOut();
   updateStatusBar();
+}
+
+void MainWindow::updateTransferFunctionUi()
+{
+  if (volumeToolsWindow_ != nullptr && volume3DViewerWidget_ != nullptr && volumeToolsAvailable())
+  {
+    volumeToolsWindow_->setTransferFunctionState(volume3DViewerWidget_->transferFunctionState());
+  }
+  updateActions();
 }
 
 void MainWindow::addRecentFile(const QString& fileName)
@@ -802,6 +834,7 @@ void MainWindow::setVolumeRenderPreset(VolumeRenderPreset preset)
   {
     volume3DViewerWidget_->setRenderPreset(preset);
     showVolume3DPage();
+    updateTransferFunctionUi();
   }
 }
 
@@ -942,18 +975,15 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
   volume3DViewerWidget_->setVolume(sharedVolume);
   const auto volume3DViewerEnd = std::chrono::steady_clock::now();
 
-  if (volumeToolsWindow_)
-  {
-    refreshVolumeToolsWindow();
-  }
-
   const auto showMedicalPageStart = std::chrono::steady_clock::now();
   showMedicalVolumePage();
   const auto showMedicalPageEnd = std::chrono::steady_clock::now();
 
-  const auto updateActionsStart = std::chrono::steady_clock::now();
+  if (volumeToolsWindow_)
+  {
+    refreshVolumeToolsWindow();
+  }
   updateActions();
-  const auto updateActionsEnd = std::chrono::steady_clock::now();
 
   const auto totalEnd = std::chrono::steady_clock::now();
 
@@ -965,8 +995,7 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
                         "  OpenGL slice setVolume:       %4 ms\n"
                         "  3D viewer setVolume:          %5 ms\n"
                         "  show medical page:            %6 ms\n"
-                        "  update actions:               %7 ms\n"
-                        "  displayLoadedVolume total:    %8 ms")
+                        "  displayLoadedVolume total:    %7 ms")
              .arg(QString::number(durationMilliseconds(sharedEnd - sharedStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(assignmentEnd - assignmentStart), 'f', 1))
              .arg(QString::number(durationMilliseconds(medicalMprViewerEnd - medicalViewerStart),
@@ -979,9 +1008,6 @@ void MainWindow::displayLoadedVolume(VolumeData volume)
                                   'f',
                                   1))
              .arg(QString::number(durationMilliseconds(showMedicalPageEnd - showMedicalPageStart),
-                                  'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(updateActionsEnd - updateActionsStart),
                                   'f',
                                   1))
              .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
@@ -1032,6 +1058,32 @@ void MainWindow::showVolumeTools()
             &MainWindow::showMprViewerPage);
     connect(volumeToolsWindow_, &VolumeToolsWindow::volume3DViewRequested, this,
             &MainWindow::showVolume3DPage);
+    connect(volumeToolsWindow_, &VolumeToolsWindow::renderPresetRequested, this,
+            [this](VolumeRenderPreset preset) {
+              if (volume3DViewerWidget_)
+              {
+                volume3DViewerWidget_->setRenderPreset(preset);
+                updateTransferFunctionUi();
+              }
+            });
+    connect(volumeToolsWindow_, &VolumeToolsWindow::globalOpacityRequested, this,
+            [this](int opacityPercent) {
+              if (volume3DViewerWidget_)
+              {
+                volume3DViewerWidget_->setGlobalOpacity(static_cast<float>(opacityPercent) /
+                                                        100.0F);
+                updateTransferFunctionUi();
+              }
+            });
+    connect(volumeToolsWindow_, &VolumeToolsWindow::manualIntensityRangeRequested, this,
+            [this](double minimum, double maximum) {
+              if (volume3DViewerWidget_)
+              {
+                volume3DViewerWidget_->setManualIntensityRange(static_cast<float>(minimum),
+                                                               static_cast<float>(maximum));
+                updateTransferFunctionUi();
+              }
+            });
     connect(volumeToolsWindow_, &VolumeToolsWindow::sliceNavigationRequested, this,
             [this](SliceOrientation orientation, int sliceIndex) {
               if (sliceIndex < 0)
@@ -1058,7 +1110,7 @@ void MainWindow::showVolumeTools()
 
 void MainWindow::refreshVolumeToolsWindow()
 {
-  if (volumeToolsWindow_ == nullptr)
+  if (volumeToolsWindow_ == nullptr || volume3DViewerWidget_ == nullptr)
   {
     return;
   }
@@ -1070,6 +1122,7 @@ void MainWindow::refreshVolumeToolsWindow()
   }
 
   volumeToolsWindow_->setVolume(currentMedicalVolume_.get());
+  volumeToolsWindow_->setTransferFunctionState(volume3DViewerWidget_->transferFunctionState());
   updateVolumeToolsNavigationState();
 }
 

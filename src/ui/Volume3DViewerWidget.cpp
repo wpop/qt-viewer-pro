@@ -128,6 +128,32 @@ void Volume3DViewerWidget::setRenderPreset(VolumeRenderPreset preset)
   }
 }
 
+void Volume3DViewerWidget::setGlobalOpacity(float opacity)
+{
+  if (rendererWidget_)
+  {
+    rendererWidget_->setGlobalOpacity(opacity);
+  }
+}
+
+void Volume3DViewerWidget::setManualIntensityRange(float minimum, float maximum)
+{
+  if (rendererWidget_)
+  {
+    rendererWidget_->setManualIntensityRange(minimum, maximum);
+  }
+}
+
+VolumeTransferFunctionState Volume3DViewerWidget::transferFunctionState() const
+{
+  if (rendererWidget_)
+  {
+    return rendererWidget_->transferFunctionState();
+  }
+
+  return {};
+}
+
 void Volume3DViewerWidget::resetView()
 {
   if (rendererWidget_)

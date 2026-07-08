@@ -149,8 +149,8 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   if (!volume || !volume->isValid())
   {
     currentVolume_.reset();
-    volumeIntensityMinimum_ = 0.0F;
-    volumeIntensityMaximum_ = 0.0F;
+    sourceIntensityMinimum_ = 0.0F;
+    sourceIntensityMaximum_ = 0.0F;
     volumeTextureDirty_ = true;
     volumeTextureReady_ = false;
     update();
@@ -164,15 +164,18 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
   const auto rangeStart = Clock::now();
   if (currentVolume_ && currentVolume_->hasIntensityRange())
   {
-    volumeIntensityMinimum_ = currentVolume_->intensityMinimum();
-    volumeIntensityMaximum_ = currentVolume_->intensityMaximum();
+    sourceIntensityMinimum_ = currentVolume_->intensityMinimum();
+    sourceIntensityMaximum_ = currentVolume_->intensityMaximum();
   }
   else
   {
-    volumeIntensityMinimum_ = 0.0F;
-    volumeIntensityMaximum_ = 0.0F;
+    sourceIntensityMinimum_ = 0.0F;
+    sourceIntensityMaximum_ = 0.0F;
   }
   const auto rangeEnd = Clock::now();
+
+  transferFunctionState_.intensityMinimum = sourceIntensityMinimum_;
+  transferFunctionState_.intensityMaximum = sourceIntensityMaximum_;
 
   const auto dirtyStart = Clock::now();
   volumeTextureDirty_ = true;
@@ -195,13 +198,66 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
 
 void OpenGLVolumeRendererWidget::setRenderPreset(VolumeRenderPreset renderPreset)
 {
-  if (activeRenderPreset_ == renderPreset)
+  if (transferFunctionState_.renderPreset == renderPreset)
   {
     return;
   }
 
-  activeRenderPreset_ = renderPreset;
+  transferFunctionState_ = withRenderPreset(transferFunctionState_, renderPreset);
   update();
+}
+
+void OpenGLVolumeRendererWidget::setGlobalOpacity(float opacity)
+{
+  const float clampedOpacity = clampGlobalOpacity(opacity);
+  if (transferFunctionState_.globalOpacity == clampedOpacity)
+  {
+    return;
+  }
+
+  transferFunctionState_ = withGlobalOpacity(transferFunctionState_, clampedOpacity);
+  update();
+}
+
+void OpenGLVolumeRendererWidget::setManualIntensityRange(float minimum, float maximum)
+{
+  if (currentVolume_ && currentVolume_->hasIntensityRange())
+  {
+    const auto [clampedMinimum, clampedMaximum] =
+        clampIntensityRange(minimum, maximum, sourceIntensityMinimum_, sourceIntensityMaximum_);
+    if (transferFunctionState_.renderPreset == VolumeRenderPreset::Custom &&
+        transferFunctionState_.intensityMinimum == clampedMinimum &&
+        transferFunctionState_.intensityMaximum == clampedMaximum)
+    {
+      return;
+    }
+
+    transferFunctionState_ = withManualIntensityRange(transferFunctionState_,
+                                                      clampedMinimum,
+                                                      clampedMaximum,
+                                                      sourceIntensityMinimum_,
+                                                      sourceIntensityMaximum_);
+    update();
+    return;
+  }
+
+  const auto [requestedMinimum, requestedMaximum] = std::minmax(minimum, maximum);
+  if (transferFunctionState_.renderPreset == VolumeRenderPreset::Custom &&
+      transferFunctionState_.intensityMinimum == requestedMinimum &&
+      transferFunctionState_.intensityMaximum == requestedMaximum)
+  {
+    return;
+  }
+
+  transferFunctionState_.intensityMinimum = requestedMinimum;
+  transferFunctionState_.intensityMaximum = requestedMaximum;
+  transferFunctionState_.renderPreset = VolumeRenderPreset::Custom;
+  update();
+}
+
+VolumeTransferFunctionState OpenGLVolumeRendererWidget::transferFunctionState() const
+{
+  return transferFunctionState_;
 }
 
 void OpenGLVolumeRendererWidget::resetView()
@@ -401,6 +457,12 @@ void OpenGLVolumeRendererWidget::paintGL()
           glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMinimum");
       const GLint volumeIntensityMaximumLocation =
           glGetUniformLocation(volumeShaderProgram_, "volumeIntensityMaximum");
+      const GLint manualIntensityMinimumLocation =
+          glGetUniformLocation(volumeShaderProgram_, "manualIntensityMinimum");
+      const GLint manualIntensityMaximumLocation =
+          glGetUniformLocation(volumeShaderProgram_, "manualIntensityMaximum");
+      const GLint globalOpacityLocation =
+          glGetUniformLocation(volumeShaderProgram_, "globalOpacity");
       const GLint renderPresetLocation =
           glGetUniformLocation(volumeShaderProgram_, "renderPreset");
       glUniformMatrix4fv(volumeMvpLocation, 1, GL_FALSE, mvpMatrix.constData());
@@ -410,9 +472,12 @@ void OpenGLVolumeRendererWidget::paintGL()
                   cameraPositionTexture.y(),
                   cameraPositionTexture.z());
       glUniform1f(stepSizeLocation, stepSize);
-      glUniform1f(volumeIntensityMinimumLocation, volumeIntensityMinimum_);
-      glUniform1f(volumeIntensityMaximumLocation, volumeIntensityMaximum_);
-      glUniform1i(renderPresetLocation, static_cast<GLint>(activeRenderPreset_));
+      glUniform1f(volumeIntensityMinimumLocation, sourceIntensityMinimum_);
+      glUniform1f(volumeIntensityMaximumLocation, sourceIntensityMaximum_);
+      glUniform1f(manualIntensityMinimumLocation, transferFunctionState_.intensityMinimum);
+      glUniform1f(manualIntensityMaximumLocation, transferFunctionState_.intensityMaximum);
+      glUniform1f(globalOpacityLocation, transferFunctionState_.globalOpacity);
+      glUniform1i(renderPresetLocation, static_cast<GLint>(transferFunctionState_.renderPreset));
 
       auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
       extraFunctions->glBindVertexArray(volumeVao_);
@@ -524,8 +589,8 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
     return;
   }
 
-  volumeIntensityMinimum_ = currentVolume_->intensityMinimum();
-  volumeIntensityMaximum_ = currentVolume_->intensityMaximum();
+  sourceIntensityMinimum_ = currentVolume_->intensityMinimum();
+  sourceIntensityMaximum_ = currentVolume_->intensityMaximum();
 
   const auto prepEnd = Clock::now();
 
@@ -645,6 +710,9 @@ uniform vec3 cameraPositionTexture;
 uniform float stepSize;
 uniform float volumeIntensityMinimum;
 uniform float volumeIntensityMaximum;
+uniform float manualIntensityMinimum;
+uniform float manualIntensityMaximum;
+uniform float globalOpacity;
 uniform int renderPreset;
 
 bool insideVolume(vec3 position)
@@ -661,6 +729,23 @@ vec4 applyDefaultTransferFunction(float rawSampleValue)
   {
     normalizedSampleValue =
         clamp((rawSampleValue - volumeIntensityMinimum) / intensityRange, 0.0, 1.0);
+  }
+
+  float sampleIntensity = smoothstep(0.10, 0.80, normalizedSampleValue);
+  vec3 sampleColor = vec3(sampleIntensity);
+  float sampleAlpha = sampleIntensity * 0.08;
+
+  return vec4(sampleColor, sampleAlpha);
+}
+
+vec4 applyCustomTransferFunction(float rawSampleValue)
+{
+  float intensityRange = manualIntensityMaximum - manualIntensityMinimum;
+  float normalizedSampleValue = 0.0;
+  if (intensityRange > 0.0)
+  {
+    normalizedSampleValue =
+        clamp((rawSampleValue - manualIntensityMinimum) / intensityRange, 0.0, 1.0);
   }
 
   float sampleIntensity = smoothstep(0.10, 0.80, normalizedSampleValue);
@@ -711,6 +796,10 @@ vec4 applyTransferFunction(float rawSampleValue)
   {
     return applyCtLungTransferFunction(rawSampleValue);
   }
+  if (renderPreset == 3)
+  {
+    return applyCustomTransferFunction(rawSampleValue);
+  }
 
   return applyDefaultTransferFunction(rawSampleValue);
 }
@@ -739,6 +828,7 @@ void main()
         texture(volumeTexture, samplePosition).r;
 
     vec4 sampleTransfer = applyTransferFunction(rawSampleValue);
+    sampleTransfer.a *= clamp(globalOpacity, 0.0, 1.0);
 
     accumulatedColor +=
         (1.0 - accumulatedAlpha) *
@@ -917,8 +1007,8 @@ void OpenGLVolumeRendererWidget::destroyVolumeTexture()
   }
 
   volumeTextureReady_ = false;
-  volumeIntensityMinimum_ = 0.0F;
-  volumeIntensityMaximum_ = 0.0F;
+  sourceIntensityMinimum_ = 0.0F;
+  sourceIntensityMaximum_ = 0.0F;
 }
 
 GLuint OpenGLVolumeRendererWidget::compileShader(GLenum shaderType, const char* source)
