@@ -170,6 +170,7 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
     axialPane_.titleLabel->setText(QStringLiteral("Axial"));
     sagittalPane_.titleLabel->setText(QStringLiteral("Sagittal"));
     coronalPane_.titleLabel->setText(QStringLiteral("Coronal"));
+    emit navigationStateChanged();
     return;
   }
 
@@ -179,6 +180,11 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
   currentPosition_.z = currentVolume_->depth() / 2;
   setDefaultWindowLevel();
   refreshAllSlices();
+}
+
+bool MprViewerWidget::hasVolume() const
+{
+  return currentVolume_ && currentVolume_->isValid();
 }
 
 void MprViewerWidget::createUi()
@@ -300,6 +306,7 @@ void MprViewerWidget::refreshAllSlices()
   refreshSlicePane(axialPane_);
   refreshSlicePane(sagittalPane_);
   refreshSlicePane(coronalPane_);
+  emit navigationStateChanged();
 }
 
 void MprViewerWidget::refreshSlicePane(SlicePane& pane)
@@ -410,6 +417,41 @@ void MprViewerWidget::updatePositionFromImageClick(SliceOrientation orientation,
                                                        static_cast<std::size_t>(imageX),
                                                        static_cast<std::size_t>(imageY),
                                                        currentPosition_);
+  refreshAllSlices();
+}
+
+void MprViewerWidget::setSliceIndexForOrientation(SliceOrientation orientation, std::size_t sliceIndex)
+{
+  if (!currentVolume_)
+  {
+    return;
+  }
+
+  const std::size_t sliceCount = sliceCountForOrientation(orientation);
+  if (sliceCount == 0)
+  {
+    return;
+  }
+
+  const std::size_t clampedIndex = std::min(sliceIndex, sliceCount - 1);
+  if (currentSliceIndexForOrientation(orientation) == clampedIndex)
+  {
+    return;
+  }
+
+  switch (orientation)
+  {
+  case SliceOrientation::Axial:
+    currentPosition_.z = clampedIndex;
+    break;
+  case SliceOrientation::Sagittal:
+    currentPosition_.x = clampedIndex;
+    break;
+  case SliceOrientation::Coronal:
+    currentPosition_.y = clampedIndex;
+    break;
+  }
+
   refreshAllSlices();
 }
 

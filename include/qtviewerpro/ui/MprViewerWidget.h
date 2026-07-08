@@ -27,6 +27,13 @@ public:
 
   void setVolume(VolumeData volume);
   void setVolume(std::shared_ptr<const VolumeData> volume);
+  bool hasVolume() const;
+  std::size_t sliceCountForOrientation(SliceOrientation orientation) const;
+  std::size_t currentSliceIndexForOrientation(SliceOrientation orientation) const;
+  void setSliceIndexForOrientation(SliceOrientation orientation, std::size_t sliceIndex);
+
+signals:
+  void navigationStateChanged();
 
 private:
   struct SlicePane
@@ -47,8 +54,6 @@ private:
   void setDefaultWindowLevel();
   void updatePositionForOrientation(SliceOrientation orientation, int delta);
   void updatePositionFromImageClick(SliceOrientation orientation, int imageX, int imageY);
-  std::size_t sliceCountForOrientation(SliceOrientation orientation) const;
-  std::size_t currentSliceIndexForOrientation(SliceOrientation orientation) const;
 
   SlicePane axialPane_;
   SlicePane sagittalPane_;
