@@ -29,10 +29,12 @@ VolumeData::VolumeData(std::size_t width,
                        float spacingY,
                        float spacingZ,
                        std::vector<float> voxels,
-                       SpatialGeometry spatialGeometry)
+                       SpatialGeometry spatialGeometry,
+                       std::optional<VoxelAxisAnatomy> voxelAxisAnatomy)
     : VolumeData(width, height, depth, spacingX, spacingY, spacingZ, std::move(voxels))
 {
   spatialGeometry_ = spatialGeometry;
+  voxelAxisAnatomy_ = voxelAxisAnatomy;
 }
 
 std::size_t VolumeData::width() const
@@ -73,6 +75,16 @@ const std::vector<float>& VolumeData::voxels() const
 const VolumeData::SpatialGeometry& VolumeData::spatialGeometry() const noexcept
 {
   return spatialGeometry_;
+}
+
+const std::optional<VoxelAxisAnatomy>& VolumeData::voxelAxisAnatomy() const noexcept
+{
+  return voxelAxisAnatomy_;
+}
+
+bool VolumeData::hasVoxelAxisAnatomy() const noexcept
+{
+  return voxelAxisAnatomy_.has_value();
 }
 
 bool VolumeData::hasSpatialOrientation() const noexcept

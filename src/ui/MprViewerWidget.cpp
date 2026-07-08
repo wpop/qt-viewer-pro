@@ -91,8 +91,16 @@ std::optional<qvp::ImageViewer2D::EdgeLabels> edgeLabelsForOrientation(
     return std::nullopt;
   }
 
-  const auto labels =
-      qvp::MprOrientationLabelMapper::edgeLabels(volume->spatialGeometry(), orientation);
+  std::optional<qvp::OrientationEdgeLabels> labels;
+  if (volume->hasSpatialOrientation())
+  {
+    labels = qvp::MprOrientationLabelMapper::edgeLabels(volume->spatialGeometry(), orientation);
+  }
+  else if (volume->hasVoxelAxisAnatomy())
+  {
+    labels = qvp::MprOrientationLabelMapper::edgeLabels(*volume->voxelAxisAnatomy(), orientation);
+  }
+
   if (!labels.has_value())
   {
     return std::nullopt;

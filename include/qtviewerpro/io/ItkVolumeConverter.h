@@ -1,8 +1,11 @@
 #pragma once
 
+#include "qtviewerpro/core/AnatomicalOrientation.h"
 #include "qtviewerpro/core/VolumeData.h"
 
 #include <itkImage.h>
+
+#include <optional>
 
 namespace qvp
 {
@@ -17,6 +20,7 @@ using ItkVolumeImage = itk::Image<float, 3>;
 
 VolumeData convertItkImageToVolume(const ItkVolumeImage::Pointer& image,
                                    const ItkSpatialGeometryPolicy& policy,
-                                   const char* formatName);
+                                   const char* formatName,
+                                   std::optional<VoxelAxisAnatomy> voxelAxisAnatomy = std::nullopt);
 
 } // namespace qvp

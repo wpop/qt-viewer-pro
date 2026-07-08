@@ -8,6 +8,9 @@
 #include <itkImageRegionIterator.h>
 
 #include <cmath>
+#include <fstream>
+#include <stdexcept>
+#include <vector>
 
 namespace
 {
@@ -92,6 +95,71 @@ void writeTinyMetaImageFile(const QString& path)
   writer->Update();
 }
 
+void writeRawVoxelFile(const QString& path, const std::vector<float>& voxels)
+{
+  std::ofstream file(path.toStdString(), std::ios::binary);
+  if (!file)
+  {
+    throw std::runtime_error("Failed to open MetaImage raw file for writing");
+  }
+
+  file.write(reinterpret_cast<const char*>(voxels.data()),
+             static_cast<std::streamsize>(voxels.size() * sizeof(float)));
+  if (!file)
+  {
+    throw std::runtime_error("Failed to write MetaImage raw voxels");
+  }
+}
+
+QString writeDetachedMetaImageFixture(const QTemporaryDir& directory,
+                                      const QString& baseName,
+                                      const QStringList& extraFields)
+{
+  std::vector<float> voxels;
+  voxels.reserve(kWidth * kHeight * kDepth);
+  for (std::size_t z = 0; z < kDepth; ++z)
+  {
+    for (std::size_t y = 0; y < kHeight; ++y)
+    {
+      for (std::size_t x = 0; x < kWidth; ++x)
+      {
+        voxels.push_back(static_cast<float>(x + (10 * y) + (100 * z)));
+      }
+    }
+  }
+  const QString rawPath = directory.filePath(baseName + ".raw");
+  writeRawVoxelFile(rawPath, voxels);
+
+  const QString headerPath = directory.filePath(baseName + ".mhd");
+  std::ofstream file(headerPath.toStdString());
+  if (!file)
+  {
+    throw std::runtime_error("Failed to open MetaImage header for writing");
+  }
+
+  file << "ObjectType = Image\n";
+  file << "NDims = 3\n";
+  file << "BinaryData = True\n";
+  file << "BinaryDataByteOrderMSB = False\n";
+  file << "CompressedData = False\n";
+  file << "TransformMatrix = 0 1 0 -1 0 0 0 0 1\n";
+  file << "Offset = 12.5 -8.25 42\n";
+  file << "ElementSpacing = 1.5 2 2.5\n";
+  file << "DimSize = 4 3 2\n";
+  file << "ElementType = MET_FLOAT\n";
+  for (const QString& field : extraFields)
+  {
+    file << field.toStdString() << '\n';
+  }
+  file << "ElementDataFile = " << QFileInfo(rawPath).fileName().toStdString() << '\n';
+  if (!file)
+  {
+    throw std::runtime_error("Failed to write MetaImage header");
+  }
+
+  return headerPath;
+}
+
 void verifyLoadedVolume(const qvp::VolumeData& volume)
 {
   QCOMPARE(volume.width(), kWidth);
@@ -123,6 +191,12 @@ void verifyLoadedVolume(const qvp::VolumeData& volume)
   QCOMPARE(voxels[linearIndex(3, 2, 1)], 123.0F);
 }
 
+void verifyNoVoxelAxisAnatomy(const qvp::VolumeData& volume)
+{
+  QVERIFY(!volume.hasVoxelAxisAnatomy());
+  QVERIFY(!volume.voxelAxisAnatomy().has_value());
+}
+
 } // namespace
 
 class TestMetaImageVolumeLoader : public QObject
@@ -131,6 +205,10 @@ class TestMetaImageVolumeLoader : public QObject
 
 private slots:
   void loadsTinySyntheticVolume();
+  void loadsLpsAnatomicalOrientationAsVoxelAxisMetadata();
+  void loadsRaiAnatomicalOrientationAsVoxelAxisMetadata();
+  void missingAnatomicalOrientationLeavesVoxelAxisMetadataUnset();
+  void invalidAnatomicalOrientationLeavesVoxelAxisMetadataUnset();
   void failsForMissingFile();
 };
 
@@ -148,6 +226,86 @@ void TestMetaImageVolumeLoader::loadsTinySyntheticVolume()
   QVERIFY(result.success);
   QVERIFY(result.volume.isValid());
   verifyLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+}
+
+void TestMetaImageVolumeLoader::loadsLpsAnatomicalOrientationAsVoxelAxisMetadata()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path =
+      writeDetachedMetaImageFixture(directory, "lps-anatomy", {"AnatomicalOrientation = LPS"});
+
+  const qvp::MetaImageVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+  QVERIFY(result.volume.hasVoxelAxisAnatomy());
+  QVERIFY(result.volume.voxelAxisAnatomy().has_value());
+  QCOMPARE(result.volume.voxelAxisAnatomy()->x, qvp::AnatomicalDirection::Left);
+  QCOMPARE(result.volume.voxelAxisAnatomy()->y, qvp::AnatomicalDirection::Posterior);
+  QCOMPARE(result.volume.voxelAxisAnatomy()->z, qvp::AnatomicalDirection::Superior);
+}
+
+void TestMetaImageVolumeLoader::loadsRaiAnatomicalOrientationAsVoxelAxisMetadata()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path =
+      writeDetachedMetaImageFixture(directory, "rai-anatomy", {"AnatomicalOrientation = RAI"});
+
+  const qvp::MetaImageVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+  QVERIFY(result.volume.hasVoxelAxisAnatomy());
+  QVERIFY(result.volume.voxelAxisAnatomy().has_value());
+  QCOMPARE(result.volume.voxelAxisAnatomy()->x, qvp::AnatomicalDirection::Right);
+  QCOMPARE(result.volume.voxelAxisAnatomy()->y, qvp::AnatomicalDirection::Anterior);
+  QCOMPARE(result.volume.voxelAxisAnatomy()->z, qvp::AnatomicalDirection::Inferior);
+}
+
+void TestMetaImageVolumeLoader::missingAnatomicalOrientationLeavesVoxelAxisMetadataUnset()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path = writeDetachedMetaImageFixture(directory, "missing-anatomy", {});
+
+  const qvp::MetaImageVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+  verifyNoVoxelAxisAnatomy(result.volume);
+}
+
+void TestMetaImageVolumeLoader::invalidAnatomicalOrientationLeavesVoxelAxisMetadataUnset()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  const QString path =
+      writeDetachedMetaImageFixture(directory, "invalid-anatomy", {"AnatomicalOrientation = LLS"});
+
+  const qvp::MetaImageVolumeLoader loader;
+  const qvp::VolumeLoadResult result = loader.load(path);
+
+  QVERIFY(result.success);
+  QVERIFY(result.volume.isValid());
+  verifyLoadedVolume(result.volume);
+  QVERIFY(!result.volume.hasSpatialOrientation());
+  verifyNoVoxelAxisAnatomy(result.volume);
 }
 
 void TestMetaImageVolumeLoader::failsForMissingFile()

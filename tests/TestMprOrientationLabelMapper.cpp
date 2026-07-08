@@ -26,6 +26,9 @@ private slots:
   void degenerateAxisRejected();
   void nonFiniteDirectionRejected();
   void duplicateDominantAxesRejected();
+  void voxelAxisAnatomyLpsMapsAllOrientations();
+  void voxelAxisAnatomyRaiMapsAllOrientations();
+  void voxelAxisAnatomyUnknownFailsClosed();
 };
 
 namespace
@@ -37,6 +40,13 @@ qvp::VolumeData::SpatialGeometry makeGeometry()
   geometry.coordinateSystem = qvp::VolumeData::CoordinateSystem::LPS;
   geometry.hasOrientation = true;
   return geometry;
+}
+
+qvp::VoxelAxisAnatomy makeVoxelAxisAnatomy(qvp::AnatomicalDirection x,
+                                           qvp::AnatomicalDirection y,
+                                           qvp::AnatomicalDirection z)
+{
+  return qvp::VoxelAxisAnatomy{x, y, z};
 }
 
 void verifyLabels(const std::optional<qvp::OrientationEdgeLabels>& labels,
@@ -258,6 +268,69 @@ void TestMprOrientationLabelMapper::duplicateDominantAxesRejected()
 
   QVERIFY(!qvp::MprOrientationLabelMapper::edgeLabels(
                geometry, qvp::SliceOrientation::Axial)
+               .has_value());
+}
+
+void TestMprOrientationLabelMapper::voxelAxisAnatomyLpsMapsAllOrientations()
+{
+  const auto anatomy = makeVoxelAxisAnatomy(qvp::AnatomicalDirection::Left,
+                                            qvp::AnatomicalDirection::Posterior,
+                                            qvp::AnatomicalDirection::Superior);
+
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Axial),
+               "R",
+               "L",
+               "A",
+               "P");
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Sagittal),
+               "A",
+               "P",
+               "I",
+               "S");
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Coronal),
+               "R",
+               "L",
+               "I",
+               "S");
+}
+
+void TestMprOrientationLabelMapper::voxelAxisAnatomyRaiMapsAllOrientations()
+{
+  const auto anatomy = makeVoxelAxisAnatomy(qvp::AnatomicalDirection::Right,
+                                            qvp::AnatomicalDirection::Anterior,
+                                            qvp::AnatomicalDirection::Inferior);
+
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Axial),
+               "L",
+               "R",
+               "P",
+               "A");
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Sagittal),
+               "P",
+               "A",
+               "S",
+               "I");
+  verifyLabels(qvp::MprOrientationLabelMapper::edgeLabels(
+                   anatomy, qvp::SliceOrientation::Coronal),
+               "L",
+               "R",
+               "S",
+               "I");
+}
+
+void TestMprOrientationLabelMapper::voxelAxisAnatomyUnknownFailsClosed()
+{
+  const auto anatomy = makeVoxelAxisAnatomy(qvp::AnatomicalDirection::Unknown,
+                                            qvp::AnatomicalDirection::Posterior,
+                                            qvp::AnatomicalDirection::Superior);
+
+  QVERIFY(!qvp::MprOrientationLabelMapper::edgeLabels(
+               anatomy, qvp::SliceOrientation::Axial)
                .has_value());
 }
 

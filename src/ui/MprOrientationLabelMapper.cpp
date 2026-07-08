@@ -19,6 +19,8 @@ enum class AnatomicalAxis
   Z
 };
 
+using AnatomicalDirection = qvp::AnatomicalDirection;
+
 struct ClassifiedDirection
 {
   AnatomicalAxis axis;
@@ -168,6 +170,29 @@ std::optional<std::string_view> oppositeLabel(std::string_view label)
   return std::nullopt;
 }
 
+std::optional<std::string_view> anatomicalDirectionLabel(AnatomicalDirection direction)
+{
+  switch (direction)
+  {
+  case AnatomicalDirection::Left:
+    return "L";
+  case AnatomicalDirection::Right:
+    return "R";
+  case AnatomicalDirection::Anterior:
+    return "A";
+  case AnatomicalDirection::Posterior:
+    return "P";
+  case AnatomicalDirection::Superior:
+    return "S";
+  case AnatomicalDirection::Inferior:
+    return "I";
+  case AnatomicalDirection::Unknown:
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
 Vector3 voxelXAxis(const qvp::VolumeData::Direction& direction)
 {
   return Vector3{direction[0], direction[3], direction[6]};
@@ -200,6 +225,28 @@ std::optional<DisplayAxes> displayAxes(const qvp::VolumeData::Direction& directi
     return DisplayAxes{voxelYAxis(direction), voxelZAxis(direction)};
   case qvp::SliceOrientation::Coronal:
     return DisplayAxes{voxelXAxis(direction), voxelZAxis(direction)};
+  }
+
+  return std::nullopt;
+}
+
+struct DisplayAnatomyAxes
+{
+  AnatomicalDirection horizontal = AnatomicalDirection::Unknown;
+  AnatomicalDirection vertical = AnatomicalDirection::Unknown;
+};
+
+std::optional<DisplayAnatomyAxes> displayAxes(const qvp::VoxelAxisAnatomy& anatomy,
+                                              qvp::SliceOrientation orientation)
+{
+  switch (orientation)
+  {
+  case qvp::SliceOrientation::Axial:
+    return DisplayAnatomyAxes{anatomy.x, anatomy.y};
+  case qvp::SliceOrientation::Sagittal:
+    return DisplayAnatomyAxes{anatomy.y, anatomy.z};
+  case qvp::SliceOrientation::Coronal:
+    return DisplayAnatomyAxes{anatomy.x, anatomy.z};
   }
 
   return std::nullopt;
@@ -242,6 +289,33 @@ std::optional<OrientationEdgeLabels> MprOrientationLabelMapper::edgeLabels(
 
   const auto right = positiveDirectionLabel(*horizontal, geometry.coordinateSystem);
   const auto bottom = positiveDirectionLabel(*vertical, geometry.coordinateSystem);
+  if (!right.has_value() || !bottom.has_value())
+  {
+    return std::nullopt;
+  }
+
+  const auto left = oppositeLabel(*right);
+  const auto top = oppositeLabel(*bottom);
+  if (!left.has_value() || !top.has_value())
+  {
+    return std::nullopt;
+  }
+
+  return OrientationEdgeLabels{*left, *right, *top, *bottom};
+}
+
+std::optional<OrientationEdgeLabels> MprOrientationLabelMapper::edgeLabels(
+    const VoxelAxisAnatomy& anatomy,
+    SliceOrientation orientation)
+{
+  const auto axes = displayAxes(anatomy, orientation);
+  if (!axes.has_value())
+  {
+    return std::nullopt;
+  }
+
+  const auto right = anatomicalDirectionLabel(axes->horizontal);
+  const auto bottom = anatomicalDirectionLabel(axes->vertical);
   if (!right.has_value() || !bottom.has_value())
   {
     return std::nullopt;
