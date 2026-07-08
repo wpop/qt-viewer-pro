@@ -37,6 +37,7 @@ set(QTVIEWERPRO_CORE_SOURCES
     src/core/SliceData.cpp
     src/core/SliceExtractor.cpp
     src/core/VolumeData.cpp
+    src/core/VolumeInformation.cpp
     src/core/VolumePhysicalCoordinateMapper.cpp
     src/core/VolumeMetadata.cpp
 )
@@ -47,6 +48,7 @@ set(QTVIEWERPRO_CORE_HEADERS
     include/qtviewerpro/core/SliceExtractor.h
     include/qtviewerpro/core/SliceOrientation.h
     include/qtviewerpro/core/VolumeData.h
+    include/qtviewerpro/core/VolumeInformation.h
     include/qtviewerpro/core/VolumePhysicalCoordinateMapper.h
     include/qtviewerpro/core/VolumeMetadata.h
 )
@@ -258,6 +260,18 @@ target_link_libraries(test-volume-physical-coordinate-mapper
 )
 
 add_test(NAME test-volume-physical-coordinate-mapper COMMAND test-volume-physical-coordinate-mapper)
+
+qt6_add_executable(test-volume-information
+    tests/TestVolumeInformation.cpp
+)
+
+target_link_libraries(test-volume-information
+    PRIVATE
+        qt-viewer-pro-core
+        Qt6::Test
+)
+
+add_test(NAME test-volume-information COMMAND test-volume-information)
 
 qt6_add_executable(test-slice-data
     tests/TestSliceData.cpp

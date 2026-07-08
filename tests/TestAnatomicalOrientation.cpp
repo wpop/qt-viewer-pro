@@ -16,6 +16,10 @@ private slots:
   void rejectsInvalidLetters();
   void rejectsDuplicateAnatomicalFamily();
   void rejectsLowercaseAcronym();
+  void formatsLps();
+  void formatsRai();
+  void rejectsFormattingUnknownAxis();
+  void rejectsFormattingDuplicateAxisFamily();
 };
 
 void TestAnatomicalOrientation::parsesLps()
@@ -76,6 +80,46 @@ void TestAnatomicalOrientation::rejectsDuplicateAnatomicalFamily()
 void TestAnatomicalOrientation::rejectsLowercaseAcronym()
 {
   QVERIFY(!qvp::parseAnatomicalOrientationAcronym("lps").has_value());
+}
+
+void TestAnatomicalOrientation::formatsLps()
+{
+  const qvp::VoxelAxisAnatomy anatomy{qvp::AnatomicalDirection::Left,
+                                      qvp::AnatomicalDirection::Posterior,
+                                      qvp::AnatomicalDirection::Superior};
+
+  const auto acronym = qvp::anatomicalOrientationAcronym(anatomy);
+  QVERIFY(acronym.has_value());
+  QCOMPARE(*acronym, std::string("LPS"));
+}
+
+void TestAnatomicalOrientation::formatsRai()
+{
+  const qvp::VoxelAxisAnatomy anatomy{qvp::AnatomicalDirection::Right,
+                                      qvp::AnatomicalDirection::Anterior,
+                                      qvp::AnatomicalDirection::Inferior};
+
+  const auto acronym = qvp::anatomicalOrientationAcronym(anatomy);
+  QVERIFY(acronym.has_value());
+  QCOMPARE(*acronym, std::string("RAI"));
+}
+
+void TestAnatomicalOrientation::rejectsFormattingUnknownAxis()
+{
+  const qvp::VoxelAxisAnatomy anatomy{qvp::AnatomicalDirection::Unknown,
+                                      qvp::AnatomicalDirection::Anterior,
+                                      qvp::AnatomicalDirection::Inferior};
+
+  QVERIFY(!qvp::anatomicalOrientationAcronym(anatomy).has_value());
+}
+
+void TestAnatomicalOrientation::rejectsFormattingDuplicateAxisFamily()
+{
+  const qvp::VoxelAxisAnatomy anatomy{qvp::AnatomicalDirection::Right,
+                                      qvp::AnatomicalDirection::Left,
+                                      qvp::AnatomicalDirection::Inferior};
+
+  QVERIFY(!qvp::anatomicalOrientationAcronym(anatomy).has_value());
 }
 
 QTEST_MAIN(TestAnatomicalOrientation)

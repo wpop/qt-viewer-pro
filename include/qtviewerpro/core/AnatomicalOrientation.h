@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace qvp
@@ -26,5 +27,8 @@ struct VoxelAxisAnatomy
 
 std::optional<VoxelAxisAnatomy>
 parseAnatomicalOrientationAcronym(std::string_view acronym);
+
+std::optional<std::string>
+anatomicalOrientationAcronym(const VoxelAxisAnatomy& anatomy);
 
 } // namespace qvp

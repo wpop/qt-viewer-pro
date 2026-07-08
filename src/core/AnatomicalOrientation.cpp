@@ -1,6 +1,7 @@
 #include "qtviewerpro/core/AnatomicalOrientation.h"
 
 #include <array>
+#include <string>
 
 namespace
 {
@@ -37,6 +38,49 @@ std::optional<ParsedDirection> parseDirection(char value)
   default:
     return std::nullopt;
   }
+}
+
+std::optional<AnatomicalAxisFamily> anatomicalAxisFamily(qvp::AnatomicalDirection direction)
+{
+  switch (direction)
+  {
+  case qvp::AnatomicalDirection::Left:
+  case qvp::AnatomicalDirection::Right:
+    return AnatomicalAxisFamily::LeftRight;
+  case qvp::AnatomicalDirection::Anterior:
+  case qvp::AnatomicalDirection::Posterior:
+    return AnatomicalAxisFamily::AnteriorPosterior;
+  case qvp::AnatomicalDirection::Superior:
+  case qvp::AnatomicalDirection::Inferior:
+    return AnatomicalAxisFamily::SuperiorInferior;
+  case qvp::AnatomicalDirection::Unknown:
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<char> anatomicalDirectionLetter(qvp::AnatomicalDirection direction)
+{
+  switch (direction)
+  {
+  case qvp::AnatomicalDirection::Left:
+    return 'L';
+  case qvp::AnatomicalDirection::Right:
+    return 'R';
+  case qvp::AnatomicalDirection::Anterior:
+    return 'A';
+  case qvp::AnatomicalDirection::Posterior:
+    return 'P';
+  case qvp::AnatomicalDirection::Superior:
+    return 'S';
+  case qvp::AnatomicalDirection::Inferior:
+    return 'I';
+  case qvp::AnatomicalDirection::Unknown:
+    return std::nullopt;
+  }
+
+  return std::nullopt;
 }
 
 } // namespace
@@ -76,6 +120,38 @@ parseAnatomicalOrientationAcronym(std::string_view acronym)
   }
 
   return anatomy;
+}
+
+std::optional<std::string>
+anatomicalOrientationAcronym(const VoxelAxisAnatomy& anatomy)
+{
+  const auto xFamily = anatomicalAxisFamily(anatomy.x);
+  const auto yFamily = anatomicalAxisFamily(anatomy.y);
+  const auto zFamily = anatomicalAxisFamily(anatomy.z);
+  if (!xFamily.has_value() || !yFamily.has_value() || !zFamily.has_value())
+  {
+    return std::nullopt;
+  }
+
+  if (xFamily == yFamily || xFamily == zFamily || yFamily == zFamily)
+  {
+    return std::nullopt;
+  }
+
+  const auto xLetter = anatomicalDirectionLetter(anatomy.x);
+  const auto yLetter = anatomicalDirectionLetter(anatomy.y);
+  const auto zLetter = anatomicalDirectionLetter(anatomy.z);
+  if (!xLetter.has_value() || !yLetter.has_value() || !zLetter.has_value())
+  {
+    return std::nullopt;
+  }
+
+  std::string acronym;
+  acronym.reserve(3);
+  acronym.push_back(*xLetter);
+  acronym.push_back(*yLetter);
+  acronym.push_back(*zLetter);
+  return acronym;
 }
 
 } // namespace qvp
