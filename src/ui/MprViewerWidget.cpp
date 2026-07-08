@@ -1,6 +1,7 @@
 #include "qtviewerpro/ui/MprViewerWidget.h"
 
 #include "qtviewerpro/core/SliceExtractor.h"
+#include "qtviewerpro/core/VolumePhysicalCoordinateMapper.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
 #include "qtviewerpro/ui/MprCoordinateMapper.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
@@ -16,6 +17,8 @@
 #include <QWidget>
 
 #include <algorithm>
+#include <cmath>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -41,6 +44,42 @@ QString orientationName(qvp::SliceOrientation orientation)
   }
 
   return QStringLiteral("Unknown");
+}
+
+double normalizedCoordinateForDisplay(double value)
+{
+  return std::fabs(value) < 0.05 ? 0.0 : value;
+}
+
+std::optional<QString> physicalCoordinateText(const qvp::VolumeData* volume,
+                                              const qvp::MprVoxelPosition& position)
+{
+  if (volume == nullptr || !volume->hasSpatialOrientation())
+  {
+    return std::nullopt;
+  }
+
+  QString prefix;
+  switch (volume->spatialGeometry().coordinateSystem)
+  {
+  case qvp::VolumeData::CoordinateSystem::LPS:
+    prefix = QStringLiteral("LPS");
+    break;
+  case qvp::VolumeData::CoordinateSystem::RAS:
+    prefix = QStringLiteral("RAS");
+    break;
+  case qvp::VolumeData::CoordinateSystem::Unknown:
+    return std::nullopt;
+  }
+
+  const auto point = qvp::VolumePhysicalCoordinateMapper::voxelToPhysical(
+      *volume, qvp::VoxelIndex3D{position.x, position.y, position.z});
+
+  return QStringLiteral("%1: (%2, %3, %4) mm")
+      .arg(prefix)
+      .arg(normalizedCoordinateForDisplay(point.x), 0, 'f', 1)
+      .arg(normalizedCoordinateForDisplay(point.y), 0, 'f', 1)
+      .arg(normalizedCoordinateForDisplay(point.z), 0, 'f', 1);
 }
 
 std::optional<qvp::ImageViewer2D::EdgeLabels> edgeLabelsForOrientation(
@@ -102,18 +141,24 @@ void MprViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
     axialPane_.viewer->setCrosshairPosition(std::nullopt);
     axialPane_.viewer->setEdgeLabels(std::nullopt);
     axialPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    axialPane_.physicalCoordinateLabel->clear();
+    axialPane_.physicalCoordinateLabel->setVisible(false);
     resetPane(sagittalPane_);
     sagittalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     sagittalPane_.viewer->setImage(QImage());
     sagittalPane_.viewer->setCrosshairPosition(std::nullopt);
     sagittalPane_.viewer->setEdgeLabels(std::nullopt);
     sagittalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    sagittalPane_.physicalCoordinateLabel->clear();
+    sagittalPane_.physicalCoordinateLabel->setVisible(false);
     resetPane(coronalPane_);
     coronalPane_.viewer->setPixelSpacing(1.0F, 1.0F);
     coronalPane_.viewer->setImage(QImage());
     coronalPane_.viewer->setCrosshairPosition(std::nullopt);
     coronalPane_.viewer->setEdgeLabels(std::nullopt);
     coronalPane_.coordinateLabel->setText(QStringLiteral("No volume loaded"));
+    coronalPane_.physicalCoordinateLabel->clear();
+    coronalPane_.physicalCoordinateLabel->setVisible(false);
     axialPane_.titleLabel->setText(QStringLiteral("Axial"));
     sagittalPane_.titleLabel->setText(QStringLiteral("Sagittal"));
     coronalPane_.titleLabel->setText(QStringLiteral("Coronal"));
@@ -150,6 +195,8 @@ void MprViewerWidget::createUi()
 
     pane.titleLabel = new QLabel(orientationName(pane.orientation), container);
     pane.coordinateLabel = new QLabel(QStringLiteral("No volume loaded"), container);
+    pane.physicalCoordinateLabel = new QLabel(container);
+    pane.physicalCoordinateLabel->setVisible(false);
     pane.sliceSlider = new QSlider(Qt::Horizontal, container);
     pane.sliceSlider->setRange(0, 0);
     pane.sliceSlider->setValue(0);
@@ -169,6 +216,7 @@ void MprViewerWidget::createUi()
     navigationLayout->addWidget(pane.sliceValueLabel);
     layout->addWidget(pane.titleLabel);
     layout->addWidget(pane.coordinateLabel);
+    layout->addWidget(pane.physicalCoordinateLabel);
     layout->addWidget(pane.viewer, 1);
     layout->addLayout(navigationLayout);
 
@@ -251,6 +299,7 @@ void MprViewerWidget::refreshSlicePane(SlicePane& pane)
   const std::size_t sliceIndex = currentSliceIndexForOrientation(pane.orientation);
   const std::size_t sliceCount = sliceCountForOrientation(pane.orientation);
   const SliceData slice = SliceExtractor::extract(*currentVolume_, pane.orientation, sliceIndex);
+  const auto physicalText = physicalCoordinateText(currentVolume_.get(), currentPosition_);
   const QSignalBlocker blocker(pane.sliceSlider);
   pane.sliceSlider->setRange(0, static_cast<int>(sliceCount - 1));
   pane.sliceSlider->setEnabled(true);
@@ -268,6 +317,16 @@ void MprViewerWidget::refreshSlicePane(SlicePane& pane)
                                     .arg(currentPosition_.x)
                                     .arg(currentPosition_.y)
                                     .arg(currentPosition_.z));
+  if (physicalText.has_value())
+  {
+    pane.physicalCoordinateLabel->setText(*physicalText);
+    pane.physicalCoordinateLabel->setVisible(true);
+  }
+  else
+  {
+    pane.physicalCoordinateLabel->clear();
+    pane.physicalCoordinateLabel->setVisible(false);
+  }
 }
 
 void MprViewerWidget::setDefaultWindowLevel()

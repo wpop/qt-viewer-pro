@@ -34,6 +34,7 @@ private:
     SliceOrientation orientation = SliceOrientation::Axial;
     QLabel* titleLabel = nullptr;
     QLabel* coordinateLabel = nullptr;
+    QLabel* physicalCoordinateLabel = nullptr;
     QSlider* sliceSlider = nullptr;
     QLabel* sliceValueLabel = nullptr;
     ImageViewer2D* viewer = nullptr;
