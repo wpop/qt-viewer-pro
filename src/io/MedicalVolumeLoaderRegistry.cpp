@@ -4,12 +4,27 @@
 #include "qtviewerpro/io/MetaImageVolumeLoader.h"
 #include "qtviewerpro/io/NiftiVolumeLoader.h"
 #include "qtviewerpro/io/NrrdVolumeLoader.h"
+#include "qtviewerpro/io/RawVolumeLoader.h"
+
+#include <QFileInfo>
 
 namespace qvp
 {
 
 VolumeLoadResult loadMedicalVolume(const QString& path)
 {
+  if (QFileInfo(path).suffix().compare(QStringLiteral("json"), Qt::CaseInsensitive) == 0)
+  {
+    try
+    {
+      return VolumeLoadResult::makeSuccess(RawVolumeLoader::load(path));
+    }
+    catch (const std::exception& error)
+    {
+      return VolumeLoadResult::makeFailure(QString::fromUtf8(error.what()));
+    }
+  }
+
   const NiftiVolumeLoader niftiLoader;
   if (niftiLoader.canLoad(path))
   {

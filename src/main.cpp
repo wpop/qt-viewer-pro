@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 
   // Configure application settings storage.
   QApplication::setOrganizationName("wpop");
-  QApplication::setApplicationName("Qt Viewer");
+  QApplication::setApplicationName("Qt Viewer Pro");
 
   qvp::MainWindow window;
   window.show();

@@ -8,6 +8,7 @@
 #include "qtviewerpro/processing/VolumeResampler.h"
 #include "qtviewerpro/processing/ImageProcessor.h"
 #include "qtviewerpro/ui/ImageViewer2D.h"
+#include "qtviewerpro/ui/MessageBoxUtils.h"
 #include "qtviewerpro/ui/MprViewerWidget.h"
 #include "qtviewerpro/ui/OpenGLVolumeViewerWidget.h"
 #include "qtviewerpro/ui/Volume3DViewerWidget.h"
@@ -19,8 +20,11 @@
 #include <QCloseEvent>
 #include <QFile>
 #include <QFileDialog>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QImage>
 #include <QKeySequence>
+#include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -28,13 +32,13 @@
 #include <QStatusBar>
 #include <QStackedWidget>
 #include <QToolBar>
+#include <QVBoxLayout>
 #include <QWidget>
 
 #include <QSize>
 #include <QStyle>
 
 #include <QIcon>
-#include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -45,7 +49,6 @@
 
 #include <cmath>
 #include <exception>
-#include <chrono>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -54,11 +57,6 @@
 namespace
 {
 constexpr int kMaxRecentFiles = 5;
-
-double durationMilliseconds(const std::chrono::steady_clock::duration& duration)
-{
-  return std::chrono::duration<double, std::milli>(duration).count();
-}
 
 QIcon createTextIcon(const QString& text)
 {
@@ -295,18 +293,16 @@ QString validateRawMetadataFile(const QString& metadataPath)
 
 void showRawVolumeLoadError(QWidget* parent, const QString& details)
 {
-  QMessageBox messageBox(parent);
-  messageBox.setIcon(QMessageBox::Warning);
-  messageBox.setWindowTitle("RAW Volume Load Error");
-  messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
-  messageBox.setInformativeText(
+  qvp::showStyledWarning(
+      parent,
+      QStringLiteral("RAW Volume Load Error"),
+      QStringLiteral("Select the RAW JSON metadata file only."),
       QStringLiteral("MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
                      "File -> Open Medical Volume...\n\n"
+                     "The RAW JSON workflow expects a sibling volume.raw file unless the metadata "
+                     "explicitly provides rawFile.\n\n"
                      "Details: %1")
           .arg(details));
-  messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
-                           "QLabel { color: palette(text); }");
-  messageBox.exec();
 }
 } // namespace
 
@@ -315,7 +311,7 @@ namespace qvp
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
-  setWindowTitle("Qt Viewer");
+  setWindowTitle("Qt Viewer Pro");
   resize(1000, 700);
 
   connect(&resampleWatcher_, &QFutureWatcher<VolumeResampleResult>::finished, this,
@@ -337,7 +333,7 @@ void MainWindow::saveImageAs()
 
   if (image.isNull())
   {
-    QMessageBox::information(this, "No Image", "There is no image to save.");
+    showStyledInformation(this, "No Image", "There is no image to save.");
     return;
   }
 
@@ -357,7 +353,7 @@ void MainWindow::saveImageAs()
 
   if (!image.save(fileName))
   {
-    QMessageBox::warning(this, "Save Failed", "Could not save the image.");
+    showStyledWarning(this, "Save Failed", "Could not save the image.");
   }
 }
 
@@ -380,7 +376,7 @@ void MainWindow::openImage(const QString& fileName)
 
   if (image.isNull())
   {
-    QMessageBox::warning(this, "Error", "Failed to load image.");
+    showStyledWarning(this, "Error", "Failed to load image.");
     return;
   }
 
@@ -453,8 +449,9 @@ void MainWindow::createFileMenu()
   openMedicalVolumeAction_->setStatusTip("Open a medical volume in the medical volume viewer");
   connect(openMedicalVolumeAction_, &QAction::triggered, this, &MainWindow::openMedicalVolume);
 
-  QAction* openDicomSeriesFolderAction = fileMenu->addAction("Open DICOM Series Folder...");
-  openDicomSeriesFolderAction->setStatusTip("Open a DICOM series by selecting its folder");
+  QAction* openDicomSeriesFolderAction = fileMenu->addAction("Open DICOM Series...");
+  openDicomSeriesFolderAction->setStatusTip(
+      "Open a DICOM series by selecting one file from the series");
   connect(openDicomSeriesFolderAction, &QAction::triggered, this, &MainWindow::openDicomSeriesFolder);
 
   openMaskOverlayAction_ = fileMenu->addAction("Open Mask Overlay...");
@@ -622,8 +619,8 @@ void MainWindow::createHelpMenu()
 {
   QMenu* helpMenu = menuBar()->addMenu("&Help");
 
-  aboutAction_ = helpMenu->addAction("&About Qt Viewer");
-  aboutAction_->setStatusTip("Show information about Qt Viewer");
+  aboutAction_ = helpMenu->addAction("&About Qt Viewer Pro");
+  aboutAction_->setStatusTip("Show information about Qt Viewer Pro");
   connect(aboutAction_, &QAction::triggered, this, &MainWindow::showAboutDialog);
 }
 
@@ -794,11 +791,13 @@ void MainWindow::openMedicalVolume()
   const QString fileName = QFileDialog::getOpenFileName(
       this, "Open Medical Volume", QString(),
       "Medical Volumes ("
+      "*.json "
       "*.nii *.nii.gz "
       "*.mhd *.mha "
       "*.dcm "
       "*.nrrd *.nhdr"
       ");;"
+      "RAW JSON Metadata (*.json);;"
       "NIfTI (*.nii *.nii.gz);;"
       "MetaImage (*.mhd *.mha);;"
       "DICOM (*.dcm);;"
@@ -813,7 +812,7 @@ void MainWindow::openMedicalVolume()
   VolumeLoadResult result = loadMedicalVolume(fileName);
   if (!result.success)
   {
-    QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
+    showStyledWarning(this, "Medical Volume Load Error", result.errorMessage);
     return;
   }
 
@@ -847,9 +846,9 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
 
   if (!currentMedicalVolume_ || !currentMedicalVolume_->isValid())
   {
-    QMessageBox::information(this,
-                             "No Medical Volume",
-                             "Load a medical volume before resampling it to 1 mm isotropic.");
+    showStyledInformation(this,
+                          "No Medical Volume",
+                          "Load a medical volume before resampling it to 1 mm isotropic.");
     return;
   }
 
@@ -862,7 +861,6 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
   resampleWatcher_.setFuture(QtConcurrent::run([sourceVolume]() {
     VolumeResampleResult result;
     result.sourceVolume = sourceVolume;
-    result.backgroundStart = std::chrono::steady_clock::now();
 
     try
     {
@@ -885,10 +883,7 @@ void MainWindow::resampleVolumeToIsotropicSpacing()
 
 void MainWindow::handleVolumeResampleFinished()
 {
-  const auto guiReceiveTime = std::chrono::steady_clock::now();
   const VolumeResampleResult result = resampleWatcher_.result();
-  const auto backgroundToGuiMs =
-      durationMilliseconds(guiReceiveTime - result.backgroundStart);
 
   resamplingInProgress_ = false;
   if (QApplication::overrideCursor() != nullptr)
@@ -898,11 +893,6 @@ void MainWindow::handleVolumeResampleFinished()
   statusBar()->clearMessage();
   updateActions();
 
-  qDebug().noquote()
-      << QStringLiteral("Volume resample delivery timings:\n"
-                        "  Background start -> GUI thread: %1 ms")
-             .arg(QString::number(backgroundToGuiMs, 'f', 1));
-
   if (currentMedicalVolume_ != result.sourceVolume)
   {
     return;
@@ -910,37 +900,31 @@ void MainWindow::handleVolumeResampleFinished()
 
   if (!result.success)
   {
-    QMessageBox::warning(this, "Resample Failed", result.errorMessage);
+    showStyledWarning(this, "Resample Failed", result.errorMessage);
     return;
   }
 
   displayLoadedVolume(std::move(result.volume));
-  const auto showVolume3DStart = std::chrono::steady_clock::now();
   showVolume3DPage();
-  const auto showVolume3DEnd = std::chrono::steady_clock::now();
-
-  qDebug().noquote()
-      << QStringLiteral("Volume page switch timings:\n"
-                        "  showVolume3DPage:                %1 ms")
-             .arg(QString::number(durationMilliseconds(showVolume3DEnd - showVolume3DStart),
-                                  'f',
-                                  1));
 }
 
 void MainWindow::openDicomSeriesFolder()
 {
-  const QString directoryPath =
-      QFileDialog::getExistingDirectory(this, "Open DICOM Series Folder", QString());
-  if (directoryPath.isEmpty())
+  const QString filePath = QFileDialog::getOpenFileName(this,
+                                                        "Open DICOM Series",
+                                                        QString(),
+                                                        "DICOM Files (*.dcm *.dicom);;"
+                                                        "All Files (*)");
+  if (filePath.isEmpty())
   {
     return;
   }
 
   const DicomVolumeLoader loader;
-  VolumeLoadResult result = loader.loadSeriesDirectory(directoryPath);
+  VolumeLoadResult result = loader.load(filePath);
   if (!result.success)
   {
-    QMessageBox::warning(this, "Medical Volume Load Error", result.errorMessage);
+    showStyledWarning(this, "Medical Volume Load Error", result.errorMessage);
     return;
   }
 
@@ -955,62 +939,18 @@ void MainWindow::openMaskOverlay()
 
 void MainWindow::displayLoadedVolume(VolumeData volume)
 {
-  const auto totalStart = std::chrono::steady_clock::now();
-
-  const auto sharedStart = std::chrono::steady_clock::now();
   auto sharedVolume = std::make_shared<const VolumeData>(std::move(volume));
-  const auto sharedEnd = std::chrono::steady_clock::now();
-
-  const auto assignmentStart = std::chrono::steady_clock::now();
   currentMedicalVolume_ = sharedVolume;
-  const auto assignmentEnd = std::chrono::steady_clock::now();
-
-  const auto medicalViewerStart = std::chrono::steady_clock::now();
   mprViewerWidget_->setVolume(sharedVolume);
-  const auto medicalMprViewerEnd = std::chrono::steady_clock::now();
   medicalVolumeViewerWidget_->setVolume(sharedVolume);
-  const auto medicalViewerEnd = std::chrono::steady_clock::now();
-
-  const auto volume3DViewerStart = std::chrono::steady_clock::now();
   volume3DViewerWidget_->setVolume(sharedVolume);
-  const auto volume3DViewerEnd = std::chrono::steady_clock::now();
-
-  const auto showMedicalPageStart = std::chrono::steady_clock::now();
   showMedicalVolumePage();
-  const auto showMedicalPageEnd = std::chrono::steady_clock::now();
 
   if (volumeToolsWindow_)
   {
     refreshVolumeToolsWindow();
   }
   updateActions();
-
-  const auto totalEnd = std::chrono::steady_clock::now();
-
-  qDebug().noquote()
-      << QStringLiteral("Volume display timings:\n"
-                        "  shared ownership setup:      %1 ms\n"
-                        "  current volume assignment:    %2 ms\n"
-                        "  MPR viewer setVolume:         %3 ms\n"
-                        "  OpenGL slice setVolume:       %4 ms\n"
-                        "  3D viewer setVolume:          %5 ms\n"
-                        "  show medical page:            %6 ms\n"
-                        "  displayLoadedVolume total:    %7 ms")
-             .arg(QString::number(durationMilliseconds(sharedEnd - sharedStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(assignmentEnd - assignmentStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(medicalMprViewerEnd - medicalViewerStart),
-                                  'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(medicalViewerEnd - medicalMprViewerEnd),
-                                  'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(volume3DViewerEnd - volume3DViewerStart),
-                                  'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(showMedicalPageEnd - showMedicalPageStart),
-                                  'f',
-                                  1))
-             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void MainWindow::showImagePage()
@@ -1319,8 +1259,10 @@ void MainWindow::openSyntheticVolumeSlice()
 void MainWindow::openRawVolume()
 {
   const QString metadataPath =
-      QFileDialog::getOpenFileName(this, "Open RAW Volume Metadata", QString(),
-                                   "JSON Metadata (*.json);;All Files (*)");
+      QFileDialog::getOpenFileName(this,
+                                   "Open RAW Volume Metadata",
+                                   QString(),
+                                   "JSON Metadata (*.json)");
   if (metadataPath.isEmpty())
   {
     return;
@@ -1333,16 +1275,9 @@ void MainWindow::openRawVolume()
     return;
   }
 
-  const QString rawPath = QFileDialog::getOpenFileName(this, "Open RAW Volume Data", QString(),
-                                                       "RAW Float32 Volume (*.raw);;All Files (*)");
-  if (rawPath.isEmpty())
-  {
-    return;
-  }
-
   try
   {
-    VolumeData volume = RawVolumeLoader::load(metadataPath, rawPath);
+    VolumeData volume = RawVolumeLoader::load(metadataPath);
     displayLoadedVolume(std::move(volume));
   }
   catch (const std::exception& error)
@@ -1353,19 +1288,80 @@ void MainWindow::openRawVolume()
 
 void MainWindow::showAboutDialog()
 {
-  QMessageBox::about(
-      this, "About Qt Viewer",
-      "Qt Viewer\n\n"
-      "A lightweight desktop image viewer built with C++, Qt Widgets, and OpenCV.\n\n"
-      "Features:\n"
-      "- Open images\n"
-      "- Drag and drop\n"
-      "- Zoom, fit, and actual size\n"
-      "- Rotate and flip\n"
-      "- Grayscale processing\n"
-      "- Reset image\n"
-      "- Save processed image\n\n"
-      "Version: 0.1");
+  if (aboutDialog_ == nullptr)
+  {
+    aboutDialog_ = new QDialog(this, Qt::Tool | Qt::WindowTitleHint | Qt::WindowSystemMenuHint |
+                                         Qt::WindowCloseButtonHint);
+    aboutDialog_->setWindowTitle("About Qt Viewer Pro");
+    aboutDialog_->setModal(false);
+    aboutDialog_->setStyleSheet(QStringLiteral(R"(
+QDialog {
+  background-color: #1E1E1E;
+}
+
+QLabel {
+  color: #E6E6E6;
+}
+
+QPushButton {
+  background-color: #333333;
+  color: #E6E6E6;
+  border: 1px solid #3A3A3A;
+  border-radius: 4px;
+  padding: 4px 8px;
+  min-width: 72px;
+}
+
+QPushButton:hover {
+  background-color: #3A3A3A;
+}
+
+QPushButton:pressed {
+  background-color: #444444;
+  color: #FFFFFF;
+}
+)"));
+
+    auto* layout = new QVBoxLayout(aboutDialog_);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(12);
+
+    auto* titleLabel = new QLabel("Qt Viewer Pro", aboutDialog_);
+    auto titleFont = titleLabel->font();
+    titleFont.setPointSize(titleFont.pointSize() + 4);
+    titleFont.setBold(true);
+    titleLabel->setFont(titleFont);
+    titleLabel->setAlignment(Qt::AlignCenter);
+
+    auto* versionLabel = new QLabel("Version 1.0.0", aboutDialog_);
+    versionLabel->setAlignment(Qt::AlignCenter);
+
+    auto* descriptionLabel = new QLabel(
+        "C++20 / Qt 6 / OpenGL medical image and volume viewer", aboutDialog_);
+    descriptionLabel->setWordWrap(true);
+    descriptionLabel->setAlignment(Qt::AlignCenter);
+
+    auto* featuresLabel = new QLabel("2D image viewing\n"
+                                     "Medical volume loading\n"
+                                     "Synchronized MPR\n"
+                                     "3D volume rendering",
+                                     aboutDialog_);
+    featuresLabel->setAlignment(Qt::AlignCenter);
+
+    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok, aboutDialog_);
+    connect(buttonBox, &QDialogButtonBox::accepted, aboutDialog_, &QDialog::hide);
+
+    layout->addWidget(titleLabel);
+    layout->addWidget(versionLabel);
+    layout->addWidget(descriptionLabel);
+    layout->addWidget(featuresLabel);
+    layout->addWidget(buttonBox);
+    aboutDialog_->adjustSize();
+  }
+
+  aboutDialog_->show();
+  aboutDialog_->raise();
+  aboutDialog_->activateWindow();
 }
 
 } // namespace qvp

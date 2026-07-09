@@ -10,12 +10,12 @@
 #include <QStringList>
 
 #include <cstddef>
-#include <chrono>
 #include <memory>
 
 class QMenu;
 class QCloseEvent;
 class QAction;
+class QDialog;
 class QStackedWidget;
 
 namespace qvp
@@ -89,7 +89,6 @@ private:
     VolumeData volume;
     QString errorMessage;
     bool success = false;
-    std::chrono::steady_clock::time_point backgroundStart;
   };
 
   // UI
@@ -135,6 +134,7 @@ private:
   OpenGLVolumeViewerWidget* medicalVolumeViewerWidget_ = nullptr;
   Volume3DViewerWidget* volume3DViewerWidget_ = nullptr;
   VolumeToolsWindow* volumeToolsWindow_ = nullptr;
+  QDialog* aboutDialog_ = nullptr;
   QImage originalImage_;
   std::shared_ptr<const VolumeData> currentMedicalVolume_;
   QFutureWatcher<VolumeResampleResult> resampleWatcher_;

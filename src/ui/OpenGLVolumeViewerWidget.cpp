@@ -4,6 +4,7 @@
 #include "qtviewerpro/io/MedicalVolumeLoaderRegistry.h"
 #include "qtviewerpro/io/RawVolumeLoader.h"
 #include "qtviewerpro/processing/SliceImageConverter.h"
+#include "qtviewerpro/ui/MessageBoxUtils.h"
 #include "qtviewerpro/render/OpenGLSliceViewer.h"
 
 #include <QCheckBox>
@@ -25,10 +26,8 @@
 #include <QSlider>
 #include <QSpinBox>
 #include <QVBoxLayout>
-#include <QDebug>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <exception>
 #include <limits>
@@ -41,7 +40,6 @@ namespace qvp
 
 namespace
 {
-using Clock = std::chrono::steady_clock;
 constexpr int kDefaultWindow = 255;
 constexpr int kDefaultLevel = 127;
 constexpr int kSoftTissueWindow = 400;
@@ -55,11 +53,6 @@ constexpr int kPresetIndexSoftTissue = 1;
 constexpr int kPresetIndexLung = 2;
 constexpr int kPresetIndexBone = 3;
 constexpr int kPresetIndexReset = 4;
-
-double durationMilliseconds(const Clock::duration& duration)
-{
-  return std::chrono::duration<double, std::milli>(duration).count();
-}
 
 void setWindowLevelControls(QSpinBox* windowSpinBox,
                             QSpinBox* levelSpinBox,
@@ -200,18 +193,16 @@ QString validateRawMetadataFile(const QString& metadataPath)
 
 void showRawVolumeLoadError(QWidget* parent, const QString& details)
 {
-  QMessageBox messageBox(parent);
-  messageBox.setIcon(QMessageBox::Warning);
-  messageBox.setWindowTitle("RAW Volume Load Error");
-  messageBox.setText("RAW test volumes require JSON metadata plus a separate float32 .raw file.");
-  messageBox.setInformativeText(
+  qvp::showStyledWarning(
+      parent,
+      QStringLiteral("RAW Volume Load Error"),
+      QStringLiteral("Select the RAW JSON metadata file only."),
       QStringLiteral("MetaImage/LUNA16 .raw files should be opened via the .mhd file using "
                      "File -> Open Medical Volume...\n\n"
+                     "The RAW JSON workflow expects a sibling volume.raw file unless the metadata "
+                     "explicitly provides rawFile.\n\n"
                      "Details: %1")
           .arg(details));
-  messageBox.setStyleSheet("QMessageBox { background-color: palette(window); }"
-                           "QLabel { color: palette(text); }");
-  messageBox.exec();
 }
 
 } // namespace
@@ -230,77 +221,30 @@ void OpenGLVolumeViewerWidget::setVolume(VolumeData volume)
 
 void OpenGLVolumeViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
 {
-  const auto totalStart = Clock::now();
   if (!volume || !volume->isValid())
   {
-    QMessageBox::warning(this, "Volume Load Error", "Loaded volume data is invalid.");
+    showStyledWarning(this, "Volume Load Error", "Loaded volume data is invalid.");
     return;
   }
 
-  const auto ownershipStart = Clock::now();
   currentVolume_ = std::move(volume);
-  const auto ownershipEnd = Clock::now();
-
-  const auto resetMaskStart = Clock::now();
   maskVolume_.reset();
   {
     const QSignalBlocker blocker(showMaskOverlayCheckBox_);
     showMaskOverlayCheckBox_->setChecked(false);
   }
-  const auto resetMaskEnd = Clock::now();
-
-  const auto maskControlsStart = Clock::now();
   updateMaskOpacityControls();
-  const auto maskControlsEnd = Clock::now();
-
-  const auto rangeReadStart = Clock::now();
   const float cachedMinimumIntensity = currentVolume_->intensityMinimum();
   const float cachedMaximumIntensity = currentVolume_->intensityMaximum();
-  const auto rangeReadEnd = Clock::now();
   currentVolumeRange_ = std::make_pair(cachedMinimumIntensity, cachedMaximumIntensity);
 
   setWindowLevelControls(windowSpinBox_, levelSpinBox_, kDefaultWindow, kDefaultLevel);
   setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexReset);
 
-  const auto ctPresetStart = Clock::now();
   applyCtWindowLevelPresetIfNeeded(*currentVolume_);
-  const auto ctPresetEnd = Clock::now();
-
-  const auto middleSliceStart = Clock::now();
   resetToAxialMiddleSlice();
-  const auto middleSliceEnd = Clock::now();
-
-  const auto volumeSliceStart = Clock::now();
   updateVolumeSlice();
-  const auto volumeSliceEnd = Clock::now();
-
-  const auto resetViewStart = Clock::now();
   openGLViewer_->resetView();
-  const auto resetViewEnd = Clock::now();
-
-  const auto totalEnd = Clock::now();
-
-  qDebug().noquote()
-      << QStringLiteral("Medical volume viewer timings:\n"
-                        "  ownership move:              %1 ms\n"
-                        "  mask reset/setup:            %2 ms\n"
-                        "  mask controls update:         %3 ms\n"
-                        "  cached intensity range read:  %4 ms\n"
-                        "  CT preset setup:              %5 ms\n"
-                        "  middle slice setup:           %6 ms\n"
-                        "  volume slice update:          %7 ms\n"
-                        "  OpenGL viewer reset:          %8 ms\n"
-                        "  setVolume total:              %9 ms")
-             .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(resetMaskEnd - resetMaskStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(maskControlsEnd - maskControlsStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(rangeReadEnd - rangeReadStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(ctPresetEnd - ctPresetStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(middleSliceEnd - middleSliceStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(volumeSliceEnd - volumeSliceStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(resetViewEnd - resetViewStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
-
 }
 
 void OpenGLVolumeViewerWidget::createUi()
@@ -506,7 +450,7 @@ void OpenGLVolumeViewerWidget::openImage()
   const QImage image(fileName);
   if (image.isNull())
   {
-    QMessageBox::warning(this, "Open Failed", "Could not load the selected image.");
+    showStyledWarning(this, "Open Failed", "Could not load the selected image.");
     return;
   }
 
@@ -527,7 +471,7 @@ void OpenGLVolumeViewerWidget::openMaskOverlay()
 {
   if (!currentVolume_ || !currentVolume_->isValid())
   {
-    QMessageBox::warning(this, "Mask Overlay Error", "Load a base volume before opening a mask overlay.");
+    showStyledWarning(this, "Mask Overlay Error", "Load a base volume before opening a mask overlay.");
     return;
   }
 
@@ -548,21 +492,21 @@ void OpenGLVolumeViewerWidget::openMaskOverlay()
   VolumeLoadResult result = loadMedicalVolume(fileName);
   if (!result.success)
   {
-    QMessageBox::warning(this, "Mask Overlay Error", result.errorMessage);
+    showStyledWarning(this, "Mask Overlay Error", result.errorMessage);
     return;
   }
 
   if (!result.volume.isValid())
   {
-    QMessageBox::warning(this, "Mask Overlay Error", "Loaded mask volume data is invalid.");
+    showStyledWarning(this, "Mask Overlay Error", "Loaded mask volume data is invalid.");
     return;
   }
 
   if (!maskMatchesCurrentVolume(result.volume))
   {
-    QMessageBox::warning(this,
-                         "Mask Overlay Error",
-                         "Mask volume dimensions must match the currently loaded volume.");
+    showStyledWarning(this,
+                      "Mask Overlay Error",
+                      "Mask volume dimensions must match the currently loaded volume.");
     return;
   }
 
@@ -580,7 +524,7 @@ void OpenGLVolumeViewerWidget::loadSyntheticSlice()
 void OpenGLVolumeViewerWidget::loadRawSlice()
 {
   const QString metadataPath = QFileDialog::getOpenFileName(
-      this, "Open RAW JSON Metadata", QString(), "JSON Metadata (*.json);;All Files (*)");
+      this, "Open RAW JSON Metadata", QString(), "JSON Metadata (*.json)");
   if (metadataPath.isEmpty())
   {
     return;
@@ -593,16 +537,9 @@ void OpenGLVolumeViewerWidget::loadRawSlice()
     return;
   }
 
-  const QString rawPath = QFileDialog::getOpenFileName(
-      this, "Open RAW Volume Data", QString(), "RAW Float32 Volume (*.raw);;All Files (*)");
-  if (rawPath.isEmpty())
-  {
-    return;
-  }
-
   try
   {
-    setVolume(RawVolumeLoader::load(metadataPath, rawPath));
+    setVolume(RawVolumeLoader::load(metadataPath));
   }
   catch (const std::exception& error)
   {
@@ -902,7 +839,6 @@ void OpenGLVolumeViewerWidget::updateMaskOpacityControls()
 
 void OpenGLVolumeViewerWidget::updateVolumeSlice()
 {
-  const auto totalStart = Clock::now();
   if (!hasCurrentVolumeSlice_ || !currentVolume_ || !currentVolume_->isValid())
   {
     return;
@@ -910,51 +846,21 @@ void OpenGLVolumeViewerWidget::updateVolumeSlice()
 
   try
   {
-    const auto sliceExtractStart = Clock::now();
     const auto slice = SliceExtractor::extract(*currentVolume_, currentOrientation_, currentSliceIndex_);
-    const auto sliceExtractEnd = Clock::now();
-
-    const auto imageConvertStart = Clock::now();
     QImage image = SliceImageConverter::toGrayscaleImage(
         slice, static_cast<float>(windowSpinBox_->value()), static_cast<float>(levelSpinBox_->value()));
-    const auto imageConvertEnd = Clock::now();
-
-    const auto overlayStart = Clock::now();
     if (maskVolume_.has_value() && showMaskOverlayCheckBox_->isChecked())
     {
       const auto maskSlice =
           SliceExtractor::extract(maskVolume_.value(), currentOrientation_, currentSliceIndex_);
       image = applyMaskOverlay(image, maskSlice);
     }
-    const auto overlayEnd = Clock::now();
-
-    const auto setImageStart = Clock::now();
     openGLViewer_->setSliceImage(image, static_cast<float>(slice.spacingX()),
                                  static_cast<float>(slice.spacingY()));
-    const auto setImageEnd = Clock::now();
-
-    const auto totalEnd = Clock::now();
-
-    qDebug().noquote()
-        << QStringLiteral("Medical volume slice timings:\n"
-                          "  SliceExtractor::extract:     %1 ms\n"
-                          "  SliceImageConverter::to...:   %2 ms\n"
-                          "  mask overlay:                %3 ms\n"
-                          "  openGLViewer setSliceImage:   %4 ms\n"
-                          "  updateVolumeSlice total:      %5 ms")
-               .arg(QString::number(durationMilliseconds(sliceExtractEnd - sliceExtractStart),
-                                    'f',
-                                    1))
-               .arg(QString::number(durationMilliseconds(imageConvertEnd - imageConvertStart),
-                                    'f',
-                                    1))
-               .arg(QString::number(durationMilliseconds(overlayEnd - overlayStart), 'f', 1))
-               .arg(QString::number(durationMilliseconds(setImageEnd - setImageStart), 'f', 1))
-               .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
   }
   catch (const std::exception& error)
   {
-    QMessageBox::warning(this, "Slice Update Error", error.what());
+    showStyledWarning(this, "Slice Update Error", QString::fromUtf8(error.what()));
   }
 }
 
@@ -1021,25 +927,13 @@ bool OpenGLVolumeViewerWidget::looksLikeCtVolume(const VolumeData& volume) const
 
 void OpenGLVolumeViewerWidget::applyCtWindowLevelPresetIfNeeded(const VolumeData& volume)
 {
-  const auto start = Clock::now();
   if (!looksLikeCtVolume(volume))
   {
-    const auto end = Clock::now();
-    qDebug().noquote()
-        << QStringLiteral("Medical volume CT preset timing:\n"
-                          "  looksLikeCtVolume: %1 ms")
-               .arg(QString::number(durationMilliseconds(end - start), 'f', 1));
     return;
   }
 
   setWindowLevelControls(windowSpinBox_, levelSpinBox_, kLungWindow, kLungLevel);
   setWindowLevelPresetIndex(windowLevelPresetComboBox_, kPresetIndexLung);
-
-  const auto end = Clock::now();
-  qDebug().noquote()
-      << QStringLiteral("Medical volume CT preset timing:\n"
-                        "  looksLikeCtVolume: %1 ms")
-             .arg(QString::number(durationMilliseconds(end - start), 'f', 1));
 }
 
 bool OpenGLVolumeViewerWidget::maskMatchesCurrentVolume(const VolumeData& mask) const
