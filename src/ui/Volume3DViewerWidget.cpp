@@ -5,23 +5,11 @@
 #include <QLabel>
 #include <QString>
 #include <QVBoxLayout>
-#include <QDebug>
 
-#include <chrono>
 #include <utility>
 
 namespace qvp
 {
-
-namespace
-{
-using Clock = std::chrono::steady_clock;
-
-double durationMilliseconds(const Clock::duration& duration)
-{
-  return std::chrono::duration<double, std::milli>(duration).count();
-}
-} // namespace
 
 Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
 {
@@ -70,7 +58,6 @@ Volume3DViewerWidget::Volume3DViewerWidget(QWidget* parent) : QWidget(parent)
 
 void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
 {
-  const auto totalStart = Clock::now();
   if (!volume || !volume->isValid())
   {
     currentVolume_.reset();
@@ -85,18 +72,11 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
     return;
   }
 
-  const auto ownershipStart = Clock::now();
   currentVolume_ = std::move(volume);
-  const auto ownershipEnd = Clock::now();
-
-  const auto rendererStart = Clock::now();
   if (rendererWidget_)
   {
     rendererWidget_->setVolume(currentVolume_);
   }
-  const auto rendererEnd = Clock::now();
-
-  const auto statusStart = Clock::now();
   if (statusLabel_)
   {
     statusLabel_->setText(QString("Volume ready: %1 x %2 x %3 voxels")
@@ -104,20 +84,6 @@ void Volume3DViewerWidget::setVolume(std::shared_ptr<const VolumeData> volume)
                               .arg(currentVolume_->height())
                               .arg(currentVolume_->depth()));
   }
-  const auto statusEnd = Clock::now();
-
-  const auto totalEnd = Clock::now();
-
-  qDebug().noquote()
-      << QStringLiteral("3D viewer timings:\n"
-                        "  ownership move:        %1 ms\n"
-                        "  renderer setVolume:    %2 ms\n"
-                        "  status label update:   %3 ms\n"
-                        "  setVolume total:       %4 ms")
-             .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(rendererEnd - rendererStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(statusEnd - statusStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void Volume3DViewerWidget::setRenderPreset(VolumeRenderPreset preset)

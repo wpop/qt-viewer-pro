@@ -2,148 +2,165 @@
 
 [![CI](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/wpop/qt-viewer-pro/actions/workflows/ci.yml)
 
-Qt Viewer Pro is a C++20 / Qt 6 desktop image and medical volume viewer built with Qt Widgets, OpenCV, OpenGL, ITK, and CMake.
+## Overview
 
-This project extends the original Qt Viewer into a unified desktop application for 2D image viewing and medical volume exploration.
+Qt Viewer Pro is a C++20 / Qt 6 / OpenGL desktop medical imaging and volume visualization application. It combines general 2D image viewing with medical-volume loading, synchronized multi-planar reconstruction, coordinate-aware slice inspection, mask overlays, isotropic resampling, and interactive 3D volume rendering.
 
-## Screenshot
+## Screenshots
 
-| 2D image viewer / grayscale demo | Medical volume viewer with NRRD sample |
-| --- | --- |
-| ![2D image viewer / grayscale demo](docs/images/qt_viewer_grayscale.png) | ![Medical volume viewer with NRRD sample](docs/images/medical_volume_viewer_nrrd.png) |
+### DICOM Series Viewer
 
-| DICOM series viewer | Mask overlay with opacity control |
-| --- | --- |
-| ![DICOM series viewer](docs/images/dicom_series_viewer.png) | ![Mask overlay with opacity control](docs/images/mask_overlay_opacity.png) |
+![DICOM Series Viewer](docs/images/dicom_series_viewer.png)
 
-## Current Features
+Loads DICOM series for CT slice viewing with medical-volume navigation and visible dataset metadata.
 
-- 2D image loading for PNG, JPG, JPEG, and BMP
-- Zoom, pan, fit to window, and actual size controls
-- 2D image processing actions, including rotate, flip, and OpenCV-backed grayscale conversion
-- Embedded Medical Volume Viewer page
-- OpenGL slice display
-- NIfTI loading for `.nii` and `.nii.gz`
-- MetaImage loading for `.mhd` and `.mha`
-- DICOM series folder loading
-- NRRD loading for `.nrrd` and `.nhdr`
-- Custom float32 RAW loading with JSON metadata
-- Axial, coronal, and sagittal slice navigation
-- Window and level controls with CT presets
-- Mask overlay loading
-- Mask opacity control
-- Crosshair voxel readout with base voxel value and optional mask value
-- Medical volume metadata panel
+### Synchronized MPR
 
-## Technologies
+![Synchronized MPR](docs/images/01-mpr-viewer.png)
 
-- C++20
-- Qt 6 Widgets for the GUI
-- OpenCV for standard 2D image loading and image processing/color conversion
-- OpenGL for medical slice rendering
-- ITK for medical volume loading
-- CMake
-- Ninja
-- CTest
+Shows axial, sagittal, and coronal views with synchronized crosshairs and anatomical orientation labels.
 
-## Project Structure
+### Medical Volume Viewer
 
-```text
-qt-viewer-pro/
-├── cmake/
-├── docs/
-├── include/
-├── resources/
-├── samples/
-├── scripts/
-├── src/
-└── tests/
-```
+![Medical Volume Viewer](docs/images/02-medical-volume-viewer.png)
 
-## Project Architecture
+Provides CT slice viewing with a crosshair, patient/world coordinates, and voxel plus volume metadata.
 
-- `core` contains reusable data and slice logic, including `VolumeData`, `SliceData`, `SliceExtractor`, and `SliceOrientation`.
-- `io` contains `ImageLoader`, `MedicalVolumeLoaderRegistry`, and the NIfTI, MetaImage, DICOM, NRRD, and RAW loaders.
-- `processing` contains image processing utilities.
-- `render` contains `OpenGLSliceViewer`.
-- `ui` contains the desktop interface, including `MainWindow`, `ImageViewer2D`, and `OpenGLVolumeViewerWidget`.
+### 3D Volume Rendering
 
-Unit tests currently cover the core data structures, slice extraction, and the volume loader stack.
+![3D Volume Rendering](docs/images/03-3d-volume-rendering.png)
 
-## Local Data Policy
+Displays OpenGL volume rendering with physical-spacing-aware rendering and medical render presets.
 
-- `data/` is ignored by Git.
-- Medical datasets and generated samples are kept local only.
-- Screenshots can be committed under `docs/images/`.
+### Volume Tools
+
+![Volume Tools](docs/images/04-volume-tools.png)
+
+Combines volume information, synchronized navigation, and 3D transfer controls including opacity and manual intensity settings.
+
+## Additional Views
+
+### Mask Overlay
+
+![Mask Overlay](docs/images/mask_overlay_opacity.png)
+
+### NRRD Medical Volume
+
+![NRRD Medical Volume](docs/images/medical_volume_viewer_nrrd.png)
+
+### 2D Grayscale Processing
+
+![2D Grayscale Processing](docs/images/qt_viewer_grayscale.png)
+
+## Features
+
+- Common 2D image loading for PNG, JPG, JPEG, and BMP
+- 2D zoom, pan, fit-to-window, actual-size viewing, drag and drop, and recent files
+- Basic 2D image operations including rotate, flip, reset, and grayscale conversion
+- Medical volume loading for DICOM series, NIfTI, MetaImage, NRRD, and custom float32 RAW volumes with JSON metadata
+- Axial, sagittal, and coronal MPR with synchronized navigation across all panes
+- MPR crosshairs driven by a shared voxel position
+- Anatomical orientation edge labels for trusted orientation data
+- Physical patient coordinates shown for the current voxel position when geometry is trusted
+- Voxel spacing, intensity range, origin, direction, coordinate system, and related metadata display
+- Mask overlay loading and opacity control for slice viewing
+- Isotropic volume resampling to 1 mm spacing
+- OpenGL 3D volume rendering with physical-spacing-aware scaling
+- 3D render modes for Default, CT Bone, CT Lung, and Custom
+- Manual 3D transfer controls for global opacity and intensity minimum / maximum
+- Floating Volume Tools window for volume information, navigation, and 3D transfer controls
+
+## Architecture
+
+- `core` contains immutable data models and pure helpers such as `VolumeData`, anatomical orientation helpers, volume information formatting input, physical coordinate mapping, slice extraction, and MPR coordinate math.
+- `io` contains image loading, the medical-volume loader registry, and format-specific loaders for DICOM, NIfTI, MetaImage, NRRD, and RAW workflows.
+- `processing` contains resampling and image-processing utilities that operate on loaded data without owning UI state.
+- `render` contains OpenGL rendering infrastructure, including the canonical 3D renderer and transfer-function state.
+- `ui` contains `MainWindow`, the 2D viewer, the medical slice viewer, the synchronized MPR viewer, the 3D viewer wrapper, and the floating Volume Tools window.
+
+Current ownership boundaries:
+
+- `VolumeData` is shared across medical viewing surfaces with shared ownership.
+- `MprViewerWidget` owns synchronized slice navigation and the shared current voxel position.
+- `OpenGLVolumeRendererWidget` owns canonical 3D render and transfer-function state.
+- `VolumeToolsWindow` is presentation and control UI only; it does not own canonical medical or render state.
+- `MainWindow` coordinates page switching, actions, and signal wiring between components.
+
+## Supported Formats
+
+- 2D images: PNG, JPG, JPEG, BMP
+- Medical volumes: DICOM series selected from one DICOM file, `.nii`, `.nii.gz`, `.mhd`, `.mha`, `.nrrd`, `.nhdr`
+- Custom RAW volumes: float32 `.raw` data with JSON metadata selected through `File -> Open Medical Volume...`
+
+## Basic Usage
+
+### Open a DICOM Series
+
+Use `File -> Open DICOM Series...`, select one DICOM file from the desired series, and the application discovers and loads the complete series from the same directory.
+
+### Open a Medical Volume
+
+Use `File -> Open Medical Volume...`.
+
+Supported file inputs include:
+
+- NIfTI: `.nii`, `.nii.gz`
+- MetaImage: `.mhd`, `.mha`
+- NRRD: `.nrrd`, `.nhdr`
+- RAW JSON metadata: `.json`
+
+For RAW JSON, select the JSON metadata file, the loader resolves the associated `.raw` data file, and no second file dialog is required.
+
+### Open a Mask Overlay
+
+Load a medical volume first, then use `File -> Open Mask Overlay...`.
 
 ## Build
 
+Main dependencies:
+
+- C++20 compiler
+- CMake
+- Ninja
+- Qt 6
+- OpenCV
+- ITK
+
+Build on Ubuntu/Linux with:
+
 ```bash
 cmake -S . -B build -G Ninja
 cmake --build build
+```
+
+## Run
+
+```bash
 ./build/qt-viewer-pro
 ```
 
-## Workflows
-
-### Open Medical Volume
-
-Use `File -> Open Medical Volume...` and choose any supported medical volume file:
-
-```text
-.nii
-.nii.gz
-.mhd
-.mha
-.dcm
-.nrrd
-.nhdr
-```
-
-### Open DICOM Series
-
-Use `File -> Open DICOM Series Folder...` to load a directory of DICOM slices.
-
-### Open Mask Overlay
-
-Use `File -> Open Mask Overlay...` to load a mask volume for the active medical volume.
-
-### Load Custom RAW Test Volume
-
-Use `Tools -> Load Custom RAW Test Volume...`, then select:
-
-```text
-data/samples/raw/custom_test_volume/metadata.json
-data/samples/raw/custom_test_volume/volume.raw
-```
-
-This workflow expects a JSON metadata object plus a separate float32 RAW file. MetaImage / LUNA16 `.raw` files should be opened via their `.mhd` file using `File -> Open Medical Volume...`.
-
 ## Testing
-
-Configure and build the project first:
-
-```bash
-cmake -S . -B build -G Ninja
-cmake --build build
-```
-
-Run unit tests with CTest:
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-## Formatting
+The current automated suite contains 17 tests covering:
 
-This project uses `clang-format` for C++ source formatting.
+- volume data and metadata
+- anatomical orientation formatting
+- physical coordinate mapping
+- transfer-function logic
+- slice extraction and slice image conversion
+- MPR coordinate and orientation mapping
+- window/level processing
+- isotropic resampling
+- NIfTI, MetaImage, NRRD, and RAW-oriented medical loader paths
 
-Format all C++ headers and source files:
+## Project Status
 
-```bash
-find include src tests \( -name "*.h" -o -name "*.cpp" \) -print0 | xargs -0 clang-format -i
-```
+v1.0.0 release candidate / feature-complete for the current viewer scope.
 
 ## License
 
-MIT License
+MIT License.

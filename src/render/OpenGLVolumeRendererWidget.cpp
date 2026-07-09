@@ -4,7 +4,6 @@
 
 #include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
-#include <QDebug>
 #include <QMouseEvent>
 #include <QSizePolicy>
 #include <QString>
@@ -14,7 +13,6 @@
 
 #include <cstddef>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -22,13 +20,6 @@
 
 namespace
 {
-using Clock = std::chrono::steady_clock;
-
-double durationMilliseconds(const Clock::duration& duration)
-{
-  return std::chrono::duration<double, std::milli>(duration).count();
-}
-
 constexpr float kMinCameraDistance = 1.25F;
 constexpr float kMaxCameraDistance = 8.0F;
 constexpr float kZoomStepFactor = 0.9F;
@@ -145,7 +136,6 @@ OpenGLVolumeRendererWidget::~OpenGLVolumeRendererWidget()
 
 void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> volume)
 {
-  const auto totalStart = Clock::now();
   if (!volume || !volume->isValid())
   {
     currentVolume_.reset();
@@ -157,11 +147,8 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
     return;
   }
 
-  const auto ownershipStart = Clock::now();
   currentVolume_ = std::move(volume);
-  const auto ownershipEnd = Clock::now();
 
-  const auto rangeStart = Clock::now();
   if (currentVolume_ && currentVolume_->hasIntensityRange())
   {
     sourceIntensityMinimum_ = currentVolume_->intensityMinimum();
@@ -172,28 +159,13 @@ void OpenGLVolumeRendererWidget::setVolume(std::shared_ptr<const VolumeData> vol
     sourceIntensityMinimum_ = 0.0F;
     sourceIntensityMaximum_ = 0.0F;
   }
-  const auto rangeEnd = Clock::now();
 
   transferFunctionState_.intensityMinimum = sourceIntensityMinimum_;
   transferFunctionState_.intensityMaximum = sourceIntensityMaximum_;
 
-  const auto dirtyStart = Clock::now();
   volumeTextureDirty_ = true;
   volumeTextureReady_ = false;
-  const auto dirtyEnd = Clock::now();
   update();
-
-  const auto totalEnd = Clock::now();
-  qDebug().noquote()
-      << QStringLiteral("3D renderer setVolume timings:\n"
-                        "  ownership move:       %1 ms\n"
-                        "  cached range setup:    %2 ms\n"
-                        "  dirty flag update:     %3 ms\n"
-                        "  setVolume total:       %4 ms")
-             .arg(QString::number(durationMilliseconds(ownershipEnd - ownershipStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(rangeEnd - rangeStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(dirtyEnd - dirtyStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void OpenGLVolumeRendererWidget::setRenderPreset(VolumeRenderPreset renderPreset)
@@ -521,13 +493,11 @@ QQuaternion OpenGLVolumeRendererWidget::rotationBetweenVectors(const QVector3D& 
 
 void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
 {
-  const auto totalStart = Clock::now();
   if (!volumeTextureDirty_)
   {
     return;
   }
 
-  const auto prepStart = Clock::now();
   volumeTextureDirty_ = false;
   destroyVolumeTexture();
 
@@ -592,8 +562,6 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
   sourceIntensityMinimum_ = currentVolume_->intensityMinimum();
   sourceIntensityMaximum_ = currentVolume_->intensityMaximum();
 
-  const auto prepEnd = Clock::now();
-
   while (glGetError() != GL_NO_ERROR)
   {
   }
@@ -615,7 +583,6 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
   glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousUnpackAlignment);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-  const auto uploadCallStart = Clock::now();
   auto* extraFunctions = QOpenGLContext::currentContext()->extraFunctions();
   extraFunctions->glTexImage3D(GL_TEXTURE_3D,
                                0,
@@ -627,7 +594,6 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
                                GL_RED,
                                GL_FLOAT,
                                voxels.data());
-  const auto uploadCallEnd = Clock::now();
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, previousUnpackAlignment);
 
@@ -645,16 +611,6 @@ void OpenGLVolumeRendererWidget::uploadVolumeTextureIfNeeded()
   volumeTextureReady_ = true;
   emit volumeTextureUploaded(static_cast<int>(width), static_cast<int>(height),
                              static_cast<int>(depth));
-
-  const auto totalEnd = Clock::now();
-  qDebug().noquote()
-      << QStringLiteral("OpenGL volume upload timings (deferred paintGL path):\n"
-                        "  CPU preparation:       %1 ms\n"
-                        "  glTexImage3D upload:   %2 ms\n"
-                        "  total upload path:     %3 ms")
-             .arg(QString::number(durationMilliseconds(prepEnd - prepStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(uploadCallEnd - uploadCallStart), 'f', 1))
-             .arg(QString::number(durationMilliseconds(totalEnd - totalStart), 'f', 1));
 }
 
 void OpenGLVolumeRendererWidget::initializeRenderingResources()

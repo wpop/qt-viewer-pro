@@ -14,6 +14,14 @@ class RawVolumeLoader
 {
 public:
   /**
+   * @brief Loads a volume from a JSON metadata file and its associated RAW voxel file.
+   * @param metadataPath Path to the JSON metadata file.
+   * @return Loaded volume data.
+   * @throws std::runtime_error when metadata or raw data is invalid.
+   */
+  static VolumeData load(const QString& metadataPath);
+
+  /**
    * @brief Loads a volume from metadata and raw voxel data files.
    * @param metadataPath Path to the JSON metadata file.
    * @param rawPath Path to the RAW float32 voxel file.

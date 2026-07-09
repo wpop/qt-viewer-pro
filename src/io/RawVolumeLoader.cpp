@@ -1,6 +1,8 @@
 #include "qtviewerpro/io/RawVolumeLoader.h"
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -9,6 +11,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -62,10 +65,73 @@ std::size_t checkedMultiply(std::size_t lhs, std::size_t rhs)
   return lhs * rhs;
 }
 
+QString resolvedRawPath(const QString& metadataPath, const QJsonObject& metadata)
+{
+  const QFileInfo metadataInfo(metadataPath);
+  const QDir metadataDirectory = metadataInfo.dir();
+
+  const auto resolvedMetadataPath = [&](const QString& fieldName) -> std::optional<QString> {
+    if (!metadata.contains(fieldName))
+    {
+      return std::nullopt;
+    }
+
+    const QJsonValue value = metadata.value(fieldName);
+    if (!value.isString() || value.toString().isEmpty())
+    {
+      throw std::runtime_error(("Metadata field must be a non-empty string: " + fieldName)
+                                   .toStdString());
+    }
+
+    const QString rawFile = value.toString();
+    return QFileInfo(rawFile).isAbsolute() ? rawFile : metadataDirectory.filePath(rawFile);
+  };
+
+  for (const QString& fieldName : {QStringLiteral("rawFile"),
+                                   QStringLiteral("dataFile"),
+                                   QStringLiteral("file"),
+                                   QStringLiteral("filename")})
+  {
+    if (const auto path = resolvedMetadataPath(fieldName); path.has_value())
+    {
+      return *path;
+    }
+  }
+
+  const QStringList rawCandidates = metadataDirectory.entryList(
+      QStringList{QStringLiteral("*.raw")}, QDir::Files, QDir::Name);
+  if (rawCandidates.size() == 1)
+  {
+    return metadataDirectory.filePath(rawCandidates.front());
+  }
+
+  throw std::runtime_error(
+      QStringLiteral("Unable to resolve raw volume file for metadata '%1'. "
+                     "Provide rawFile/dataFile/file/filename in the metadata or keep exactly one "
+                     ".raw file beside it.")
+          .arg(metadataPath)
+          .toStdString());
+}
+
 } // namespace
 
 namespace qvp
 {
+
+VolumeData RawVolumeLoader::load(const QString& metadataPath)
+{
+  QFile metadataFile(metadataPath);
+  if (!metadataFile.open(QIODevice::ReadOnly))
+    throw std::runtime_error("Unable to open metadata file");
+
+  QJsonParseError parseError;
+  const QJsonDocument metadataDocument =
+      QJsonDocument::fromJson(metadataFile.readAll(), &parseError);
+  if (parseError.error != QJsonParseError::NoError || !metadataDocument.isObject())
+    throw std::runtime_error("Metadata JSON must be a valid object");
+
+  return load(metadataPath, resolvedRawPath(metadataPath, metadataDocument.object()));
+}
 
 VolumeData RawVolumeLoader::load(const QString& metadataPath, const QString& rawPath)
 {
