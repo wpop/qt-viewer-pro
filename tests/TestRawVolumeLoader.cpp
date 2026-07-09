@@ -63,8 +63,8 @@ class TestRawVolumeLoader : public QObject
 private slots:
   void loadsSmallValidRawVolume();
   void loadsSiblingVolumeRawWhenOnlyMetadataPathIsProvided();
-  void loadsRepositorySampleMetadataAndRaw();
-  void loadsRepositorySampleViaMedicalVolumeDispatch();
+  void loadsSiblingVolumeRawFromTemporaryFixture();
+  void loadsTemporaryFixtureViaMedicalVolumeDispatch();
   void throwsForMissingMetadataFile();
   void throwsForInvalidRawSize();
 };
@@ -111,37 +111,48 @@ void TestRawVolumeLoader::loadsSiblingVolumeRawWhenOnlyMetadataPathIsProvided()
   QVERIFY(volume.voxels() == voxels);
 }
 
-void TestRawVolumeLoader::loadsRepositorySampleMetadataAndRaw()
+void TestRawVolumeLoader::loadsSiblingVolumeRawFromTemporaryFixture()
 {
-  const QString metadata = QFINDTESTDATA("../data/samples/raw/custom_test_volume/metadata.json");
-  QVERIFY2(!metadata.isEmpty(), "Repository RAW sample metadata was not found");
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
 
-  const qvp::VolumeData volume = qvp::RawVolumeLoader::load(metadata);
+  const std::vector<float> voxels{0.0F, 1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F};
+  writeMetadata(metadataPath(directory), 2, 2, 2, 1.0, 1.5, 2.0);
+  writeRaw(rawPath(directory), voxels);
 
-  QCOMPARE(volume.width(), std::size_t{64});
-  QCOMPARE(volume.height(), std::size_t{64});
-  QCOMPARE(volume.depth(), std::size_t{16});
+  const qvp::VolumeData volume = qvp::RawVolumeLoader::load(metadataPath(directory));
+
+  QCOMPARE(volume.width(), std::size_t{2});
+  QCOMPARE(volume.height(), std::size_t{2});
+  QCOMPARE(volume.depth(), std::size_t{2});
   QCOMPARE(volume.spacingX(), 1.0F);
-  QCOMPARE(volume.spacingY(), 1.0F);
+  QCOMPARE(volume.spacingY(), 1.5F);
   QCOMPARE(volume.spacingZ(), 2.0F);
-  QCOMPARE(volume.voxelCount(), std::size_t{64 * 64 * 16});
+  QCOMPARE(volume.voxelCount(), std::size_t{8});
+  QVERIFY(volume.voxels() == voxels);
   QVERIFY(volume.isValid());
 }
 
-void TestRawVolumeLoader::loadsRepositorySampleViaMedicalVolumeDispatch()
+void TestRawVolumeLoader::loadsTemporaryFixtureViaMedicalVolumeDispatch()
 {
-  const QString metadata = QFINDTESTDATA("../data/samples/raw/custom_test_volume/metadata.json");
-  QVERIFY2(!metadata.isEmpty(), "Repository RAW sample metadata was not found");
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
 
-  const qvp::VolumeLoadResult result = qvp::loadMedicalVolume(metadata);
+  const std::vector<float> voxels{10.0F, 20.0F, 30.0F, 40.0F, 50.0F, 60.0F, 70.0F, 80.0F};
+  writeMetadata(metadataPath(directory), 2, 2, 2, 0.5, 0.75, 1.25);
+  writeRaw(rawPath(directory), voxels);
+
+  const qvp::VolumeLoadResult result = qvp::loadMedicalVolume(metadataPath(directory));
 
   QVERIFY(result.success);
-  QCOMPARE(result.volume.width(), std::size_t{64});
-  QCOMPARE(result.volume.height(), std::size_t{64});
-  QCOMPARE(result.volume.depth(), std::size_t{16});
-  QCOMPARE(result.volume.spacingX(), 1.0F);
-  QCOMPARE(result.volume.spacingY(), 1.0F);
-  QCOMPARE(result.volume.spacingZ(), 2.0F);
+  QCOMPARE(result.volume.width(), std::size_t{2});
+  QCOMPARE(result.volume.height(), std::size_t{2});
+  QCOMPARE(result.volume.depth(), std::size_t{2});
+  QCOMPARE(result.volume.spacingX(), 0.5F);
+  QCOMPARE(result.volume.spacingY(), 0.75F);
+  QCOMPARE(result.volume.spacingZ(), 1.25F);
+  QCOMPARE(result.volume.voxelCount(), std::size_t{8});
+  QVERIFY(result.volume.voxels() == voxels);
   QVERIFY(result.volume.isValid());
 }
 
